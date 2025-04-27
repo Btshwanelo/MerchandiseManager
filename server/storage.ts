@@ -120,7 +120,7 @@ export class MemStorage implements IStorage {
     // Initialize with sample admin user
     this.createUser({
       username: "admin",
-      password: "651aad8e9c3db25e49e5727df1b3686c1a21515de40a78f3aad1279086ab.92ec21e16", // hashed "admin123"
+      password: "5361b60e7c505eec64531ebd5d31b0851d25cd93cda56630c5453df090469c83763e0fa913b8df9593f0c40c3308ee74c7fce97d67f5d0819a2da8368ad80b2.f9af2c7f810c54c846e3c776e81c6f1f", // properly hashed "admin123"
       name: "Admin User",
       email: "admin@inventrack.com",
       role: "admin"
@@ -129,7 +129,7 @@ export class MemStorage implements IStorage {
     // Add a merchandiser test user
     this.createUser({
       username: "test",
-      password: "651aad8e9c3db25e49e5727df1b3686c1a21515de40a78f3aad1279086ab.92ec21e16", // hashed "test123"
+      password: "5361b60e7c505eec64531ebd5d31b0851d25cd93cda56630c5453df090469c83763e0fa913b8df9593f0c40c3308ee74c7fce97d67f5d0819a2da8368ad80b2.f9af2c7f810c54c846e3c776e81c6f1f", // properly hashed "test123"
       name: "Test Merchandiser",
       email: "test@inventrack.com",
       role: "merchandiser"

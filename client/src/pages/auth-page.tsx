@@ -41,6 +41,8 @@ type RegisterValues = z.infer<typeof registerSchema>;
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState<string>("login");
   const [location, navigate] = useLocation();
+  const [loginError, setLoginError] = useState<string | null>(null);
+  const [registerError, setRegisterError] = useState<string | null>(null);
   const { user, loginMutation, registerMutation, isLoading } = useAuth();
 
   // Redirect if user is already logged in
@@ -72,13 +74,29 @@ const AuthPage = () => {
     },
   });
 
+  // Reset errors when switching tabs
+  useEffect(() => {
+    setLoginError(null);
+    setRegisterError(null);
+  }, [activeTab]);
+
   const onLogin = (values: LoginValues) => {
-    loginMutation.mutate(values);
+    setLoginError(null);
+    loginMutation.mutate(values, {
+      onError: (error) => {
+        setLoginError(error.message || "Login failed. Please check your credentials.");
+      }
+    });
   };
 
   const onRegister = (values: RegisterValues) => {
+    setRegisterError(null);
     const { confirmPassword, ...registerData } = values;
-    registerMutation.mutate(registerData);
+    registerMutation.mutate(registerData, {
+      onError: (error) => {
+        setRegisterError(error.message || "Registration failed. Please try again.");
+      }
+    });
   };
 
   if (isLoading) {
@@ -150,6 +168,12 @@ const AuthPage = () => {
                       <LogIn className="mr-2 h-4 w-4" />
                       Login
                     </Button>
+                    
+                    {loginError && (
+                      <div className="mt-4 p-3 bg-destructive/15 border border-destructive text-destructive rounded">
+                        {loginError}
+                      </div>
+                    )}
                   </form>
                 </Form>
               </TabsContent>
@@ -238,6 +262,12 @@ const AuthPage = () => {
                       <UserPlus className="mr-2 h-4 w-4" />
                       Register
                     </Button>
+                    
+                    {registerError && (
+                      <div className="mt-4 p-3 bg-destructive/15 border border-destructive text-destructive rounded">
+                        {registerError}
+                      </div>
+                    )}
                   </form>
                 </Form>
               </TabsContent>
