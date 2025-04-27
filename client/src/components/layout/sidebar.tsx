@@ -33,31 +33,35 @@ type NavItem = {
 const navigationItems: NavItem[] = [
   // Core functionality
   {
-    href: "/",
+    href: "/dashboard",
     label: "Dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
-    section: "core"
+    section: "core",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/inventory",
     label: "Inventory",
     icon: <Package className="h-5 w-5" />,
-    section: "core"
+    section: "core",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/products",
     label: "Products",
     icon: <Tags className="h-5 w-5" />,
-    section: "core"
+    section: "core",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/stores",
     label: "Stores",
     icon: <Store className="h-5 w-5" />,
-    section: "core"
+    section: "core",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   
-  // Merchandising section
+  // Merchandising section - Available to all roles
   {
     href: "/stock-take",
     label: "Stock Take",
@@ -80,7 +84,8 @@ const navigationItems: NavItem[] = [
     href: "/flows",
     label: "Flows",
     icon: <FileText className="h-5 w-5" />,
-    section: "merchandising"
+    section: "merchandising",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
 
   // Documents & Orders
@@ -88,25 +93,29 @@ const navigationItems: NavItem[] = [
     href: "/product-sheets",
     label: "Product Sheets",
     icon: <FileText className="h-5 w-5" />,
-    section: "documents"
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/list-prices",
     label: "List Prices",
     icon: <FileSpreadsheet className="h-5 w-5" />,
-    section: "documents"
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/deals",
     label: "Deals",
     icon: <Tag className="h-5 w-5" />,
-    section: "documents"
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/orders",
     label: "Orders",
     icon: <ShoppingCart className="h-5 w-5" />,
-    section: "documents"
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]
   },
   
   // Reporting & Admin
@@ -114,13 +123,15 @@ const navigationItems: NavItem[] = [
     href: "/reports",
     label: "Reports",
     icon: <BarChart3 className="h-5 w-5" />,
-    section: "admin"
+    section: "admin",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/alerts",
     label: "Alerts",
     icon: <Bell className="h-5 w-5" />,
-    section: "admin"
+    section: "admin",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/users",
@@ -181,162 +192,187 @@ export const Sidebar = ({ className }: SidebarProps) => {
       <ScrollArea className="flex-1 py-4">
         <nav>
           {/* Core Section */}
-          <div className="mb-4">
-            <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Main
-            </h3>
-            <ul className="space-y-1 px-2">
-              {navigationItems
-                .filter(item => item.section === "core")
-                .map((item) => {
-                  // Hide items that are restricted by role
-                  if (item.roles && !item.roles.includes(userRole)) {
-                    return null;
-                  }
+          {userRole && (
+            <>
+              {/* Filter core menu items by role first to check if section should display */}
+              {navigationItems.filter(item => 
+                item.section === "core" && 
+                (!item.roles || item.roles.includes(userRole))
+              ).length > 0 && (
+                <div className="mb-4">
+                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    Main
+                  </h3>
+                  <ul className="space-y-1 px-2">
+                    {navigationItems
+                      .filter(item => item.section === "core")
+                      .map((item) => {
+                        // Hide items that are restricted by role
+                        if (item.roles && !item.roles.includes(userRole)) {
+                          return null;
+                        }
 
-                  const isActive = location === item.href;
+                        const isActive = location === item.href;
 
-                  return (
-                    <li key={item.href}>
-                      <Link href={item.href}>
-                        <a
-                          className={cn(
-                            "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive
-                              ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                              : "text-foreground hover:bg-neutral-100"
-                          )}
-                        >
-                          {item.icon}
-                          <span className="ml-3">{item.label}</span>
-                          {item.label === "Alerts" && (
-                            <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
-                              5
-                            </span>
-                          )}
-                        </a>
-                      </Link>
-                    </li>
-                  );
-                })}
-            </ul>
-          </div>
+                        return (
+                          <li key={item.href}>
+                            <Link href={item.href}>
+                              <a
+                                className={cn(
+                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                  isActive
+                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                    : "text-foreground hover:bg-neutral-100"
+                                )}
+                              >
+                                {item.icon}
+                                <span className="ml-3">{item.label}</span>
+                                {item.label === "Alerts" && (
+                                  <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                                    5
+                                  </span>
+                                )}
+                              </a>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              )}
 
-          {/* Merchandising Section */}
-          <div className="mb-4">
-            <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Merchandising
-            </h3>
-            <ul className="space-y-1 px-2">
-              {navigationItems
-                .filter(item => item.section === "merchandising")
-                .map((item) => {
-                  // Hide items that are restricted by role
-                  if (item.roles && !item.roles.includes(userRole)) {
-                    return null;
-                  }
+              {/* Merchandising Section */}
+              {navigationItems.filter(item => 
+                item.section === "merchandising" && 
+                (!item.roles || item.roles.includes(userRole))
+              ).length > 0 && (
+                <div className="mb-4">
+                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    Merchandising
+                  </h3>
+                  <ul className="space-y-1 px-2">
+                    {navigationItems
+                      .filter(item => item.section === "merchandising")
+                      .map((item) => {
+                        // Hide items that are restricted by role
+                        if (item.roles && !item.roles.includes(userRole)) {
+                          return null;
+                        }
 
-                  const isActive = location === item.href;
+                        const isActive = location === item.href;
 
-                  return (
-                    <li key={item.href}>
-                      <Link href={item.href}>
-                        <a
-                          className={cn(
-                            "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive
-                              ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                              : "text-foreground hover:bg-neutral-100"
-                          )}
-                        >
-                          {item.icon}
-                          <span className="ml-3">{item.label}</span>
-                        </a>
-                      </Link>
-                    </li>
-                  );
-                })}
-            </ul>
-          </div>
+                        return (
+                          <li key={item.href}>
+                            <Link href={item.href}>
+                              <a
+                                className={cn(
+                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                  isActive
+                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                    : "text-foreground hover:bg-neutral-100"
+                                )}
+                              >
+                                {item.icon}
+                                <span className="ml-3">{item.label}</span>
+                              </a>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              )}
 
-          {/* Documents Section */}
-          <div className="mb-4">
-            <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Documents
-            </h3>
-            <ul className="space-y-1 px-2">
-              {navigationItems
-                .filter(item => item.section === "documents")
-                .map((item) => {
-                  // Hide items that are restricted by role
-                  if (item.roles && !item.roles.includes(userRole)) {
-                    return null;
-                  }
+              {/* Documents Section */}
+              {navigationItems.filter(item => 
+                item.section === "documents" && 
+                (!item.roles || item.roles.includes(userRole))
+              ).length > 0 && (
+                <div className="mb-4">
+                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    Documents
+                  </h3>
+                  <ul className="space-y-1 px-2">
+                    {navigationItems
+                      .filter(item => item.section === "documents")
+                      .map((item) => {
+                        // Hide items that are restricted by role
+                        if (item.roles && !item.roles.includes(userRole)) {
+                          return null;
+                        }
 
-                  const isActive = location === item.href;
+                        const isActive = location === item.href;
 
-                  return (
-                    <li key={item.href}>
-                      <Link href={item.href}>
-                        <a
-                          className={cn(
-                            "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive
-                              ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                              : "text-foreground hover:bg-neutral-100"
-                          )}
-                        >
-                          {item.icon}
-                          <span className="ml-3">{item.label}</span>
-                        </a>
-                      </Link>
-                    </li>
-                  );
-                })}
-            </ul>
-          </div>
+                        return (
+                          <li key={item.href}>
+                            <Link href={item.href}>
+                              <a
+                                className={cn(
+                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                  isActive
+                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                    : "text-foreground hover:bg-neutral-100"
+                                )}
+                              >
+                                {item.icon}
+                                <span className="ml-3">{item.label}</span>
+                              </a>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              )}
 
-          {/* Admin Section */}
-          <div>
-            <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-              Administration
-            </h3>
-            <ul className="space-y-1 px-2">
-              {navigationItems
-                .filter(item => item.section === "admin")
-                .map((item) => {
-                  // Hide items that are restricted by role
-                  if (item.roles && !item.roles.includes(userRole)) {
-                    return null;
-                  }
+              {/* Admin Section */}
+              {navigationItems.filter(item => 
+                item.section === "admin" && 
+                (!item.roles || item.roles.includes(userRole))
+              ).length > 0 && (
+                <div>
+                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                    Administration
+                  </h3>
+                  <ul className="space-y-1 px-2">
+                    {navigationItems
+                      .filter(item => item.section === "admin")
+                      .map((item) => {
+                        // Hide items that are restricted by role
+                        if (item.roles && !item.roles.includes(userRole)) {
+                          return null;
+                        }
 
-                  const isActive = location === item.href;
+                        const isActive = location === item.href;
 
-                  return (
-                    <li key={item.href}>
-                      <Link href={item.href}>
-                        <a
-                          className={cn(
-                            "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                            isActive
-                              ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                              : "text-foreground hover:bg-neutral-100"
-                          )}
-                        >
-                          {item.icon}
-                          <span className="ml-3">{item.label}</span>
-                          {item.label === "Alerts" && (
-                            <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
-                              5
-                            </span>
-                          )}
-                        </a>
-                      </Link>
-                    </li>
-                  );
-                })}
-            </ul>
-          </div>
+                        return (
+                          <li key={item.href}>
+                            <Link href={item.href}>
+                              <a
+                                className={cn(
+                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                  isActive
+                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                    : "text-foreground hover:bg-neutral-100"
+                                )}
+                              >
+                                {item.icon}
+                                <span className="ml-3">{item.label}</span>
+                                {item.label === "Alerts" && (
+                                  <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                                    5
+                                  </span>
+                                )}
+                              </a>
+                            </Link>
+                          </li>
+                        );
+                      })}
+                  </ul>
+                </div>
+              )}
+            </>
+          )}
         </nav>
       </ScrollArea>
 
