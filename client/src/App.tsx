@@ -19,6 +19,16 @@ import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
 
+// New pages
+import StockTake from "@/pages/stock-take";
+import Merchandising from "@/pages/merchandising";
+import CompetitorMerchandising from "@/pages/competitor-merchandising";
+import Flows from "@/pages/flows";
+import ProductSheets from "@/pages/product-sheets";
+import ListPrices from "@/pages/list-prices";
+import Deals from "@/pages/deals";
+import Orders from "@/pages/orders";
+
 function Router() {
   return (
     <Switch>
@@ -79,6 +89,56 @@ function Router() {
         )}
         roles={[UserRole.ADMIN]}
       />
+      
+      {/* Stock Take & Merchandising Routes */}
+      <ProtectedRoute path="/stock-take" component={() => (
+        <Layout>
+          <StockTake />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/merchandising" component={() => (
+        <Layout>
+          <Merchandising />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/competitor-merchandising" component={() => (
+        <Layout>
+          <CompetitorMerchandising />
+        </Layout>
+      )} />
+      
+      {/* Flow & Document Routes */}
+      <ProtectedRoute path="/flows" component={() => (
+        <Layout>
+          <Flows />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/product-sheets" component={() => (
+        <Layout>
+          <ProductSheets />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/list-prices" component={() => (
+        <Layout>
+          <ListPrices />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/deals" component={() => (
+        <Layout>
+          <Deals />
+        </Layout>
+      )} />
+      
+      <ProtectedRoute path="/orders" component={() => (
+        <Layout>
+          <Orders />
+        </Layout>
+      )} />
       
       <Route component={NotFound} />
     </Switch>
