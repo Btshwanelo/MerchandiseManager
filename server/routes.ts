@@ -221,6 +221,86 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Quick add inventory route - allows adding inventory and creates a shelf if needed
+  app.post("/api/inventory/quick-add", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const schema = z.object({
+        productId: z.number(),
+        storeId: z.number(),
+        section: z.string().optional(),
+        shelfName: z.string().optional(),
+        quantity: z.number().positive(),
+        notes: z.string().optional(),
+      });
+      
+      const { productId, storeId, section, shelfName, quantity, notes } = schema.parse(req.body);
+      
+      // Find an existing shelf or create a new one
+      let shelf = null;
+      
+      if (shelfName) {
+        // Try to find a shelf with the given name in the store
+        const shelves = await storage.getShelfByStoreId(storeId);
+        shelf = shelves.find(s => s.name === shelfName);
+      }
+      
+      // If no shelf was found or specified, try to find a shelf in the specified section
+      if (!shelf && section) {
+        const shelves = await storage.getShelfByStoreId(storeId);
+        shelf = shelves.find(s => s.section === section);
+      }
+      
+      // If we still don't have a shelf, create one
+      if (!shelf) {
+        shelf = await storage.createShelf({
+          name: shelfName || `Shelf ${Date.now().toString().slice(-4)}`,
+          section: section || "General",
+          storeId: storeId
+        });
+      }
+      
+      // Now add the inventory
+      const updatedInventory = await storage.adjustInventory(
+        productId,
+        shelf.id,
+        quantity,
+        req.user!.id
+      );
+      
+      // Create an activity record with notes if provided
+      if (notes) {
+        await storage.createActivity({
+          actionType: 'add',
+          productId,
+          shelfId: shelf.id,
+          storeId,
+          userId: req.user!.id,
+          quantity,
+          status: 'completed',
+          notes
+        });
+      }
+      
+      res.json({
+        inventory: updatedInventory,
+        shelf,
+        message: "Inventory successfully added"
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid inventory data", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to add inventory" });
+    }
+  });
+  
   // Activity routes
   app.get("/api/activities/recent", async (req, res) => {
     try {
