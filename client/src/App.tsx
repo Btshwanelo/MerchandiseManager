@@ -1,10 +1,10 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/not-found";
-import { AuthProvider } from "@/hooks/use-auth";
+import { AuthProvider, useAuth } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
 import Dashboard from "@/pages/dashboard";
 import Inventory from "@/pages/inventory";
@@ -18,6 +18,7 @@ import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
+import { useEffect } from "react";
 
 // New pages
 import StockTake from "@/pages/stock-take";
@@ -29,46 +30,92 @@ import ListPrices from "@/pages/list-prices";
 import Deals from "@/pages/deals";
 import Orders from "@/pages/orders";
 
+// Redirector component for different user roles
+function RoleBasedRedirect() {
+  const [, navigate] = useLocation();
+  const { user } = useAuth();
+  
+  useEffect(() => {
+    if (user) {
+      if (user.role === UserRole.MERCHANDISER) {
+        // Merchandisers go directly to stock take page
+        navigate("/stock-take");
+      } else {
+        // Admins and Managers go to dashboard
+        navigate("/dashboard");
+      }
+    }
+  }, [user, navigate]);
+  
+  return <div className="flex items-center justify-center min-h-screen">Redirecting...</div>;
+}
+
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
       
-      <ProtectedRoute path="/" component={() => (
-        <Layout>
-          <Dashboard />
-        </Layout>
-      )} />
+      <ProtectedRoute path="/" component={RoleBasedRedirect} />
       
-      <ProtectedRoute path="/inventory" component={() => (
-        <Layout>
-          <Inventory />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/dashboard" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Dashboard />
+          </Layout>
+        )}
+      />
       
-      <ProtectedRoute path="/products" component={() => (
-        <Layout>
-          <Products />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/inventory" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Inventory />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/stores" component={() => (
-        <Layout>
-          <Stores />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/products" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Products />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/reports" component={() => (
-        <Layout>
-          <Reports />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/stores" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Stores />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/alerts" component={() => (
-        <Layout>
-          <Alerts />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/reports" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Reports />
+          </Layout>
+        )} 
+      />
+      
+      <ProtectedRoute 
+        path="/alerts" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Alerts />
+          </Layout>
+        )} 
+      />
       
       <ProtectedRoute 
         path="/users" 
@@ -109,36 +156,56 @@ function Router() {
         </Layout>
       )} />
       
-      {/* Flow & Document Routes */}
-      <ProtectedRoute path="/flows" component={() => (
-        <Layout>
-          <Flows />
-        </Layout>
-      )} />
+      {/* Flow & Document Routes - Admin/Manager Only */}
+      <ProtectedRoute 
+        path="/flows" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Flows />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/product-sheets" component={() => (
-        <Layout>
-          <ProductSheets />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/product-sheets" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <ProductSheets />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/list-prices" component={() => (
-        <Layout>
-          <ListPrices />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/list-prices" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <ListPrices />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/deals" component={() => (
-        <Layout>
-          <Deals />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/deals" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Deals />
+          </Layout>
+        )} 
+      />
       
-      <ProtectedRoute path="/orders" component={() => (
-        <Layout>
-          <Orders />
-        </Layout>
-      )} />
+      <ProtectedRoute 
+        path="/orders" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]}
+        component={() => (
+          <Layout>
+            <Orders />
+          </Layout>
+        )} 
+      />
       
       <Route component={NotFound} />
     </Switch>
