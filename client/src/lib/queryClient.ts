@@ -11,11 +11,45 @@ export async function apiRequest(
   method: string,
   url: string,
   data?: unknown | undefined,
+  options?: {
+    headers?: Record<string, string>;
+  }
 ): Promise<Response> {
+  // Set up headers
+  const headers: Record<string, string> = {};
+  
+  // Set default Content-Type if data exists and no Content-Type is provided
+  if (data && !options?.headers?.["Content-Type"]) {
+    headers["Content-Type"] = "application/json";
+  }
+  
+  // Merge with custom headers if provided
+  if (options?.headers) {
+    Object.assign(headers, options.headers);
+  }
+  
+  // Prepare the body based on Content-Type
+  let body: string | FormData | undefined = undefined;
+  
+  if (data) {
+    if (headers["Content-Type"]?.includes("multipart/form-data")) {
+      // For multipart/form-data, use FormData directly
+      body = data as FormData;
+      // Remove Content-Type to let browser set it with boundary
+      delete headers["Content-Type"];
+    } else if (headers["Content-Type"]?.includes("application/json")) {
+      // For JSON, stringify the data
+      body = JSON.stringify(data);
+    } else if (data) {
+      // For other types with data, use it as is
+      body = data as any;
+    }
+  }
+  
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
+    headers,
+    body,
     credentials: "include",
   });
 
