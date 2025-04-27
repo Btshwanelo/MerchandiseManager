@@ -120,10 +120,92 @@ export class MemStorage implements IStorage {
     // Initialize with sample admin user
     this.createUser({
       username: "admin",
-      password: "$2b$10$dXpb1VUgSVtNq5zWQFHkqOUBi6GcVHwZzThjT4q0KkIuL4kD1JA12", // hashed "admin123"
+      password: "651aad8e9c3db25e49e5727df1b3686c1a21515de40a78f3aad1279086ab.92ec21e16", // hashed "admin123"
       name: "Admin User",
       email: "admin@inventrack.com",
       role: "admin"
+    });
+    
+    // Add a merchandiser test user
+    this.createUser({
+      username: "test",
+      password: "651aad8e9c3db25e49e5727df1b3686c1a21515de40a78f3aad1279086ab.92ec21e16", // hashed "test123"
+      name: "Test Merchandiser",
+      email: "test@inventrack.com",
+      role: "merchandiser"
+    });
+    
+    // Add sample store
+    this.createStore({
+      name: "Downtown Supermarket",
+      location: "123 Main Street, Downtown",
+      managerId: 1
+    });
+    
+    // Add sample products
+    this.createProduct({
+      name: "Premium Cereal",
+      sku: "CEREAL001",
+      description: "Premium breakfast cereal with added vitamins",
+      category: "Breakfast",
+      price: 499,
+      minStockLevel: 10
+    });
+    
+    this.createProduct({
+      name: "Organic Pasta",
+      sku: "PASTA002",
+      description: "Organic whole wheat pasta",
+      category: "Pasta & Rice",
+      price: 349,
+      minStockLevel: 15
+    });
+    
+    this.createProduct({
+      name: "Energy Drink",
+      sku: "DRINK003",
+      description: "High-energy sports drink",
+      category: "Beverages",
+      price: 259,
+      minStockLevel: 20
+    });
+    
+    // Add shelves
+    this.createShelf({
+      name: "Shelf A1",
+      section: "Breakfast Foods",
+      storeId: 1
+    });
+    
+    this.createShelf({
+      name: "Shelf B2",
+      section: "Pasta & Rice",
+      storeId: 1
+    });
+    
+    this.createShelf({
+      name: "Shelf C3",
+      section: "Beverages",
+      storeId: 1
+    });
+    
+    // Add inventory
+    this.createInventory({
+      productId: 1,
+      shelfId: 1,
+      quantity: 12
+    });
+    
+    this.createInventory({
+      productId: 2,
+      shelfId: 2,
+      quantity: 18
+    });
+    
+    this.createInventory({
+      productId: 3,
+      shelfId: 3,
+      quantity: 8
     });
   }
 

@@ -1,0 +1,113 @@
+# Product Requirements Document (PRD) for The Merchant
+
+## PRD Title: PRD for Merchant
+**Author:** Mlu Manda  
+**Team:** Figma, Replit, Bolt.new  
+**PM Epic:** [Insert link to Project Management tool epic (on JIRA or similar tool)]  
+**Status of PRD:** Backlog  
+
+---
+
+## One Pager
+
+### Overview
+The Merchant is an inventory management tool designed for third-party merchandisers working on behalf of FMCG brands. This tool streamlines stocktaking processes, manages merchandising promotions, and documents competitor activities, enabling real-time data collection and analysis to optimize inventory management.
+
+### Problem
+Current inventory management processes for FMCG brands lack efficiency and real-time data capture. Merchandisers face challenges in accurately tracking stock levels, documenting promotions, and providing insights on competitor activities. These inefficiencies lead to missed opportunities for sales and promotional effectiveness, ultimately affecting brand performance in retail environments.
+
+### Objectives
+-  **Objective 1:** Streamline the stocktaking process to ensure accurate inventory levels are captured.
+-  **Objective 2:** Enhance visibility of promotional activities through real-time data collection.
+-  **Objective 3:** Provide actionable insights on competitor promotions to inform strategic decisions.
+
+### Constraints
+-  **Constraint 1:** Limited integration capabilities with existing inventory systems.
+-  **Constraint 2:** Time constraints for development and deployment before peak retail seasons.
+-  **Constraint 3:** Dependence on the accuracy of data provided by merchandisers.
+
+### Persona
+-  **Key Persona:** Third-party merchandisers working for FMCG brands.
+
+---
+
+### Use Cases
+-  **Scenario 1:** A merchandiser arrives at a store to conduct a stocktake, using the app to record stock levels and take shelf images.
+-  **Scenario 2:** The merchandiser documents current promotions and competitor activities, uploading images and details through the app.
+-  **Scenario 3:** The merchandiser reviews product placement guidelines and promotional deals within the app to optimize shelf presentation.
+
+---
+
+## PRD
+
+### Features In
+1. **Stock Take/Availability**
+   - Pre-upload product information for easy selection.
+   - Summary of stock availability with commentary textbox.
+   - Ability to take up to 5 shelf pictures per store.
+
+2. **Merchandising/Promotions**
+   - Drop-down for product options and a box to insert price.
+   - Upload feature for current promotional images.
+
+3. **Competitor Merchandising/Promotions**
+   - Textboxes for brand and product description, promotional price.
+   - Upload feature for competitor promotional images.
+
+4. **Flows Tab**
+   - Standard picture of product shelf order provided in PowerPoint format.
+
+5. **Product Sheet Tab**
+   - PDF showcasing available products.
+
+6. **List Price Tab**
+   - Upload feature for list prices in PDF or Excel format.
+
+7. **Deals Tab**
+   - Upload feature for promotional deals and discounts in Excel format.
+
+8. **Orders Tab**
+   - Capture images of orders placed by merchandisers.
+
+### Features Out
+1. **Real-time inventory updates** - Due to integration limitations with existing systems.
+2. **Automated competitor analysis** - Complexity in developing AI-driven insights.
+3. **Multi-store management** - Focus on individual store stocktaking for initial rollout.
+
+### Design - (optional)
+-  Early sketches of the user interface and user journey will be included as the project progresses.
+
+### Technical Considerations - (optional)
+-  Link to the engineering technical approach document will be provided upon completion.
+
+### Success Metrics
+-  Increase in stocktake accuracy by 30%.
+-  Reduction in time spent on stocktaking by 25%.
+-  Enhanced reporting on promotional effectiveness with a target of 20% increase in sales during promotional periods.
+
+**Note:** Link to Analytics requirements and approach document will be included.
+
+### GTM Approach
+-  The marketing department will emphasize the tool's efficiency and real-time data capabilities. A comprehensive launch plan will be developed in collaboration with marketing and sales teams.
+
+**Note:** Link to a larger GTM brief will be provided.
+
+### Open Issues
+-  Determining the best approach for integrating with existing inventory systems.
+-  Addressing potential training needs for merchandisers to effectively use the tool.
+
+### Q&A
+-  **Q:** How will the app handle data security?
+  - **A:** Data will be encrypted, and access will be restricted based on user roles.
+
+-  **Q:** What happens if a merchandiser cannot upload images?
+  - **A:** The app will allow for manual entry of information as a backup.
+
+---
+
+### Feature Timeline and Phasing
+-  **Phase 1:** Development of core stocktaking functionalities.
+-  **Phase 2:** Integration of promotional and competitor analysis features.
+-  **Phase 3:** User testing and feedback implementation.
+-  **Phase 4:** Official launch and ongoing support.
+
