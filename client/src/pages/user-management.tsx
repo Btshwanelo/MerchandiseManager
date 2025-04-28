@@ -20,7 +20,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Search, UserCog } from "lucide-react";
+import { Loader2, Plus, Search, UserCog, Eye, UserPlus, FileUp } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -43,6 +43,14 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { UserRole, User, insertUserSchema } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from "wouter";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator
+} from "@/components/ui/dropdown-menu";
 
 const UserManagementPage = () => {
   const { toast } = useToast();
@@ -150,9 +158,16 @@ const UserManagementPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">User Management</h1>
-        <Button onClick={handleAddNewUser}>
-          <Plus className="h-4 w-4 mr-2" /> Add User
-        </Button>
+        <div className="flex gap-3">
+          <Link href="/user-import">
+            <Button variant="outline">
+              <FileUp className="h-4 w-4 mr-2" /> Bulk Import
+            </Button>
+          </Link>
+          <Button onClick={handleAddNewUser}>
+            <Plus className="h-4 w-4 mr-2" /> Add User
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -224,10 +239,33 @@ const UserManagementPage = () => {
                       <TableCell>{getRoleBadge(user.role)}</TableCell>
                       <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
                       <TableCell className="text-right">
-                        <Button variant="ghost" size="icon">
-                          <UserCog className="h-4 w-4" />
-                          <span className="sr-only">Manage user</span>
-                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <Button variant="ghost" size="icon">
+                              <UserCog className="h-4 w-4" />
+                              <span className="sr-only">Manage user</span>
+                            </Button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end">
+                            <Link href={`/user-detail/${user.id}`}>
+                              <DropdownMenuItem>
+                                <Eye className="h-4 w-4 mr-2" />
+                                View Details
+                              </DropdownMenuItem>
+                            </Link>
+                            {currentUser?.role === UserRole.ADMIN && (
+                              <>
+                                <DropdownMenuSeparator />
+                                <Link href={`/users`}>
+                                  <DropdownMenuItem>
+                                    <UserPlus className="h-4 w-4 mr-2" />
+                                    Masquerade as User
+                                  </DropdownMenuItem>
+                                </Link>
+                              </>
+                            )}
+                          </DropdownMenuContent>
+                        </DropdownMenu>
                       </TableCell>
                     </TableRow>
                   ))}
