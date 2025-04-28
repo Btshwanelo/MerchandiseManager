@@ -26,6 +26,7 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
+import { DataLoadError } from "@/components/ui/error-state";
 import { 
   Dialog, 
   DialogContent, 
@@ -88,14 +89,14 @@ const StoresPage = () => {
   });
 
   // Fetch stores
-  const { data: stores, isLoading: isLoadingStores } = useQuery<Store[]>({
+  const { data: stores, isLoading: isLoadingStores, error: storesError, refetch: refetchStores } = useQuery<Store[]>({
     queryKey: ["/api/stores"],
   });
 
   // Fetch managers (users with manager role)
-  const { data: managers, isLoading: isLoadingManagers } = useQuery<UserType[]>({
+  const { data: managers, isLoading: isLoadingManagers, error: managersError, refetch: refetchManagers } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
-    select: (users) => users.filter(user => user.role === UserRole.MANAGER)
+    select: (users) => users?.filter(user => user.role === UserRole.MANAGER) || []
   });
 
   // Mutation for creating a store
@@ -354,11 +355,13 @@ const StoresPage = () => {
                                   Loading managers...
                                 </div>
                               ) : (
-                                managers?.map((manager) => (
-                                  <SelectItem key={manager.id} value={manager.username}>
+                                managers && managers.length > 0 ? 
+                                managers.map((manager) => (
+                                  <SelectItem key={manager.id} value={manager.username || ""}>
                                     {manager.name} ({manager.username})
                                   </SelectItem>
-                                ))
+                                )) : 
+                                <SelectItem value="no-managers">No managers available</SelectItem>
                               )}
                             </SelectContent>
                           </Select>
