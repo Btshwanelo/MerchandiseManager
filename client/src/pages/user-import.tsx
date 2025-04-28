@@ -255,7 +255,7 @@ const UserImportPage = () => {
               <CardTitle>Upload CSV File</CardTitle>
               <CardDescription>
                 Upload a CSV file containing user data. The file should include the following columns: 
-                username, name, email, role, password, and optionally phoneNumber.
+                username, name, email, role, and password.
               </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
@@ -492,9 +492,10 @@ const UserImportPage = () => {
               </div>
 
               <div className="space-y-2">
-                <h3 className="text-sm font-medium">Optional Fields</h3>
+                <h3 className="text-sm font-medium">Format Notes</h3>
                 <ul className="text-sm text-muted-foreground space-y-1 list-disc pl-4">
-                  <li><strong>phoneNumber</strong>: User's contact number</li>
+                  <li>Ensure each value is properly formatted and quoted if it contains commas</li>
+                  <li>The first row should contain column headers exactly as listed above</li>
                 </ul>
               </div>
 

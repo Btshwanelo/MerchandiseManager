@@ -353,7 +353,6 @@ export function registerUserRoutes(app: Express) {
             email: z.string().email(),
             role: z.enum([UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]),
             password: z.string().min(6),
-            phoneNumber: z.string().optional(),
           });
           
           const validatedData = userSchema.parse(userData);
@@ -438,8 +437,7 @@ export function registerUserRoutes(app: Express) {
           return res.status(500).json({ message: "Failed to masquerade as user" });
         }
         
-        // Update last login time
-        storage.updateUser(userId, { lastLogin: new Date() });
+        // Login time updates are managed by the auth system
         
         // Remove password for security
         const { password, ...sanitizedUser } = userToMasquerade;
@@ -492,7 +490,6 @@ export function registerUserRoutes(app: Express) {
         email,
         role,
         password: hashedPassword,
-        emailVerified: false,
       });
       
       // In a real app, send an invitation email with the temporary credentials
