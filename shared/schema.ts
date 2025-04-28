@@ -152,11 +152,18 @@ export const insertStockTakeSchema = createInsertSchema(stockTakes).omit({
 });
 
 // Stock take items table
+// Enum for stock location
+export enum StockLocation {
+  SHELF = "shelf",
+  BACK_STORE = "back_store"
+}
+
 export const stockTakeItems = pgTable("stock_take_items", {
   id: serial("id").primaryKey(),
   stockTakeId: integer("stock_take_id").references(() => stockTakes.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
   quantity: integer("quantity").notNull().default(0),
+  location: text("location", { enum: Object.values(StockLocation) }).notNull().default(StockLocation.SHELF),
 });
 
 export const insertStockTakeItemSchema = createInsertSchema(stockTakeItems).omit({
