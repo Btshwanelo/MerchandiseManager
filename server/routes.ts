@@ -440,15 +440,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
-        return res.status(401).json({ message: "Unauthorized" });
+        return res.status(401).json({ message: "Unauthorized - Please log in" });
       }
       
-      // Log the received data for debugging
+      // More detailed logging for debugging
       console.log("Stock take submission received:", {
         body: req.body,
-        hasStoreId: !!req.body.storeId,
-        hasItems: !!req.body.items,
-        auth: req.isAuthenticated()
+        files: req.files ? (req.files as Express.Multer.File[]).map(f => f.originalname) : [],
+        user: req.user ? req.user.username : 'none',
+        auth: req.isAuthenticated(),
+        contentType: req.headers['content-type']
       });
       
       // Parse items from the form data
@@ -456,17 +457,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const comment = req.body.comment || '';
       const itemsJson = req.body.items;
       
-      if (!storeId || !itemsJson) {
-        console.log("Missing data:", { storeId, hasItemsJson: !!itemsJson });
-        return res.status(400).json({ message: "Missing required data" });
+      // Detailed validation logging
+      console.log("Validating required fields:", { 
+        storeId, 
+        validStoreId: !isNaN(storeId),
+        hasItemsJson: !!itemsJson,
+        itemsJsonType: typeof itemsJson
+      });
+      
+      if (!storeId || isNaN(storeId)) {
+        return res.status(400).json({ message: "Missing or invalid store ID" });
+      }
+      
+      if (!itemsJson) {
+        return res.status(400).json({ message: "Missing items data" });
       }
       
       // Parse the items array
       let items;
       try {
+        console.log("Parsing items JSON:", { itemsJson: itemsJson.substring(0, 100) + (itemsJson.length > 100 ? '...' : '') });
         items = JSON.parse(itemsJson);
+        console.log("Successfully parsed items:", { itemsCount: items.length, firstItem: items[0] });
       } catch (e) {
-        return res.status(400).json({ message: "Invalid items data format" });
+        console.error("Error parsing items JSON:", e);
+        return res.status(400).json({ message: "Invalid items data format: " + (e instanceof Error ? e.message : String(e)) });
       }
       
       // Validate the items array

@@ -190,14 +190,32 @@ const StockTakePage = () => {
   const createStockTakeMutation = useMutation({
     mutationFn: async (formData: FormData) => {
       try {
-        const res = await apiRequest("POST", "/api/stock-takes", formData, {
-          // Don't set Content-Type header manually - browser will set it with boundary
-          // for multipart/form-data
+        // Debug log what's in the FormData
+        console.log("Stock take submission - FormData contents:", {
+          storeId: formData.get('storeId'),
+          hasItems: !!formData.get('items'),
+          itemsLength: formData.get('items') ? JSON.parse(formData.get('items') as string).length : 0,
+          filesCount: Array.from(formData.getAll('pictures')).length
+        });
+        
+        // Use fetch directly instead of apiRequest to have more control
+        const res = await fetch("/api/stock-takes", {
+          method: "POST",
+          body: formData,
+          credentials: "include"
         });
         
         if (!res.ok) {
-          const errorData = await res.json().catch(() => ({ message: "Server error" }));
-          throw new Error(errorData.message || "Failed to submit stock take");
+          let errorMessage = "Failed to submit stock take";
+          try {
+            const errorData = await res.json();
+            errorMessage = errorData.message || errorMessage;
+          } catch (e) {
+            // If response is not JSON, try to get text
+            const errorText = await res.text().catch(() => "");
+            if (errorText) errorMessage = errorText;
+          }
+          throw new Error(errorMessage);
         }
         
         return await res.json();
