@@ -8,7 +8,7 @@ import {
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { db } from "./db";
-import { eq, and, desc, lte, count, sum } from "drizzle-orm";
+import { eq, and, desc, lte, count, sum, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -704,7 +704,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteStore(id: number): Promise<boolean> {
     const result = await db.delete(stores).where(eq(stores.id, id));
-    return result.rowCount > 0;
+    return !!result;
   }
 
   // Product methods
@@ -742,7 +742,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteProduct(id: number): Promise<boolean> {
     const result = await db.delete(products).where(eq(products.id, id));
-    return result.rowCount > 0;
+    return !!result;
   }
 
   // Shelf methods
@@ -775,7 +775,7 @@ export class DatabaseStorage implements IStorage {
 
   async deleteShelf(id: number): Promise<boolean> {
     const result = await db.delete(shelves).where(eq(shelves.id, id));
-    return result.rowCount > 0;
+    return !!result;
   }
 
   // Inventory methods
@@ -1097,7 +1097,7 @@ export class DatabaseStorage implements IStorage {
       .from(inventory)
       .innerJoin(products, eq(inventory.productId, products.id));
 
-    const inventoryValue = inventoryValueResult[0]?.value || 0;
+    const inventoryValue = Number(inventoryValueResult[0]?.value || 0);
 
     return {
       totalProducts,
