@@ -33,7 +33,9 @@ import {
   ArrowUpDown, 
   Upload, 
   PackageCheck, 
-  AlertTriangle 
+  AlertTriangle,
+  ScanLine,
+  Barcode 
 } from "lucide-react";
 import { 
   Dialog, 
@@ -57,6 +59,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import BarcodeScanner from "@/components/barcode-scanner";
+import BarcodeDisplay from "@/components/barcode-display";
 
 type InventoryWithDetails = Inventory & { 
   product: Product;
@@ -85,6 +89,7 @@ const InventoryPage = () => {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addInventoryTab, setAddInventoryTab] = useState<string>("quick-add");
   const [csvData, setCsvData] = useState<InventoryCSVItem[]>([]);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
 
   // Quick add form state
   const [quickAddProduct, setQuickAddProduct] = useState<string>("");
@@ -250,6 +255,38 @@ const InventoryPage = () => {
     });
   };
 
+  // Handle barcode scan
+  const handleBarcodeScan = (barcode: string, result: any) => {
+    // Handle the barcode scan
+    setIsScannerOpen(false);
+    
+    // If the barcode is a product SKU, search for it
+    const product = products?.find(p => p.sku === barcode);
+    
+    if (product) {
+      setSearchQuery(barcode);
+      toast({
+        title: "Product found",
+        description: `Found ${product.name} with SKU ${barcode}`,
+      });
+    } else {
+      toast({
+        variant: "destructive",
+        title: "Product not found",
+        description: `No product found with barcode/SKU ${barcode}`,
+      });
+    }
+  };
+
+  // Handle barcode scan error
+  const handleBarcodeScanError = (error: string) => {
+    toast({
+      variant: "destructive",
+      title: "Scanner error",
+      description: error,
+    });
+  };
+
   // Inventory status function
   const getStockStatus = (item: InventoryWithDetails) => {
     const percentage = (item.quantity / item.product.minStockLevel) * 100;
@@ -299,6 +336,16 @@ const InventoryPage = () => {
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
+                <div className="absolute right-2 top-2">
+                  <Button 
+                    variant="ghost" 
+                    size="icon" 
+                    onClick={() => setIsScannerOpen(true)}
+                    title="Scan barcode"
+                  >
+                    <ScanLine className="h-4 w-4" />
+                  </Button>
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
