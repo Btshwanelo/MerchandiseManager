@@ -20,7 +20,7 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
-import { Loader2, Mail, Phone, Shield, UserCog, Camera } from "lucide-react";
+import { Loader2, Mail, Shield, UserCog, Camera } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
 import { useForm } from "react-hook-form";
@@ -43,7 +43,6 @@ import { useAuth } from "@/hooks/use-auth";
 const profileUpdateSchema = z.object({
   name: z.string().min(2, "Name must be at least 2 characters"),
   email: z.string().email("Invalid email format"),
-  phoneNumber: z.string().optional(),
 });
 
 // Define the password update schema
@@ -82,7 +81,6 @@ const UserProfilePage = () => {
     defaultValues: {
       name: user.name || "",
       email: user.email || "",
-      phoneNumber: user.phoneNumber || "",
     },
   });
 
@@ -213,11 +211,7 @@ const UserProfilePage = () => {
                   <span className="ml-auto font-medium">{user.email}</span>
                 </div>
                 
-                <div className="flex items-center text-sm">
-                  <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="ml-auto font-medium">{user.phoneNumber || "Not set"}</span>
-                </div>
+
                 
                 <Separator className="my-3" />
                 
@@ -280,22 +274,7 @@ const UserProfilePage = () => {
                   )}
                 />
 
-                <FormField
-                  control={profileForm.control}
-                  name="phoneNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Phone Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Enter your phone number" {...field} />
-                      </FormControl>
-                      <FormDescription>
-                        Your phone number will be used for account recovery and notifications
-                      </FormDescription>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+
 
                 <div className="flex justify-end">
                   <Button 

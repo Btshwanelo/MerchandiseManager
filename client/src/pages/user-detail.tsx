@@ -313,11 +313,7 @@ const UserDetailPage = () => {
                   <span className="ml-auto font-medium">{user.email}</span>
                 </div>
                 
-                <div className="flex items-center text-sm">
-                  <Phone className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="text-muted-foreground">Phone:</span>
-                  <span className="ml-auto font-medium">{user.phoneNumber || "Not set"}</span>
-                </div>
+
                 
                 <Separator className="my-3" />
                 
@@ -381,10 +377,7 @@ const UserDetailPage = () => {
                   <div>
                     <h3 className="font-medium mb-2">Contact &amp; Status</h3>
                     <div className="space-y-3">
-                      <div className="bg-muted/40 p-3 rounded-md flex justify-between">
-                        <span className="text-sm text-muted-foreground">Phone Number:</span>
-                        <span className="text-sm font-medium">{user.phoneNumber || "Not set"}</span>
-                      </div>
+
                       <div className="bg-muted/40 p-3 rounded-md flex justify-between">
                         <span className="text-sm text-muted-foreground">Created Date:</span>
                         <span className="text-sm font-medium">
