@@ -1,134 +1,160 @@
 /**
- * CSV Parser Utility
- * Handles parsing of CSV files for inventory and store uploads
+ * CSV parser utility for parsing CSV files with validation
  */
 
-/**
- * Parse a CSV file and return an array of objects
- * @param file The CSV file to parse
- * @param headerMapping Object mapping CSV headers to database fields
- * @returns Promise resolving to an array of parsed objects
- */
-export async function parseCSV<T>(
-  file: File, 
-  headerMapping: Record<string, string>
-): Promise<T[]> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = (event) => {
-      try {
-        if (!event.target?.result) {
-          reject(new Error("Failed to read file"));
-          return;
-        }
-        
-        const csvText = event.target.result as string;
-        const lines = csvText.split(/\r\n|\n/).filter(line => line.trim());
-        
-        if (lines.length < 2) {
-          reject(new Error("CSV file must contain headers and at least one data row"));
-          return;
-        }
-        
-        // Parse headers (first line)
-        const headers = lines[0].split(',').map(header => header.trim());
-        
-        // Map CSV headers to database fields
-        const fieldIndices: Record<string, number> = {};
-        for (const csvHeader in headerMapping) {
-          const index = headers.findIndex(h => h.toLowerCase() === csvHeader.toLowerCase());
-          if (index !== -1) {
-            fieldIndices[headerMapping[csvHeader]] = index;
-          }
-        }
-        
-        // Required fields check
-        const missingFields = Object.keys(headerMapping)
-          .filter(csvHeader => !headers.some(h => h.toLowerCase() === csvHeader.toLowerCase()));
-          
-        if (missingFields.length > 0) {
-          reject(new Error(`Missing required CSV headers: ${missingFields.join(', ')}`));
-          return;
-        }
+interface CsvParserOptions<T> {
+  delimiter?: string;
+  required?: Array<keyof T>;
+  validate?: (row: Partial<T>) => string[];
+}
 
-        // Parse data rows
-        const result: T[] = [];
-        for (let i = 1; i < lines.length; i++) {
-          // Handle commas within quoted fields
-          let currentLine = lines[i];
-          const values: string[] = [];
-          let insideQuotes = false;
-          let currentValue = '';
-          
-          for (let j = 0; j < currentLine.length; j++) {
-            const char = currentLine[j];
-            
-            if (char === '"') {
-              insideQuotes = !insideQuotes;
-            } else if (char === ',' && !insideQuotes) {
-              values.push(currentValue.trim());
-              currentValue = '';
-            } else {
-              currentValue += char;
-            }
-          }
-          
-          values.push(currentValue.trim()); // Add the last value
-          
-          // Create object using the mapped fields
-          const row: Record<string, string> = {};
-          for (const field in fieldIndices) {
-            const index = fieldIndices[field];
-            // Handle removing quotes if present
-            let value = values[index] || '';
-            if (value.startsWith('"') && value.endsWith('"')) {
-              value = value.substring(1, value.length - 1);
-            }
-            row[field] = value;
-          }
-          
-          result.push(row as unknown as T);
-        }
-        
-        resolve(result);
-      } catch (error) {
-        reject(error instanceof Error ? error : new Error('Failed to parse CSV'));
-      }
-    };
-    
-    reader.onerror = () => {
-      reject(new Error("Error reading file"));
-    };
-    
-    reader.readAsText(file);
-  });
+interface CsvParserResult<T> {
+  data: T[];
+  errors: string[];
 }
 
 /**
- * Generate a sample CSV template with headers
- * @param headers Array of header names
- * @returns CSV string with headers
+ * Generate a CSV template string based on provided headers
  */
-export function generateCSVTemplate(headers: string[]): string {
-  return headers.join(',') + '\n';
+export function generateCSVTemplate(headers: string[], sampleData: string[][] = []): string {
+  let csv = headers.join(',') + '\n';
+  
+  // Add sample data rows if provided
+  if (sampleData.length > 0) {
+    sampleData.forEach(row => {
+      csv += row.join(',') + '\n';
+    });
+  }
+  
+  return csv;
 }
 
 /**
- * Download a string as a CSV file
- * @param content The CSV content
- * @param filename The filename to use
+ * Download a CSV file with the provided content
  */
 export function downloadCSV(content: string, filename: string): void {
   const blob = new Blob([content], { type: 'text/csv;charset=utf-8;' });
-  const link = document.createElement('a');
   const url = URL.createObjectURL(blob);
-  
+  const link = document.createElement('a');
   link.setAttribute('href', url);
   link.setAttribute('download', filename);
   link.style.visibility = 'hidden';
-  
   document.body.appendChild(link);
   link.click();
   document.body.removeChild(link);
+}
+
+/**
+ * Parse CSV string into an array of objects with validation
+ */
+export async function parseCSV<T>(
+  csvContent: string,
+  options: CsvParserOptions<T> = {}
+): Promise<CsvParserResult<T>> {
+  const delimiter = options.delimiter || ',';
+  const required = options.required || [];
+  const validate = options.validate;
+  
+  const errors: string[] = [];
+  const data: T[] = [];
+  
+  // Split content into lines
+  const lines = csvContent.split(/\r?\n/).filter(line => line.trim() !== '');
+  
+  if (lines.length < 2) {
+    errors.push('CSV file must contain at least a header row and one data row');
+    return { data, errors };
+  }
+  
+  // Parse header row
+  const headers = lines[0].split(delimiter).map(header => header.trim());
+  
+  // Validate that required columns exist
+  for (const requiredField of required) {
+    if (!headers.includes(requiredField as string)) {
+      errors.push(`Required column "${String(requiredField)}" is missing from CSV headers`);
+    }
+  }
+  
+  if (errors.length > 0) {
+    return { data, errors };
+  }
+  
+  // Process data rows
+  for (let i = 1; i < lines.length; i++) {
+    const line = lines[i].trim();
+    if (!line) continue;
+    
+    const rowData = parseRow(line, delimiter);
+    const rowObject: Record<string, any> = {};
+    
+    // Map column values to object properties
+    headers.forEach((header, index) => {
+      rowObject[header] = rowData[index] || '';
+    });
+    
+    // Check required fields
+    const rowErrors: string[] = [];
+    
+    for (const requiredField of required) {
+      if (!rowObject[requiredField as string]) {
+        rowErrors.push(`Row ${i}: Missing required field "${String(requiredField)}"`);
+      }
+    }
+    
+    // Run custom validation if provided
+    if (validate) {
+      const validationErrors = validate(rowObject as Partial<T>);
+      if (validationErrors.length > 0) {
+        validationErrors.forEach(error => {
+          rowErrors.push(`Row ${i}: ${error}`);
+        });
+      }
+    }
+    
+    if (rowErrors.length > 0) {
+      errors.push(...rowErrors);
+    } else {
+      data.push(rowObject as T);
+    }
+  }
+  
+  return { data, errors };
+}
+
+/**
+ * Parse a single CSV row, handling quoted values and escaped quotes
+ */
+function parseRow(row: string, delimiter: string): string[] {
+  const values: string[] = [];
+  let currentValue = '';
+  let insideQuotes = false;
+  
+  for (let i = 0; i < row.length; i++) {
+    const char = row[i];
+    const nextChar = row[i + 1];
+    
+    if (char === '"') {
+      if (insideQuotes && nextChar === '"') {
+        // Escaped quote inside quotes
+        currentValue += '"';
+        i++;
+      } else {
+        // Toggle insideQuotes flag
+        insideQuotes = !insideQuotes;
+      }
+    } else if (char === delimiter && !insideQuotes) {
+      // End of value
+      values.push(currentValue.trim());
+      currentValue = '';
+    } else {
+      // Regular character
+      currentValue += char;
+    }
+  }
+  
+  // Add the last value
+  values.push(currentValue.trim());
+  
+  return values;
 }

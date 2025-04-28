@@ -21,9 +21,16 @@ export interface IStorage {
   // User methods
   getUser(id: number): Promise<User | undefined>;
   getUserByUsername(username: string): Promise<User | undefined>;
+  getUserByEmail(email: string): Promise<User | undefined>;
   createUser(user: InsertUser): Promise<User>;
   updateUser(id: number, user: Partial<InsertUser>): Promise<User | undefined>;
+  deleteUser(id: number): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
+  
+  // Password reset methods
+  createPasswordResetToken(token: { userId: number, token: string, expiresAt: Date }): Promise<any>;
+  getPasswordResetToken(token: string): Promise<{ id: number, userId: number, token: string, expiresAt: Date } | undefined>;
+  deletePasswordResetToken(id: number): Promise<boolean>;
   
   // Store methods
   getStore(id: number): Promise<Store | undefined>;
@@ -123,6 +130,7 @@ export class MemStorage implements IStorage {
     this.inventoryItems = new Map();
     this.activities = new Map();
     this.alerts = new Map();
+    this.passwordResetTokens = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -135,6 +143,7 @@ export class MemStorage implements IStorage {
     this.currentInventoryId = 1;
     this.currentActivityId = 1;
     this.currentAlertId = 1;
+    this.resetTokenIdCounter = 1;
     
     // Initialize with sample admin user
     this.createUser({
@@ -237,6 +246,10 @@ export class MemStorage implements IStorage {
     });
   }
 
+  // In-memory maps for user-related data
+  private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
+  private resetTokenIdCounter: number;
+
   // User methods
   async getUser(id: number): Promise<User | undefined> {
     return this.users.get(id);
@@ -247,10 +260,25 @@ export class MemStorage implements IStorage {
       (user) => user.username === username,
     );
   }
+  
+  async getUserByEmail(email: string): Promise<User | undefined> {
+    return Array.from(this.users.values()).find(
+      (user) => user.email === email,
+    );
+  }
 
   async createUser(insertUser: InsertUser): Promise<User> {
     const id = this.currentUserId++;
-    const user: User = { ...insertUser, id, createdAt: new Date() };
+    // Add default fields for new users
+    const user: User = { 
+      ...insertUser, 
+      id, 
+      createdAt: new Date(), 
+      emailVerified: false,
+      isActive: true,
+      lastLogin: null,
+      phoneNumber: insertUser.phoneNumber || null
+    };
     this.users.set(id, user);
     return user;
   }
@@ -264,8 +292,30 @@ export class MemStorage implements IStorage {
     return updatedUser;
   }
   
+  async deleteUser(id: number): Promise<boolean> {
+    return this.users.delete(id);
+  }
+  
   async getAllUsers(): Promise<User[]> {
     return Array.from(this.users.values());
+  }
+  
+  // Password reset methods
+  async createPasswordResetToken(tokenData: { userId: number, token: string, expiresAt: Date }): Promise<any> {
+    const id = this.resetTokenIdCounter++;
+    const token = { id, ...tokenData };
+    this.passwordResetTokens.set(id, token);
+    return token;
+  }
+  
+  async getPasswordResetToken(tokenString: string): Promise<{ id: number, userId: number, token: string, expiresAt: Date } | undefined> {
+    return Array.from(this.passwordResetTokens.values()).find(
+      (token) => token.token === tokenString,
+    );
+  }
+  
+  async deletePasswordResetToken(id: number): Promise<boolean> {
+    return this.passwordResetTokens.delete(id);
   }
   
   // Store methods
