@@ -112,7 +112,7 @@ export class MemStorage implements IStorage {
   private inventoryItems: Map<number, Inventory>;
   private activities: Map<number, Activity>;
   private alerts: Map<number, Alert>;
-  private passwordResetTokens: Map<number, any>;
+  private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -247,8 +247,7 @@ export class MemStorage implements IStorage {
     });
   }
 
-  // In-memory maps for user-related data
-  private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
+  // In-memory counter for reset tokens
   private resetTokenIdCounter: number;
 
   // User methods
@@ -274,11 +273,7 @@ export class MemStorage implements IStorage {
     const user: User = { 
       ...insertUser, 
       id, 
-      createdAt: new Date(), 
-      emailVerified: false,
-      isActive: true,
-      lastLogin: null,
-      phoneNumber: insertUser.phoneNumber || null
+      createdAt: new Date()
     };
     this.users.set(id, user);
     return user;

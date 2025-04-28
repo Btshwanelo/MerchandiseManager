@@ -17,21 +17,18 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
-  // Temporarily disable phone number field until we can determine exact column name
-  // phoneNumber: text("phonenumber"),
   role: text("role").notNull().default(UserRole.MERCHANDISER),
-  emailVerified: boolean("email_verified").default(false),
-  isActive: boolean("is_active").default(true),
-  lastLogin: timestamp("last_login"),
   createdAt: timestamp("created_at").defaultNow(),
+  // Temporarily disable additional fields until we can determine database schema
+  // phoneNumber: text("phonenumber"),
+  // emailVerified: boolean("email_verified").default(false),
+  // isActive: boolean("is_active").default(true),
+  // lastLogin: timestamp("last_login"),
 });
 
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
   createdAt: true,
-  emailVerified: true,
-  isActive: true,
-  lastLogin: true,
 });
 
 // Password reset tokens
