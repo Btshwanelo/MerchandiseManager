@@ -112,6 +112,7 @@ export class MemStorage implements IStorage {
   private inventoryItems: Map<number, Inventory>;
   private activities: Map<number, Activity>;
   private alerts: Map<number, Alert>;
+  private passwordResetTokens: Map<number, any>;
   
   sessionStore: any; // Express session store
   currentUserId: number;

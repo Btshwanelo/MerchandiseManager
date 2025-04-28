@@ -17,7 +17,8 @@ export const users = pgTable("users", {
   password: text("password").notNull(),
   name: text("name").notNull(),
   email: text("email").notNull(),
-  phoneNumber: text("phone_number"),
+  // Temporarily disable phone number field until we can determine exact column name
+  // phoneNumber: text("phonenumber"),
   role: text("role").notNull().default(UserRole.MERCHANDISER),
   emailVerified: boolean("email_verified").default(false),
   isActive: boolean("is_active").default(true),

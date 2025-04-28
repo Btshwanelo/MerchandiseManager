@@ -7,10 +7,14 @@ import { z } from "zod";
 import { insertProductSchema, insertStoreSchema, insertShelfSchema } from "@shared/schema";
 import multer from "multer";
 import path from "path";
+import { registerUserRoutes } from "./user-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
   setupAuth(app);
+  
+  // Set up user management routes
+  registerUserRoutes(app);
   
   // Dashboard routes
   app.get("/api/dashboard", async (req, res) => {
