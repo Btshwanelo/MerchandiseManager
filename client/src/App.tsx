@@ -13,6 +13,9 @@ import Stores from "@/pages/stores";
 import Reports from "@/pages/reports";
 import Alerts from "@/pages/alerts";
 import UserManagement from "@/pages/user-management";
+import UserProfile from "@/pages/user-profile";
+import UserDetail from "@/pages/user-detail";
+import UserImport from "@/pages/user-import";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
@@ -132,6 +135,36 @@ function Router() {
         component={() => (
           <Layout>
             <Settings />
+          </Layout>
+        )}
+        roles={[UserRole.ADMIN]}
+      />
+      
+      {/* User Profile & Detail Routes */}
+      <ProtectedRoute 
+        path="/user-profile" 
+        component={() => (
+          <Layout>
+            <UserProfile />
+          </Layout>
+        )}
+      />
+      
+      <ProtectedRoute 
+        path="/user-detail/:id" 
+        component={() => (
+          <Layout>
+            <UserDetail />
+          </Layout>
+        )}
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+      />
+      
+      <ProtectedRoute 
+        path="/user-import" 
+        component={() => (
+          <Layout>
+            <UserImport />
           </Layout>
         )}
         roles={[UserRole.ADMIN]}
