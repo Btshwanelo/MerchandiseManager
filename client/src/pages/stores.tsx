@@ -227,6 +227,11 @@ const StoresPage = () => {
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
+          ) : storesError ? (
+            <DataLoadError 
+              entityName="stores" 
+              retryAction={refetchStores} 
+            />
           ) : filteredStores?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mb-4 p-4 bg-muted rounded-full">
@@ -354,6 +359,15 @@ const StoresPage = () => {
                                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
                                   Loading managers...
                                 </div>
+                              ) : managersError ? (
+                                <>
+                                  <div className="flex items-center justify-center p-2 text-destructive">
+                                    <span className="text-sm">Failed to load managers</span>
+                                  </div>
+                                  <SelectItem value="error-loading" onClick={() => refetchManagers()}>
+                                    Click to retry
+                                  </SelectItem>
+                                </>
                               ) : (
                                 managers && managers.length > 0 ? 
                                 managers.map((manager) => (
