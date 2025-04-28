@@ -45,7 +45,12 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Product, Store as StoreType, StockLocation, UserRole } from "@shared/schema";
+import { Product, Store as StoreType, StockLocation, UserRole, StockTake as DbStockTake } from "@shared/schema";
+
+// Define a type for StockTake that includes properties we know will be in our response
+type StockTake = DbStockTake & {
+  pictures: string[]
+};
 import { BarcodeScanner } from "@/components/barcode-scanner";
 
 const StockTakePage = () => {
