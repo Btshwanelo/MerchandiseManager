@@ -478,6 +478,15 @@ const InventoryPage = () => {
                 <p className="text-sm text-muted-foreground">
                   Location: {selectedItem.shelf.section} - {selectedItem.shelf.name}
                 </p>
+                <div className="mt-3">
+                  <BarcodeDisplay 
+                    value={selectedItem.product.sku} 
+                    format="CODE128"
+                    text={selectedItem.product.name}
+                    displayValue={true}
+                    height={70}
+                  />
+                </div>
               </div>
               
               <div className="border rounded-md p-4">
@@ -543,28 +552,41 @@ const InventoryPage = () => {
                   <div className="grid md:grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="product">Product</Label>
-                      <Select 
-                        value={quickAddProduct} 
-                        onValueChange={setQuickAddProduct}
-                      >
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select Product" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {isLoadingProducts ? (
-                            <div className="flex items-center justify-center p-2">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Loading products...
-                            </div>
-                          ) : (
-                            products?.map((product) => (
-                              <SelectItem key={product.id} value={product.id.toString()}>
-                                {product.name} ({product.sku})
-                              </SelectItem>
-                            ))
-                          )}
-                        </SelectContent>
-                      </Select>
+                      <div className="flex gap-2">
+                        <div className="flex-1">
+                          <Select 
+                            value={quickAddProduct} 
+                            onValueChange={setQuickAddProduct}
+                          >
+                            <SelectTrigger>
+                              <SelectValue placeholder="Select Product" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              {isLoadingProducts ? (
+                                <div className="flex items-center justify-center p-2">
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Loading products...
+                                </div>
+                              ) : (
+                                products?.map((product) => (
+                                  <SelectItem key={product.id} value={product.id.toString()}>
+                                    {product.name} ({product.sku})
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <Button 
+                          type="button" 
+                          variant="outline" 
+                          size="icon"
+                          onClick={() => setIsScannerOpen(true)}
+                          title="Scan product barcode"
+                        >
+                          <ScanLine className="h-4 w-4" />
+                        </Button>
+                      </div>
                     </div>
 
                     <div>
@@ -756,6 +778,22 @@ const InventoryPage = () => {
               </div>
             </TabsContent>
           </Tabs>
+        </DialogContent>
+      </Dialog>
+      {/* Barcode Scanner Dialog */}
+      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan Barcode</DialogTitle>
+            <DialogDescription>
+              Scan a product barcode to search or add inventory
+            </DialogDescription>
+          </DialogHeader>
+          <BarcodeScanner 
+            onScanSuccess={handleBarcodeScan} 
+            onScanError={handleBarcodeScanError}
+            onClose={() => setIsScannerOpen(false)}
+          />
         </DialogContent>
       </Dialog>
     </div>
