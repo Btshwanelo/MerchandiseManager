@@ -53,7 +53,6 @@ type UserImport = {
   email: string;
   role: string;
   password: string;
-  phoneNumber?: string;
 };
 
 // Define the import result type
@@ -183,10 +182,10 @@ const UserImportPage = () => {
 
   // Get template content for download
   const getTemplateContent = () => {
-    const headers = "username,name,email,role,password,phoneNumber\n";
+    const headers = "username,name,email,role,password\n";
     const exampleRows = [
-      'john_doe,John Doe,john@example.com,merchandiser,password123,5551234567',
-      'jane_mgr,Jane Manager,jane@example.com,manager,password123,5559876543',
+      'john_doe,John Doe,john@example.com,merchandiser,password123',
+      'jane_mgr,Jane Manager,jane@example.com,manager,password123',
     ].join('\n');
     return headers + exampleRows;
   };

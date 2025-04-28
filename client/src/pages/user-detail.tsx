@@ -36,7 +36,6 @@ import { Avatar, AvatarImage, AvatarFallback } from "@/components/ui/avatar";
 import { 
   Loader2, 
   Mail, 
-  Phone, 
   Shield, 
   UserCog, 
   Camera, 
