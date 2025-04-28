@@ -31,19 +31,20 @@ import {
 import { Loader2, Plus, Upload, Store, Camera, Save, File, CheckCircle2 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Product, Store as StoreType } from "@shared/schema";
+import { Product, Store as StoreType, StockLocation } from "@shared/schema";
 
 const StockTakePage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
   const [selectedStore, setSelectedStore] = useState<string>("");
   const [comment, setComment] = useState<string>("");
-  const [stockTakeItems, setStockTakeItems] = useState<Array<{productId: number, quantity: number}>>([]);
+  const [stockTakeItems, setStockTakeItems] = useState<Array<{productId: number, quantity: number, location: StockLocation}>>([]);
   const [fileUploads, setFileUploads] = useState<File[]>([]);
   const [imagePreviewDialogOpen, setImagePreviewDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedQuantity, setSelectedQuantity] = useState<string>("0");
+  const [selectedLocation, setSelectedLocation] = useState<StockLocation>(StockLocation.SHELF);
   const [stockTakeSummary, setStockTakeSummary] = useState({
     totalProducts: 0,
     inStock: 0,
@@ -74,6 +75,7 @@ const StockTakePage = () => {
 
     const productId = parseInt(selectedProduct);
     const quantity = parseInt(selectedQuantity);
+    const location = selectedLocation;
     
     // Check if product already exists in the list
     const existingItemIndex = stockTakeItems.findIndex(item => item.productId === productId);
@@ -82,10 +84,11 @@ const StockTakePage = () => {
       // Update existing item
       const updatedItems = [...stockTakeItems];
       updatedItems[existingItemIndex].quantity = quantity;
+      updatedItems[existingItemIndex].location = location;
       setStockTakeItems(updatedItems);
     } else {
       // Add new item
-      setStockTakeItems([...stockTakeItems, { productId, quantity }]);
+      setStockTakeItems([...stockTakeItems, { productId, quantity, location }]);
     }
     
     // Reset selection
@@ -93,11 +96,11 @@ const StockTakePage = () => {
     setSelectedQuantity("0");
     
     // Update summary
-    updateSummary([...stockTakeItems, { productId, quantity }]);
+    updateSummary([...stockTakeItems, { productId, quantity, location }]);
   };
 
   // Update the summary stats
-  const updateSummary = (items: Array<{productId: number, quantity: number}>) => {
+  const updateSummary = (items: Array<{productId: number, quantity: number, location: StockLocation}>) => {
     if (!products) return;
     
     const totalProducts = items.length;
@@ -344,6 +347,21 @@ const StockTakePage = () => {
                     min="0"
                   />
                 </div>
+                <div className="w-full sm:w-40 space-y-2">
+                  <label className="text-sm font-medium">Location</label>
+                  <Select 
+                    value={selectedLocation} 
+                    onValueChange={(value) => setSelectedLocation(value as StockLocation)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
+                      <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
                 <Button onClick={handleAddItem} className="w-full sm:w-auto">
                   <Plus className="h-4 w-4 mr-2" /> Add Item
                 </Button>
@@ -393,6 +411,7 @@ const StockTakePage = () => {
                           <TableHead>SKU</TableHead>
                           <TableHead>Category</TableHead>
                           <TableHead>Quantity</TableHead>
+                          <TableHead>Location</TableHead>
                           <TableHead>Status</TableHead>
                           <TableHead className="w-10">Action</TableHead>
                         </TableRow>
