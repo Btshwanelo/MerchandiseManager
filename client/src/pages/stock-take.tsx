@@ -78,6 +78,12 @@ const StockTakePage = () => {
   const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
+  
+  // Fetch completed stock takes
+  const { data: completedStockTakes, isLoading: isLoadingStockTakes } = useQuery<StockTake[]>({
+    queryKey: ["/api/stock-takes"],
+    enabled: !!user,
+  });
 
   // Add item to stock take
   const handleAddItem = () => {
@@ -409,8 +415,8 @@ const StockTakePage = () => {
             </CardHeader>
             <CardContent className="space-y-6">
               {/* Add Product Section */}
-              <div className="flex flex-col sm:flex-row gap-2 items-end">
-                <div className="flex-1 space-y-2">
+              <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-2">
+                <div className="w-full space-y-2">
                   <div className="flex justify-between items-center">
                     <label className="text-sm font-medium">Product</label>
                     <Button 
@@ -424,7 +430,7 @@ const StockTakePage = () => {
                     </Button>
                   </div>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select a product..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -443,22 +449,25 @@ const StockTakePage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <div className="w-full sm:w-32 space-y-2">
+                
+                <div className="w-full md:w-32 space-y-2">
                   <label className="text-sm font-medium">Quantity</label>
                   <Input 
                     type="number" 
                     value={selectedQuantity}
                     onChange={(e) => setSelectedQuantity(e.target.value)}
                     min="0"
+                    className="w-full"
                   />
                 </div>
-                <div className="w-full sm:w-40 space-y-2">
+                
+                <div className="w-full md:w-40 space-y-2">
                   <label className="text-sm font-medium">Location</label>
                   <Select 
                     value={selectedLocation} 
                     onValueChange={(value) => setSelectedLocation(value as StockLocation)}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="w-full">
                       <SelectValue placeholder="Select location..." />
                     </SelectTrigger>
                     <SelectContent>
@@ -467,7 +476,8 @@ const StockTakePage = () => {
                     </SelectContent>
                   </Select>
                 </div>
-                <Button onClick={handleAddItem} className="w-full sm:w-auto">
+                
+                <Button onClick={handleAddItem} className="w-full md:w-auto">
                   <Plus className="h-4 w-4 mr-2" /> Add Item
                 </Button>
               </div>

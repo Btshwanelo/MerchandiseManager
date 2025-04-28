@@ -648,6 +648,63 @@ export class DatabaseStorage implements IStorage {
       createTableIfMissing: true 
     });
   }
+  
+  // Stock Take methods
+  async getStockTake(id: number): Promise<StockTake | undefined> {
+    const [stockTake] = await db.select().from(stockTakes).where(eq(stockTakes.id, id));
+    return stockTake;
+  }
+
+  async getAllStockTakes(): Promise<StockTake[]> {
+    return await db.select().from(stockTakes);
+  }
+
+  async getStockTakeByStoreId(storeId: number): Promise<StockTake[]> {
+    return await db.select().from(stockTakes).where(eq(stockTakes.storeId, storeId));
+  }
+
+  async getStockTakesByUserId(userId: number): Promise<StockTake[]> {
+    return await db.select().from(stockTakes).where(eq(stockTakes.userId, userId));
+  }
+
+  async getStockTakeWithItems(id: number): Promise<(StockTake & { items: (StockTakeItem & { product: Product })[] }) | undefined> {
+    const [stockTake] = await db.select().from(stockTakes).where(eq(stockTakes.id, id));
+    if (!stockTake) return undefined;
+    
+    const itemsWithProducts = await db.select({
+      item: stockTakeItems,
+      product: products
+    }).from(stockTakeItems)
+      .innerJoin(products, eq(stockTakeItems.productId, products.id))
+      .where(eq(stockTakeItems.stockTakeId, id));
+    
+    const items = itemsWithProducts.map(row => ({
+      ...row.item,
+      product: row.product
+    }));
+    
+    return { ...stockTake, items };
+  }
+
+  async createStockTake(stockTake: InsertStockTake): Promise<StockTake> {
+    const [newStockTake] = await db.insert(stockTakes).values(stockTake).returning();
+    return newStockTake;
+  }
+
+  // Stock Take Items methods
+  async getStockTakeItem(id: number): Promise<StockTakeItem | undefined> {
+    const [item] = await db.select().from(stockTakeItems).where(eq(stockTakeItems.id, id));
+    return item;
+  }
+
+  async getStockTakeItemsByStockTakeId(stockTakeId: number): Promise<StockTakeItem[]> {
+    return await db.select().from(stockTakeItems).where(eq(stockTakeItems.stockTakeId, stockTakeId));
+  }
+
+  async createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem> {
+    const [newItem] = await db.insert(stockTakeItems).values(item).returning();
+    return newItem;
+  }
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
