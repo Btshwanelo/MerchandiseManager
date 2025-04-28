@@ -28,10 +28,25 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Loader2, Plus, Upload, Store, Camera, Save, File, CheckCircle2, AlertTriangle, ShoppingCart, RefreshCw } from "lucide-react";
+import { 
+  Loader2, 
+  Plus, 
+  Upload, 
+  Store, 
+  Camera, 
+  Save, 
+  File, 
+  CheckCircle2, 
+  AlertTriangle, 
+  ShoppingCart, 
+  RefreshCw, 
+  QrCode,
+  Scan
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Product, Store as StoreType, StockLocation, UserRole } from "@shared/schema";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 
 const StockTakePage = () => {
   const { toast } = useToast();
@@ -45,6 +60,8 @@ const StockTakePage = () => {
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedQuantity, setSelectedQuantity] = useState<string>("0");
   const [selectedLocation, setSelectedLocation] = useState<StockLocation>(StockLocation.SHELF);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [scannerError, setScannerError] = useState<string | null>(null);
   const [stockTakeSummary, setStockTakeSummary] = useState({
     totalProducts: 0,
     inStock: 0,
@@ -384,7 +401,18 @@ const StockTakePage = () => {
               {/* Add Product Section */}
               <div className="flex flex-col sm:flex-row gap-2 items-end">
                 <div className="flex-1 space-y-2">
-                  <label className="text-sm font-medium">Product</label>
+                  <div className="flex justify-between items-center">
+                    <label className="text-sm font-medium">Product</label>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      onClick={() => setIsScannerOpen(true)}
+                      className="flex items-center gap-1 h-7 text-xs"
+                    >
+                      <Scan className="h-3 w-3" />
+                      Scan Barcode
+                    </Button>
+                  </div>
                   <Select value={selectedProduct} onValueChange={setSelectedProduct}>
                     <SelectTrigger>
                       <SelectValue placeholder="Select a product..." />
@@ -600,6 +628,48 @@ const StockTakePage = () => {
               <Button variant="outline">Close</Button>
             </DialogClose>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Barcode Scanner Dialog */}
+      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan Product Barcode</DialogTitle>
+          </DialogHeader>
+          <BarcodeScanner 
+            onScanSuccess={(result) => {
+              // Handle successful scan - find product by SKU
+              if (products) {
+                const product = products.find(p => p.sku === result);
+                if (product) {
+                  setSelectedProduct(product.id.toString());
+                  setIsScannerOpen(false);
+                  toast({
+                    title: "Product found",
+                    description: `Scanned: ${product.name} (${product.sku})`,
+                  });
+                } else {
+                  // Product not found
+                  setScannerError(`Product with SKU/barcode ${result} not found`);
+                  toast({
+                    title: "Product not found",
+                    description: `No product matches barcode: ${result}`,
+                    variant: "destructive",
+                  });
+                }
+              }
+            }}
+            onScanError={(error) => {
+              setScannerError(error);
+            }}
+            onClose={() => setIsScannerOpen(false)}
+          />
+          {scannerError && (
+            <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
+              {scannerError}
+            </div>
+          )}
         </DialogContent>
       </Dialog>
       

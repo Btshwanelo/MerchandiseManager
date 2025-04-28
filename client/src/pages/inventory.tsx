@@ -62,8 +62,8 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
-import BarcodeScanner from "@/components/barcode-scanner";
-import BarcodeDisplay from "@/components/barcode-display";
+import { BarcodeScanner } from "@/components/barcode-scanner";
+import { BarcodeGenerator } from "@/components/barcode-generator";
 
 type InventoryWithDetails = Inventory & { 
   product: Product;
@@ -259,7 +259,7 @@ const InventoryPage = () => {
   };
 
   // Handle barcode scan
-  const handleBarcodeScan = (barcode: string, result: any) => {
+  const handleBarcodeScan = (barcode: string) => {
     // Handle the barcode scan
     setIsScannerOpen(false);
     
@@ -492,10 +492,10 @@ const InventoryPage = () => {
                   Location: {selectedItem.shelf.section} - {selectedItem.shelf.name}
                 </p>
                 <div className="mt-3">
-                  <BarcodeDisplay 
+                  <BarcodeGenerator 
                     value={selectedItem.product.sku} 
                     format="CODE128"
-                    text={selectedItem.product.name}
+                    title={selectedItem.product.name}
                     displayValue={true}
                     height={70}
                   />
@@ -539,6 +539,23 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
 
+      {/* Barcode Scanner Dialog */}
+      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Scan Product Barcode</DialogTitle>
+            <DialogDescription>
+              Scan a product barcode to search or add inventory
+            </DialogDescription>
+          </DialogHeader>
+          <BarcodeScanner 
+            onScanSuccess={handleBarcodeScan}
+            onScanError={handleBarcodeScanError}
+            onClose={() => setIsScannerOpen(false)}
+          />
+        </DialogContent>
+      </Dialog>
+      
       {/* Add Inventory Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
         <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
@@ -791,22 +808,6 @@ const InventoryPage = () => {
               </div>
             </TabsContent>
           </Tabs>
-        </DialogContent>
-      </Dialog>
-      {/* Barcode Scanner Dialog */}
-      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Scan Barcode</DialogTitle>
-            <DialogDescription>
-              Scan a product barcode to search or add inventory
-            </DialogDescription>
-          </DialogHeader>
-          <BarcodeScanner 
-            onScanSuccess={handleBarcodeScan} 
-            onScanError={handleBarcodeScanError}
-            onClose={() => setIsScannerOpen(false)}
-          />
         </DialogContent>
       </Dialog>
     </div>
