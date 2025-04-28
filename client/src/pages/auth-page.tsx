@@ -108,15 +108,49 @@ const AuthPage = () => {
   }
 
   return (
-    <div className="flex min-h-screen bg-neutral-50">
-      {/* Left side - Form */}
-      <div className="flex flex-col justify-center items-center w-full max-w-md p-6 mx-auto">
-        <div className="flex items-center space-x-2 mb-8">
+    <div className="flex min-h-screen">
+      {/* Left side - Hero/Info (60%) */}
+      <div className="hidden md:flex md:w-[60%] bg-primary flex-col justify-center items-center p-8 text-white">
+        <div className="max-w-xl">
+          <div className="flex items-center space-x-3 mb-8">
+            <Package className="h-10 w-10 text-white" />
+            <h1 className="text-3xl font-bold">InvenTrack</h1>
+          </div>
+          
+          <h2 className="text-4xl font-bold mb-6">Inventory Management Made Simple</h2>
+          <p className="text-xl mb-6">Streamline your merchandising operations with our powerful inventory management solution.</p>
+          
+          <div className="space-y-4 mt-10">
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-full">
+                <Package className="h-5 w-5" />
+              </div>
+              <p className="text-lg">Manage products across multiple stores</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-full">
+                <UserPlus className="h-5 w-5" />
+              </div>
+              <p className="text-lg">Role-based access for your team</p>
+            </div>
+            <div className="flex items-center space-x-3">
+              <div className="bg-white/20 p-2 rounded-full">
+                <LogIn className="h-5 w-5" />
+              </div>
+              <p className="text-lg">Intuitive interface for merchandisers</p>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      {/* Right side - Form (40%) */}
+      <div className="flex flex-col justify-center items-center w-full md:w-[40%] p-6 bg-white">
+        <div className="md:hidden flex items-center space-x-2 mb-8">
           <Package className="h-8 w-8 text-primary" />
           <h1 className="text-2xl font-bold">InvenTrack</h1>
         </div>
 
-        <Card className="w-full">
+        <Card className="w-full max-w-md shadow-none border-0 md:border md:shadow-sm">
           <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
             <CardHeader>
               <TabsList className="grid grid-cols-2 w-full">
@@ -274,78 +308,6 @@ const AuthPage = () => {
             </CardContent>
           </Tabs>
         </Card>
-      </div>
-
-      {/* Right side - Hero section */}
-      <div className="hidden lg:flex flex-col justify-center bg-primary text-primary-foreground w-full p-12">
-        <div className="max-w-lg">
-          <h2 className="text-4xl font-bold mb-6">Inventory Management Simplified</h2>
-          <p className="text-xl mb-8">
-            InvenTrack helps merchandisers track and manage inventory across stores and shelves with
-            powerful tools and real-time updates.
-          </p>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-3">
-              <div className="bg-white bg-opacity-20 p-2 rounded">
-                <Package className="h-5 w-5" />
-              </div>
-              <div>
-                <h3 className="font-medium">Complete Inventory Control</h3>
-                <p className="text-primary-foreground text-opacity-80">
-                  Track products at both shelf and store level with detailed analytics.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="bg-white bg-opacity-20 p-2 rounded">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                  <circle cx="9" cy="7" r="4" />
-                  <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                  <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-medium">Role-Based Access Control</h3>
-                <p className="text-primary-foreground text-opacity-80">
-                  Customize permissions for admins, managers, and merchandisers.
-                </p>
-              </div>
-            </div>
-            <div className="flex items-start space-x-3">
-              <div className="bg-white bg-opacity-20 p-2 rounded">
-                <svg
-                  xmlns="http://www.w3.org/2000/svg"
-                  className="h-5 w-5"
-                  viewBox="0 0 24 24"
-                  fill="none"
-                  stroke="currentColor"
-                  strokeWidth="2"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                >
-                  <path d="M21.21 15.89A10 10 0 1 1 8 2.83" />
-                  <path d="M22 12A10 10 0 0 0 12 2v10z" />
-                </svg>
-              </div>
-              <div>
-                <h3 className="font-medium">Real-Time Analytics</h3>
-                <p className="text-primary-foreground text-opacity-80">
-                  Monitor inventory levels and receive low stock alerts instantly.
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

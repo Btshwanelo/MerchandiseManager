@@ -353,6 +353,194 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get low stock items" });
     }
   });
+  
+  // Bulk upload inventory via CSV
+  app.post("/api/inventory/bulk-upload", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      // Validate the request body as an array of inventory items
+      const bulkInventorySchema = z.array(
+        z.object({
+          productSku: z.string(),
+          storeName: z.string(),
+          shelfName: z.string().optional(),
+          section: z.string().optional(),
+          quantity: z.coerce.number().positive(),
+          notes: z.string().optional(),
+        })
+      );
+      
+      const items = bulkInventorySchema.parse(req.body);
+      const results = [];
+      const errors = [];
+
+      // Process each item
+      for (const item of items) {
+        try {
+          // Find or create the product
+          const product = await storage.getProductBySku(item.productSku);
+          if (!product) {
+            errors.push({ item, error: `Product with SKU ${item.productSku} not found` });
+            continue;
+          }
+          
+          // Find the store
+          const stores = await storage.getAllStores();
+          const store = stores.find(s => s.name === item.storeName);
+          if (!store) {
+            errors.push({ item, error: `Store with name ${item.storeName} not found` });
+            continue;
+          }
+
+          // Find an existing shelf or create a new one
+          let shelf = null;
+          
+          if (item.shelfName) {
+            // Try to find a shelf with the given name in the store
+            const shelves = await storage.getShelfByStoreId(store.id);
+            shelf = shelves.find(s => s.name === item.shelfName);
+          }
+          
+          // If no shelf was found or specified, try to find a shelf in the specified section
+          if (!shelf && item.section) {
+            const shelves = await storage.getShelfByStoreId(store.id);
+            shelf = shelves.find(s => s.section === item.section);
+          }
+          
+          // If we still don't have a shelf, create one
+          if (!shelf) {
+            shelf = await storage.createShelf({
+              name: item.shelfName || `Shelf ${Date.now().toString().slice(-4)}`,
+              section: item.section || "General",
+              storeId: store.id
+            });
+          }
+          
+          // Add the inventory
+          const updatedInventory = await storage.adjustInventory(
+            product.id,
+            shelf.id,
+            item.quantity,
+            req.user!.id
+          );
+          
+          // Create an activity record
+          await storage.createActivity({
+            actionType: 'bulk-add',
+            productId: product.id,
+            shelfId: shelf.id,
+            storeId: store.id,
+            userId: req.user!.id,
+            quantity: item.quantity,
+            status: 'completed',
+            notes: item.notes || 'Added via CSV upload'
+          });
+          
+          results.push({
+            productSku: item.productSku,
+            productName: product.name,
+            storeName: item.storeName,
+            shelfName: shelf.name,
+            quantity: item.quantity,
+            success: true
+          });
+        } catch (error) {
+          errors.push({ item, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+      }
+      
+      res.json({
+        results,
+        errors,
+        totalSuccessful: results.length,
+        totalFailed: errors.length,
+        message: `Processed ${results.length + errors.length} items, ${results.length} successful, ${errors.length} failed`
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid inventory data format", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to process bulk inventory upload" });
+    }
+  });
+  
+  // Bulk upload stores via CSV
+  app.post("/api/stores/bulk-upload", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      // Validate the request body as an array of store items
+      const bulkStoreSchema = z.array(
+        z.object({
+          name: z.string(),
+          location: z.string(),
+          managerUsername: z.string().optional()
+        })
+      );
+      
+      const items = bulkStoreSchema.parse(req.body);
+      const results = [];
+      const errors = [];
+
+      // Process each store
+      for (const item of items) {
+        try {
+          // Check if store with the same name already exists
+          const stores = await storage.getAllStores();
+          const existingStore = stores.find(s => s.name === item.name);
+          
+          if (existingStore) {
+            errors.push({ item, error: `Store with name ${item.name} already exists` });
+            continue;
+          }
+          
+          // Find manager if specified
+          let managerId = null;
+          if (item.managerUsername) {
+            const manager = await storage.getUserByUsername(item.managerUsername);
+            if (manager && manager.role === UserRole.MANAGER) {
+              managerId = manager.id;
+            } else {
+              errors.push({ item, error: `Manager with username ${item.managerUsername} not found or not a manager` });
+              continue;
+            }
+          }
+          
+          // Create the store
+          const store = await storage.createStore({
+            name: item.name,
+            location: item.location,
+            managerId
+          });
+          
+          results.push({
+            name: store.name,
+            location: store.location,
+            managerId: store.managerId,
+            success: true
+          });
+        } catch (error) {
+          errors.push({ item, error: error instanceof Error ? error.message : 'Unknown error' });
+        }
+      }
+      
+      res.json({
+        results,
+        errors,
+        totalSuccessful: results.length,
+        totalFailed: errors.length,
+        message: `Processed ${results.length + errors.length} stores, ${results.length} successful, ${errors.length} failed`
+      });
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid store data format", errors: error.errors });
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to process bulk store upload" });
+    }
+  });
 
   const httpServer = createServer(app);
 
