@@ -1,6 +1,7 @@
 import { pgTable, text, serial, integer, boolean, timestamp, jsonb, unique, foreignKey } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
+import { relations } from "drizzle-orm";
 
 // Role enum for role-based access control
 export enum UserRole {
@@ -328,3 +329,167 @@ export type InsertDeal = z.infer<typeof insertDealSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+// Relations
+export const usersRelations = relations(users, ({ many }) => ({
+  stores: many(stores),
+  activities: many(activities),
+  alerts: many(alerts, { relationName: "resolvedByUser" }),
+}));
+
+export const storesRelations = relations(stores, ({ one, many }) => ({
+  manager: one(users, {
+    fields: [stores.managerId],
+    references: [users.id],
+  }),
+  shelves: many(shelves),
+  activities: many(activities),
+  alerts: many(alerts),
+  stockTakes: many(stockTakes),
+  merchandisingPromotions: many(merchandisingPromotions),
+  competitorMerchandising: many(competitorMerchandising),
+  orders: many(orders),
+}));
+
+export const productsRelations = relations(products, ({ many }) => ({
+  inventory: many(inventory),
+  activities: many(activities),
+  alerts: many(alerts),
+  stockTakeItems: many(stockTakeItems),
+  merchandisingItems: many(merchandisingItems),
+}));
+
+export const shelvesRelations = relations(shelves, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [shelves.storeId],
+    references: [stores.id],
+  }),
+  inventory: many(inventory),
+  activities: many(activities),
+  alerts: many(alerts),
+}));
+
+export const inventoryRelations = relations(inventory, ({ one }) => ({
+  product: one(products, {
+    fields: [inventory.productId],
+    references: [products.id],
+  }),
+  shelf: one(shelves, {
+    fields: [inventory.shelfId],
+    references: [shelves.id],
+  }),
+}));
+
+export const activitiesRelations = relations(activities, ({ one }) => ({
+  product: one(products, {
+    fields: [activities.productId],
+    references: [products.id],
+  }),
+  shelf: one(shelves, {
+    fields: [activities.shelfId],
+    references: [shelves.id],
+  }),
+  store: one(stores, {
+    fields: [activities.storeId],
+    references: [stores.id],
+  }),
+  user: one(users, {
+    fields: [activities.userId],
+    references: [users.id],
+  }),
+  fromShelf: one(shelves, {
+    fields: [activities.fromShelfId],
+    references: [shelves.id],
+  }),
+  toShelf: one(shelves, {
+    fields: [activities.toShelfId],
+    references: [shelves.id],
+  }),
+}));
+
+export const alertsRelations = relations(alerts, ({ one }) => ({
+  product: one(products, {
+    fields: [alerts.productId],
+    references: [products.id],
+  }),
+  shelf: one(shelves, {
+    fields: [alerts.shelfId],
+    references: [shelves.id],
+  }),
+  store: one(stores, {
+    fields: [alerts.storeId],
+    references: [stores.id],
+  }),
+  resolvedByUser: one(users, {
+    fields: [alerts.resolvedBy],
+    references: [users.id],
+  }),
+}));
+
+export const stockTakesRelations = relations(stockTakes, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [stockTakes.storeId],
+    references: [stores.id],
+  }),
+  user: one(users, {
+    fields: [stockTakes.userId],
+    references: [users.id],
+  }),
+  items: many(stockTakeItems),
+}));
+
+export const stockTakeItemsRelations = relations(stockTakeItems, ({ one }) => ({
+  stockTake: one(stockTakes, {
+    fields: [stockTakeItems.stockTakeId],
+    references: [stockTakes.id],
+  }),
+  product: one(products, {
+    fields: [stockTakeItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const merchandisingPromotionsRelations = relations(merchandisingPromotions, ({ one, many }) => ({
+  store: one(stores, {
+    fields: [merchandisingPromotions.storeId],
+    references: [stores.id],
+  }),
+  user: one(users, {
+    fields: [merchandisingPromotions.userId],
+    references: [users.id],
+  }),
+  items: many(merchandisingItems),
+}));
+
+export const merchandisingItemsRelations = relations(merchandisingItems, ({ one }) => ({
+  promotion: one(merchandisingPromotions, {
+    fields: [merchandisingItems.merchandisingPromotionId],
+    references: [merchandisingPromotions.id],
+  }),
+  product: one(products, {
+    fields: [merchandisingItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const competitorMerchandisingRelations = relations(competitorMerchandising, ({ one }) => ({
+  store: one(stores, {
+    fields: [competitorMerchandising.storeId],
+    references: [stores.id],
+  }),
+  user: one(users, {
+    fields: [competitorMerchandising.userId],
+    references: [users.id],
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one }) => ({
+  store: one(stores, {
+    fields: [orders.storeId],
+    references: [stores.id],
+  }),
+  user: one(users, {
+    fields: [orders.userId],
+    references: [users.id],
+  }),
+}));

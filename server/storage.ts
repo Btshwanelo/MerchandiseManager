@@ -7,8 +7,13 @@ import {
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
+import { db } from "./db";
+import { eq, and, desc, lte, count, sum } from "drizzle-orm";
+import connectPg from "connect-pg-simple";
+import { pool } from "./db";
 
 const MemoryStore = createMemoryStore(session);
+const PostgresSessionStore = connectPg(session);
 
 // Interface defining all storage methods
 export interface IStorage {
@@ -75,7 +80,7 @@ export interface IStorage {
   }>;
   
   // Session store for authentication
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Express session store
 }
 
 export class MemStorage implements IStorage {
@@ -87,7 +92,7 @@ export class MemStorage implements IStorage {
   private activities: Map<number, Activity>;
   private alerts: Map<number, Alert>;
   
-  sessionStore: session.SessionStore;
+  sessionStore: any; // Express session store
   currentUserId: number;
   currentStoreId: number;
   currentProductId: number;
@@ -633,4 +638,596 @@ export class MemStorage implements IStorage {
   }
 }
 
-export const storage = new MemStorage();
+// Database storage implementation
+export class DatabaseStorage implements IStorage {
+  sessionStore: any;
+
+  constructor() {
+    this.sessionStore = new PostgresSessionStore({ 
+      pool, 
+      createTableIfMissing: true 
+    });
+  }
+
+  // User methods
+  async getUser(id: number): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.id, id));
+    return user;
+  }
+
+  async getUserByUsername(username: string): Promise<User | undefined> {
+    const [user] = await db.select().from(users).where(eq(users.username, username));
+    return user;
+  }
+
+  async createUser(insertUser: InsertUser): Promise<User> {
+    const [user] = await db.insert(users).values(insertUser).returning();
+    return user;
+  }
+
+  async updateUser(id: number, userData: Partial<InsertUser>): Promise<User | undefined> {
+    const [updatedUser] = await db
+      .update(users)
+      .set(userData)
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
+  }
+
+  async getAllUsers(): Promise<User[]> {
+    return db.select().from(users);
+  }
+
+  // Store methods
+  async getStore(id: number): Promise<Store | undefined> {
+    const [store] = await db.select().from(stores).where(eq(stores.id, id));
+    return store;
+  }
+
+  async getAllStores(): Promise<Store[]> {
+    return db.select().from(stores);
+  }
+
+  async createStore(insertStore: InsertStore): Promise<Store> {
+    const [store] = await db.insert(stores).values(insertStore).returning();
+    return store;
+  }
+
+  async updateStore(id: number, storeData: Partial<InsertStore>): Promise<Store | undefined> {
+    const [updatedStore] = await db
+      .update(stores)
+      .set(storeData)
+      .where(eq(stores.id, id))
+      .returning();
+    return updatedStore;
+  }
+
+  async deleteStore(id: number): Promise<boolean> {
+    const result = await db.delete(stores).where(eq(stores.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Product methods
+  async getProduct(id: number): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.id, id));
+    return product;
+  }
+
+  async getProductBySku(sku: string): Promise<Product | undefined> {
+    const [product] = await db.select().from(products).where(eq(products.sku, sku));
+    return product;
+  }
+
+  async getAllProducts(): Promise<Product[]> {
+    return db.select().from(products);
+  }
+
+  async getProductsByCategory(category: string): Promise<Product[]> {
+    return db.select().from(products).where(eq(products.category, category));
+  }
+
+  async createProduct(insertProduct: InsertProduct): Promise<Product> {
+    const [product] = await db.insert(products).values(insertProduct).returning();
+    return product;
+  }
+
+  async updateProduct(id: number, productData: Partial<InsertProduct>): Promise<Product | undefined> {
+    const [updatedProduct] = await db
+      .update(products)
+      .set(productData)
+      .where(eq(products.id, id))
+      .returning();
+    return updatedProduct;
+  }
+
+  async deleteProduct(id: number): Promise<boolean> {
+    const result = await db.delete(products).where(eq(products.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Shelf methods
+  async getShelf(id: number): Promise<Shelf | undefined> {
+    const [shelf] = await db.select().from(shelves).where(eq(shelves.id, id));
+    return shelf;
+  }
+
+  async getAllShelves(): Promise<Shelf[]> {
+    return db.select().from(shelves);
+  }
+
+  async getShelfByStoreId(storeId: number): Promise<Shelf[]> {
+    return db.select().from(shelves).where(eq(shelves.storeId, storeId));
+  }
+
+  async createShelf(insertShelf: InsertShelf): Promise<Shelf> {
+    const [shelf] = await db.insert(shelves).values(insertShelf).returning();
+    return shelf;
+  }
+
+  async updateShelf(id: number, shelfData: Partial<InsertShelf>): Promise<Shelf | undefined> {
+    const [updatedShelf] = await db
+      .update(shelves)
+      .set(shelfData)
+      .where(eq(shelves.id, id))
+      .returning();
+    return updatedShelf;
+  }
+
+  async deleteShelf(id: number): Promise<boolean> {
+    const result = await db.delete(shelves).where(eq(shelves.id, id));
+    return result.rowCount > 0;
+  }
+
+  // Inventory methods
+  async getInventory(id: number): Promise<Inventory | undefined> {
+    const [inventoryItem] = await db.select().from(inventory).where(eq(inventory.id, id));
+    return inventoryItem;
+  }
+
+  async getInventoryByProductId(productId: number): Promise<Inventory[]> {
+    return db.select().from(inventory).where(eq(inventory.productId, productId));
+  }
+
+  async getInventoryByShelfId(shelfId: number): Promise<Inventory[]> {
+    return db.select().from(inventory).where(eq(inventory.shelfId, shelfId));
+  }
+
+  async getInventoryByStoreId(storeId: number): Promise<(Inventory & { product: Product, shelf: Shelf })[]> {
+    // First, get all shelves for this store
+    const storeShelvesResult = await db.select().from(shelves).where(eq(shelves.storeId, storeId));
+    const shelfIds = storeShelvesResult.map(shelf => shelf.id);
+    
+    if (shelfIds.length === 0) {
+      return [];
+    }
+    
+    // Then get inventory items with joined product and shelf data
+    const result = await db.select({
+      inventory: inventory,
+      product: products,
+      shelf: shelves
+    })
+    .from(inventory)
+    .innerJoin(products, eq(inventory.productId, products.id))
+    .innerJoin(shelves, eq(inventory.shelfId, shelves.id))
+    .where(
+      eq(shelves.storeId, storeId)
+    );
+    
+    return result.map(({ inventory: inv, product, shelf }) => ({
+      ...inv,
+      product,
+      shelf
+    }));
+  }
+
+  async getLowStockItems(): Promise<(Inventory & { product: Product, shelf: Shelf, store: Store })[]> {
+    const result = await db.select({
+      inventory: inventory,
+      product: products,
+      shelf: shelves,
+      store: stores
+    })
+    .from(inventory)
+    .innerJoin(products, eq(inventory.productId, products.id))
+    .innerJoin(shelves, eq(inventory.shelfId, shelves.id))
+    .innerJoin(stores, eq(shelves.storeId, stores.id))
+    .where(
+      lte(inventory.quantity, products.minStockLevel)
+    );
+    
+    return result.map(({ inventory: inv, product, shelf, store }) => ({
+      ...inv,
+      product,
+      shelf,
+      store
+    }));
+  }
+
+  async createInventory(insertInventory: InsertInventory): Promise<Inventory> {
+    const [inventoryItem] = await db.insert(inventory).values({
+      ...insertInventory,
+      updatedAt: new Date()
+    }).returning();
+    return inventoryItem;
+  }
+
+  async updateInventory(id: number, inventoryData: Partial<InsertInventory>): Promise<Inventory | undefined> {
+    const [updatedInventory] = await db
+      .update(inventory)
+      .set({
+        ...inventoryData,
+        updatedAt: new Date()
+      })
+      .where(eq(inventory.id, id))
+      .returning();
+    return updatedInventory;
+  }
+
+  async adjustInventory(productId: number, shelfId: number, quantity: number, userId: number): Promise<Inventory | undefined> {
+    // Find existing inventory for this product and shelf
+    const [existingInventory] = await db
+      .select()
+      .from(inventory)
+      .where(
+        and(
+          eq(inventory.productId, productId),
+          eq(inventory.shelfId, shelfId)
+        )
+      );
+    
+    const [shelf] = await db
+      .select()
+      .from(shelves)
+      .where(eq(shelves.id, shelfId));
+    
+    if (!shelf) {
+      throw new Error('Shelf not found');
+    }
+    
+    if (existingInventory) {
+      const newQuantity = existingInventory.quantity + quantity;
+      if (newQuantity < 0) {
+        throw new Error('Cannot reduce inventory below zero');
+      }
+      
+      // Update inventory
+      const [updatedInventory] = await db
+        .update(inventory)
+        .set({
+          quantity: newQuantity,
+          updatedAt: new Date()
+        })
+        .where(eq(inventory.id, existingInventory.id))
+        .returning();
+      
+      // Create activity record
+      await this.createActivity({
+        actionType: quantity > 0 ? 'add' : 'remove',
+        productId,
+        shelfId,
+        storeId: shelf.storeId,
+        userId,
+        quantity: Math.abs(quantity),
+        status: 'completed'
+      });
+      
+      // Check if this adjustment results in low stock and create alert if needed
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, productId));
+      
+      if (product && newQuantity <= product.minStockLevel) {
+        await this.createAlert({
+          type: 'low_stock',
+          productId,
+          shelfId,
+          storeId: shelf.storeId,
+          message: `Low stock for ${product.name}: ${newQuantity} units remaining`,
+          status: 'active'
+        });
+      }
+      
+      return updatedInventory;
+    } else {
+      if (quantity < 0) {
+        throw new Error('Cannot create inventory with negative quantity');
+      }
+      
+      // Create new inventory entry
+      const [newInventory] = await db
+        .insert(inventory)
+        .values({
+          productId,
+          shelfId,
+          quantity,
+          updatedAt: new Date()
+        })
+        .returning();
+      
+      // Create activity record
+      await this.createActivity({
+        actionType: 'add',
+        productId,
+        shelfId,
+        storeId: shelf.storeId,
+        userId,
+        quantity,
+        status: 'completed'
+      });
+      
+      // Check if this new inventory is low stock
+      const [product] = await db
+        .select()
+        .from(products)
+        .where(eq(products.id, productId));
+      
+      if (product && quantity <= product.minStockLevel) {
+        await this.createAlert({
+          type: 'low_stock',
+          productId,
+          shelfId,
+          storeId: shelf.storeId,
+          message: `Low stock for ${product.name}: ${quantity} units remaining`,
+          status: 'active'
+        });
+      }
+      
+      return newInventory;
+    }
+  }
+
+  // Activity methods
+  async getActivity(id: number): Promise<Activity | undefined> {
+    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
+    return activity;
+  }
+
+  async getAllActivities(): Promise<Activity[]> {
+    return db.select().from(activities).orderBy(desc(activities.timestamp));
+  }
+
+  async getRecentActivities(limit: number): Promise<(Activity & { product: Product, user: User, store: Store })[]> {
+    const result = await db.select({
+      activity: activities,
+      product: products,
+      user: users,
+      store: stores
+    })
+    .from(activities)
+    .innerJoin(products, eq(activities.productId, products.id))
+    .innerJoin(users, eq(activities.userId, users.id))
+    .innerJoin(stores, eq(activities.storeId, stores.id))
+    .orderBy(desc(activities.timestamp))
+    .limit(limit);
+    
+    return result.map(({ activity, product, user, store }) => ({
+      ...activity,
+      product,
+      user,
+      store
+    }));
+  }
+
+  async createActivity(insertActivity: InsertActivity): Promise<Activity> {
+    const [activity] = await db.insert(activities).values({
+      ...insertActivity,
+      timestamp: new Date()
+    }).returning();
+    return activity;
+  }
+
+  // Alert methods
+  async getAlert(id: number): Promise<Alert | undefined> {
+    const [alert] = await db.select().from(alerts).where(eq(alerts.id, id));
+    return alert;
+  }
+
+  async getAllAlerts(): Promise<Alert[]> {
+    return db.select().from(alerts).orderBy(desc(alerts.createdAt));
+  }
+
+  async getActiveAlerts(): Promise<(Alert & { product: Product, store: Store })[]> {
+    const result = await db.select({
+      alert: alerts,
+      product: products,
+      store: stores
+    })
+    .from(alerts)
+    .innerJoin(products, eq(alerts.productId, products.id))
+    .innerJoin(stores, eq(alerts.storeId, stores.id))
+    .where(eq(alerts.status, 'active'))
+    .orderBy(desc(alerts.createdAt));
+    
+    return result.map(({ alert, product, store }) => ({
+      ...alert,
+      product,
+      store
+    }));
+  }
+
+  async createAlert(insertAlert: InsertAlert): Promise<Alert> {
+    const [alert] = await db.insert(alerts).values({
+      ...insertAlert,
+      resolvedAt: null,
+      createdAt: new Date()
+    }).returning();
+    return alert;
+  }
+
+  async resolveAlert(id: number, userId: number): Promise<Alert | undefined> {
+    const [updatedAlert] = await db
+      .update(alerts)
+      .set({
+        status: 'resolved',
+        resolvedAt: new Date(),
+        resolvedBy: userId
+      })
+      .where(eq(alerts.id, id))
+      .returning();
+    return updatedAlert;
+  }
+
+  // Dashboard methods
+  async getDashboardStats(): Promise<{
+    totalProducts: number,
+    lowStockItems: number,
+    activeStores: number,
+    inventoryValue: number
+  }> {
+    const [{ value: totalProducts }] = await db
+      .select({ value: count() })
+      .from(products);
+
+    const [{ value: lowStockItems }] = await db
+      .select({ value: count() })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id))
+      .where(lte(inventory.quantity, products.minStockLevel));
+
+    const [{ value: activeStores }] = await db
+      .select({ value: count() })
+      .from(stores);
+
+    const inventoryValueResult = await db
+      .select({
+        value: sum(sql`${inventory.quantity} * ${products.price}`)
+      })
+      .from(inventory)
+      .innerJoin(products, eq(inventory.productId, products.id));
+
+    const inventoryValue = inventoryValueResult[0]?.value || 0;
+
+    return {
+      totalProducts,
+      lowStockItems,
+      activeStores,
+      inventoryValue
+    };
+  }
+}
+
+// Create a seed function to initialize database
+async function seedDatabase() {
+  try {
+    // Check if users exist
+    const existingUsers = await db.select().from(users);
+    
+    if (existingUsers.length === 0) {
+      console.log('Seeding database with initial data...');
+      
+      // Add admin user
+      const [adminUser] = await db.insert(users).values({
+        username: "admin",
+        password: "admin123", // Plain text for demo - will be hashed on first actual login
+        name: "Admin User",
+        email: "admin@inventrack.com",
+        role: "admin"
+      }).returning();
+      
+      // Add merchandiser test user
+      const [testUser] = await db.insert(users).values({
+        username: "test",
+        password: "test123", // Plain text for demo - will be hashed on first actual login
+        name: "Test Merchandiser",
+        email: "test@inventrack.com",
+        role: "merchandiser"
+      }).returning();
+      
+      // Add manager user
+      const [managerUser] = await db.insert(users).values({
+        username: "manager",
+        password: "manager123", // Plain text for demo - will be hashed on first actual login
+        name: "Store Manager",
+        email: "manager@inventrack.com",
+        role: "manager"
+      }).returning();
+      
+      // Add sample store
+      const [store] = await db.insert(stores).values({
+        name: "Downtown Supermarket",
+        location: "123 Main Street, Downtown",
+        managerId: adminUser.id
+      }).returning();
+      
+      // Add sample products
+      const [product1] = await db.insert(products).values({
+        name: "Premium Cereal",
+        sku: "CEREAL001",
+        description: "Premium breakfast cereal with added vitamins",
+        category: "Breakfast",
+        price: 499,
+        minStockLevel: 10
+      }).returning();
+      
+      const [product2] = await db.insert(products).values({
+        name: "Organic Pasta",
+        sku: "PASTA002",
+        description: "Organic whole wheat pasta",
+        category: "Pasta & Rice",
+        price: 349,
+        minStockLevel: 15
+      }).returning();
+      
+      const [product3] = await db.insert(products).values({
+        name: "Energy Drink",
+        sku: "DRINK003",
+        description: "High-energy sports drink",
+        category: "Beverages",
+        price: 259,
+        minStockLevel: 20
+      }).returning();
+      
+      // Add shelves
+      const [shelf1] = await db.insert(shelves).values({
+        name: "Shelf A1",
+        section: "Breakfast Foods",
+        storeId: store.id
+      }).returning();
+      
+      const [shelf2] = await db.insert(shelves).values({
+        name: "Shelf B2",
+        section: "Pasta & Rice",
+        storeId: store.id
+      }).returning();
+      
+      const [shelf3] = await db.insert(shelves).values({
+        name: "Shelf C3",
+        section: "Beverages",
+        storeId: store.id
+      }).returning();
+      
+      // Add inventory
+      await db.insert(inventory).values({
+        productId: product1.id,
+        shelfId: shelf1.id,
+        quantity: 12
+      });
+      
+      await db.insert(inventory).values({
+        productId: product2.id,
+        shelfId: shelf2.id,
+        quantity: 18
+      });
+      
+      await db.insert(inventory).values({
+        productId: product3.id,
+        shelfId: shelf3.id,
+        quantity: 8
+      });
+      
+      console.log('Database seeded successfully!');
+    } else {
+      console.log('Database already contains data, skipping seed.');
+    }
+  } catch (error) {
+    console.error('Error seeding database:', error);
+  }
+}
+
+// Initialize database and use the appropriate storage implementation
+export const storage = new DatabaseStorage();
+
+// Seed the database with initial data
+seedDatabase().catch(console.error);
