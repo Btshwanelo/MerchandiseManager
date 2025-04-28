@@ -360,7 +360,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up multer storage
   const storage_config = multer.diskStorage({
     destination: (req, file, cb) => {
-      cb(null, path.join(__dirname, '../uploads'));
+      cb(null, path.join(process.cwd(), 'uploads'));
     },
     filename: (req, file, cb) => {
       cb(null, Date.now() + '-' + file.originalname);
@@ -379,6 +379,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get stock takes
+  app.get("/api/stock-takes", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Get user's role to determine what stock takes they can see
+      const user = req.user!;
+      let stockTakes;
+      
+      if (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) {
+        // Admins and managers can see all stock takes
+        stockTakes = await storage.getAllStockTakes();
+      } else {
+        // Merchandisers can only see their own stock takes
+        stockTakes = await storage.getStockTakesByUserId(user.id);
+      }
+      
+      res.json(stockTakes);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to get stock takes" });
+    }
+  });
+  
+  // Get a single stock take with its items
+  app.get("/api/stock-takes/:id", async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const stockTakeId = parseInt(req.params.id);
+      const stockTake = await storage.getStockTakeWithItems(stockTakeId);
+      
+      if (!stockTake) {
+        return res.status(404).json({ message: "Stock take not found" });
+      }
+      
+      // Check if user has permission to view this stock take
+      const user = req.user!;
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER && stockTake.userId !== user.id) {
+        return res.status(403).json({ message: "Not authorized to view this stock take" });
+      }
+      
+      res.json(stockTake);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to get stock take" });
+    }
+  });
+  
+  // Create a new stock take
   app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
     try {
       if (!req.isAuthenticated()) {
@@ -411,7 +469,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const files = (req.files as Express.Multer.File[]) || [];
       const filePaths = files.map(file => file.path);
       
-      // Process each stock take item
+      // Create the stock take record in the database
+      const stockTake = await storage.createStockTake({
+        storeId,
+        userId: req.user!.id,
+        comment,
+        pictures: filePaths,
+        status: 'completed'
+      });
+      
+      // Create stock take items
+      const stockTakeItems = [];
       for (const item of items) {
         const productId = item.productId;
         const quantity = item.quantity;
@@ -423,7 +491,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
           continue; // Skip if product not found
         }
         
-        // Determine if this is for shelf or back store
+        // Create the stock take item
+        const stockTakeItem = await storage.createStockTakeItem({
+          stockTakeId: stockTake.id,
+          productId,
+          quantity,
+          location
+        });
+        
+        stockTakeItems.push(stockTakeItem);
+        
+        // Determine if this is for shelf or back store and update inventory
         if (location === StockLocation.SHELF) {
           // Find an existing shelf for this product in this store
           const shelves = await storage.getShelfByStoreId(storeId);
@@ -488,11 +566,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Return success response
+      // Return success response with the created stock take
       res.status(200).json({ 
         success: true, 
         message: "Stock take completed successfully",
-        stockTakeItems: items.length,
+        stockTake,
+        stockTakeItems,
         picturesUploaded: filePaths.length
       });
     } catch (error) {
