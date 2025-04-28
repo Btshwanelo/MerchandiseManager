@@ -324,13 +324,38 @@ const StockTakePage = () => {
     // and then submit the form data with the image URLs
     // For this prototype, we're just simulating the process
 
+    if (!selectedStore) {
+      toast({
+        title: "Error submitting stock take",
+        description: "Store ID is required. Please select a store.",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Create form data with all required fields
     const formData = new FormData();
     formData.append("storeId", selectedStore);
-    formData.append("comment", comment);
-    formData.append("items", JSON.stringify(stockTakeItems));
+    formData.append("comment", comment || '');
     
+    // Format items to ensure they match the expected format
+    const formattedItems = stockTakeItems.map(item => ({
+      productId: item.productId,
+      quantity: item.quantity,
+      location: item.location
+    }));
+    
+    formData.append("items", JSON.stringify(formattedItems));
+    
+    // Add images if any
     fileUploads.forEach(file => {
       formData.append("pictures", file);
+    });
+
+    // Debug output to see what's being sent
+    console.log("Submitting stock take: ", {
+      storeId: selectedStore,
+      itemsCount: formattedItems.length
     });
 
     createStockTakeMutation.mutate(formData);
