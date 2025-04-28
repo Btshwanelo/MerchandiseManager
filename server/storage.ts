@@ -1,9 +1,10 @@
 import {
-  users, stores, products, shelves, inventory, activities, alerts,
+  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
-  type Alert, type InsertAlert
+  type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
+  type StockTakeItem, type InsertStockTakeItem
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -70,6 +71,19 @@ export interface IStorage {
   getActiveAlerts(): Promise<(Alert & { product: Product, store: Store })[]>;
   createAlert(alert: InsertAlert): Promise<Alert>;
   resolveAlert(id: number, userId: number): Promise<Alert | undefined>;
+  
+  // StockTake methods
+  getStockTake(id: number): Promise<StockTake | undefined>;
+  getAllStockTakes(): Promise<StockTake[]>;
+  getStockTakeByStoreId(storeId: number): Promise<StockTake[]>;
+  getStockTakesByUserId(userId: number): Promise<StockTake[]>;
+  getStockTakeWithItems(id: number): Promise<(StockTake & { items: (StockTakeItem & { product: Product })[] }) | undefined>;
+  createStockTake(stockTake: InsertStockTake): Promise<StockTake>;
+  
+  // StockTakeItem methods
+  getStockTakeItem(id: number): Promise<StockTakeItem | undefined>;
+  getStockTakeItemsByStockTakeId(stockTakeId: number): Promise<StockTakeItem[]>;
+  createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem>;
   
   // Dashboard methods
   getDashboardStats(): Promise<{
@@ -651,32 +665,32 @@ export class DatabaseStorage implements IStorage {
   
   // Stock Take methods
   async getStockTake(id: number): Promise<StockTake | undefined> {
-    const [stockTake] = await db.select().from(schema.stockTakes).where(eq(schema.stockTakes.id, id));
+    const [stockTake] = await db.select().from(stockTakes).where(eq(stockTakes.id, id));
     return stockTake;
   }
 
   async getAllStockTakes(): Promise<StockTake[]> {
-    return await db.select().from(schema.stockTakes);
+    return await db.select().from(stockTakes);
   }
 
   async getStockTakeByStoreId(storeId: number): Promise<StockTake[]> {
-    return await db.select().from(schema.stockTakes).where(eq(schema.stockTakes.storeId, storeId));
+    return await db.select().from(stockTakes).where(eq(stockTakes.storeId, storeId));
   }
 
   async getStockTakesByUserId(userId: number): Promise<StockTake[]> {
-    return await db.select().from(schema.stockTakes).where(eq(schema.stockTakes.userId, userId));
+    return await db.select().from(stockTakes).where(eq(stockTakes.userId, userId));
   }
 
   async getStockTakeWithItems(id: number): Promise<(StockTake & { items: (StockTakeItem & { product: Product })[] }) | undefined> {
-    const [stockTake] = await db.select().from(schema.stockTakes).where(eq(schema.stockTakes.id, id));
+    const [stockTake] = await db.select().from(stockTakes).where(eq(stockTakes.id, id));
     if (!stockTake) return undefined;
     
     const itemsWithProducts = await db.select({
-      item: schema.stockTakeItems,
-      product: schema.products
-    }).from(schema.stockTakeItems)
-      .innerJoin(schema.products, eq(schema.stockTakeItems.productId, schema.products.id))
-      .where(eq(schema.stockTakeItems.stockTakeId, id));
+      item: stockTakeItems,
+      product: products
+    }).from(stockTakeItems)
+      .innerJoin(products, eq(stockTakeItems.productId, products.id))
+      .where(eq(stockTakeItems.stockTakeId, id));
     
     const items = itemsWithProducts.map(row => ({
       ...row.item,
@@ -687,22 +701,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStockTake(stockTake: InsertStockTake): Promise<StockTake> {
-    const [newStockTake] = await db.insert(schema.stockTakes).values(stockTake).returning();
+    const [newStockTake] = await db.insert(stockTakes).values(stockTake).returning();
     return newStockTake;
   }
 
   // Stock Take Items methods
   async getStockTakeItem(id: number): Promise<StockTakeItem | undefined> {
-    const [item] = await db.select().from(schema.stockTakeItems).where(eq(schema.stockTakeItems.id, id));
+    const [item] = await db.select().from(stockTakeItems).where(eq(stockTakeItems.id, id));
     return item;
   }
 
   async getStockTakeItemsByStockTakeId(stockTakeId: number): Promise<StockTakeItem[]> {
-    return await db.select().from(schema.stockTakeItems).where(eq(schema.stockTakeItems.stockTakeId, stockTakeId));
+    return await db.select().from(stockTakeItems).where(eq(stockTakeItems.stockTakeId, stockTakeId));
   }
 
   async createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem> {
-    const [newItem] = await db.insert(schema.stockTakeItems).values(item).returning();
+    const [newItem] = await db.insert(stockTakeItems).values(item).returning();
     return newItem;
   }
 
