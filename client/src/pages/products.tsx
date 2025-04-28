@@ -21,7 +21,8 @@ import {
   DialogClose,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Search, Filter, Pencil, Trash2 } from "lucide-react";
+import { Loader2, Plus, Search, Filter, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { DataLoadError, EmptyDataState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
@@ -267,19 +268,19 @@ const ProductsPage = () => {
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
               ) : error ? (
-                <div className="py-8 text-center text-destructive">
-                  Error loading products. Please try again.
-                </div>
+                <DataLoadError 
+                  entityName="products" 
+                  retryAction={() => {
+                    queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+                  }} 
+                />
               ) : filteredProducts?.length === 0 ? (
-                <div className="flex flex-col items-center justify-center py-8 text-center">
-                  <div className="mb-4 p-4 bg-muted rounded-full">
-                    <Search className="h-6 w-6 text-muted-foreground" />
-                  </div>
-                  <h3 className="text-lg font-medium">No products found</h3>
-                  <p className="text-muted-foreground mt-1">
-                    Try adjusting your search or filters
-                  </p>
-                </div>
+                <EmptyDataState 
+                  entityName="products" 
+                  description="Try adjusting your search criteria or add new products."
+                  actionLabel={canManageProducts ? "Add Product" : undefined}
+                  actionFn={canManageProducts ? handleAddNewProduct : undefined}
+                />
               ) : (
                 <div className="overflow-x-auto">
                   <Table>
