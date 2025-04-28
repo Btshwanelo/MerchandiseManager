@@ -443,12 +443,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
+      // Log the received data for debugging
+      console.log("Stock take submission received:", {
+        body: req.body,
+        hasStoreId: !!req.body.storeId,
+        hasItems: !!req.body.items,
+        auth: req.isAuthenticated()
+      });
+      
       // Parse items from the form data
       const storeId = parseInt(req.body.storeId);
       const comment = req.body.comment || '';
       const itemsJson = req.body.items;
       
       if (!storeId || !itemsJson) {
+        console.log("Missing data:", { storeId, hasItemsJson: !!itemsJson });
         return res.status(400).json({ message: "Missing required data" });
       }
       
