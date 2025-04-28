@@ -1,7 +1,5 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
-import { apiRequest } from "@/lib/queryClient";
 import { 
   Table, 
   TableBody, 
@@ -10,171 +8,199 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-} from "@/components/ui/dialog";
-import { Loader2, Plus, Search, MapPin, Store as StoreIcon, User } from "lucide-react";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { z } from "zod";
+import { 
+  Select, 
+  SelectContent, 
+  SelectItem, 
+  SelectTrigger, 
+  SelectValue 
+} from "@/components/ui/select";
 import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
+import { 
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogFooter,
+  DialogDescription
+} from "@/components/ui/dialog";
+import { 
+  Loader2, 
+  Plus, 
+  Search, 
+  Store as StoreIcon, 
+  Upload,
+  MapPin,
+  User
+} from "lucide-react";
+import { Store, User as UserType, UserRole, insertStoreSchema } from "@shared/schema";
+import { CSVUpload } from "@/components/csv-upload";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { UserRole, Store, insertStoreSchema } from "@shared/schema";
+import { z } from "zod";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+
+// Type for CSV upload store item
+type StoreCSVItem = {
+  name: string;
+  location: string;
+  managerUsername?: string;
+};
 
 const StoresPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [storeFormOpen, setStoreFormOpen] = useState(false);
-  const [selectedStore, setSelectedStore] = useState<Store | null>(null);
-  const [shelvesDlgOpen, setShelvesDlgOpen] = useState(false);
-  const [currentStoreId, setCurrentStoreId] = useState<number | null>(null);
+  const isAdmin = user?.role === UserRole.ADMIN;
+  
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [addStoreTab, setAddStoreTab] = useState<string>("quick-add");
+  const [csvData, setCsvData] = useState<StoreCSVItem[]>([]);
 
-  // Check if user can manage stores
-  const canManageStores = user?.role === UserRole.ADMIN;
+  // Define form schema for store creation
+  const formSchema = insertStoreSchema.extend({
+    managerUsername: z.string().optional()
+  });
 
-  // Form setup
-  const form = useForm<z.infer<typeof insertStoreSchema>>({
-    resolver: zodResolver(insertStoreSchema),
+  type FormValues = z.infer<typeof formSchema>;
+
+  // Form for quick add
+  const form = useForm<FormValues>({
+    resolver: zodResolver(formSchema),
     defaultValues: {
       name: "",
       location: "",
-      managerId: undefined,
-    },
+      managerUsername: ""
+    }
   });
 
-  // Get stores
-  const { data: stores, isLoading, error } = useQuery<Store[]>({
+  // Fetch stores
+  const { data: stores, isLoading: isLoadingStores } = useQuery<Store[]>({
     queryKey: ["/api/stores"],
   });
 
-  // Get users for manager selection
-  const { data: users } = useQuery({
+  // Fetch managers (users with manager role)
+  const { data: managers, isLoading: isLoadingManagers } = useQuery<UserType[]>({
     queryKey: ["/api/users"],
-    enabled: canManageStores,
+    select: (users) => users.filter(user => user.role === UserRole.MANAGER)
   });
 
-  // Get shelves for a store
-  const { data: shelves, isLoading: isLoadingShelves } = useQuery({
-    queryKey: ["/api/stores", currentStoreId, "shelves"],
-    enabled: !!currentStoreId,
-  });
-
-  // Create store mutation
+  // Mutation for creating a store
   const createStoreMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof insertStoreSchema>) => {
-      const res = await apiRequest("POST", "/api/stores", values);
-      return await res.json();
+    mutationFn: async (data: FormValues) => {
+      // If managerUsername is provided, find the manager and use their ID
+      let managerId = null;
+      
+      if (data.managerUsername) {
+        const manager = managers?.find(m => m.username === data.managerUsername);
+        if (manager) {
+          managerId = manager.id;
+        }
+      }
+      
+      const storeData = {
+        name: data.name,
+        location: data.location,
+        managerId
+      };
+      
+      const response = await apiRequest("POST", "/api/stores", storeData);
+      return await response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/stores"] });
-      setStoreFormOpen(false);
-      form.reset();
       toast({
         title: "Store created",
-        description: "The store has been successfully created.",
+        description: "Store has been successfully added",
       });
-    },
-    onError: (error) => {
-      toast({
-        title: "Failed to create store",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
-
-  // Update store mutation
-  const updateStoreMutation = useMutation({
-    mutationFn: async (values: z.infer<typeof insertStoreSchema> & { id: number }) => {
-      const { id, ...data } = values;
-      const res = await apiRequest("PUT", `/api/stores/${id}`, data);
-      return await res.json();
-    },
-    onSuccess: () => {
+      // Invalidate stores query to refresh data
       queryClient.invalidateQueries({ queryKey: ["/api/stores"] });
-      setStoreFormOpen(false);
       form.reset();
-      setSelectedStore(null);
-      toast({
-        title: "Store updated",
-        description: "The store has been successfully updated.",
-      });
+      setIsAddDialogOpen(false);
     },
     onError: (error) => {
       toast({
-        title: "Failed to update store",
-        description: error.message,
         variant: "destructive",
+        title: "Failed to create store",
+        description: error instanceof Error ? error.message : "An error occurred",
       });
-    },
+    }
   });
 
-  const onSubmit = (values: z.infer<typeof insertStoreSchema>) => {
-    if (selectedStore) {
-      updateStoreMutation.mutate({ ...values, id: selectedStore.id });
-    } else {
-      createStoreMutation.mutate(values);
+  // Mutation for uploading CSV store data
+  const bulkUploadMutation = useMutation({
+    mutationFn: async (data: StoreCSVItem[]) => {
+      const response = await apiRequest("POST", "/api/stores/bulk-upload", data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Stores upload successful",
+        description: data.message,
+      });
+      // Invalidate stores query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/stores"] });
+      setIsAddDialogOpen(false);
+      setCsvData([]);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "An error occurred during upload",
+      });
     }
-  };
+  });
 
-  const handleEditStore = (store: Store) => {
-    setSelectedStore(store);
-    form.reset({
-      name: store.name,
-      location: store.location,
-      managerId: store.managerId,
-    });
-    setStoreFormOpen(true);
+  // Handle CSV data after parsing
+  const handleCsvData = (data: StoreCSVItem[]) => {
+    setCsvData(data);
   };
-
-  const handleAddNewStore = () => {
-    setSelectedStore(null);
-    form.reset({
-      name: "",
-      location: "",
-      managerId: undefined,
-    });
-    setStoreFormOpen(true);
+  
+  // Handle upload of CSV data
+  const handleUploadCsv = () => {
+    if (csvData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No data to upload",
+        description: "Please upload a CSV file first",
+      });
+      return;
+    }
+    
+    bulkUploadMutation.mutate(csvData);
   };
-
-  const handleViewShelves = (storeId: number) => {
-    setCurrentStoreId(storeId);
-    setShelvesDlgOpen(true);
+  
+  // Handle form submission
+  const onSubmit = (values: FormValues) => {
+    createStoreMutation.mutate(values);
   };
 
   // Filter stores based on search query
-  const filteredStores = stores?.filter((store) => {
-    return store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      store.location.toLowerCase().includes(searchQuery.toLowerCase());
-  });
+  const filteredStores = stores?.filter(store => 
+    store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    store.location.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Store Management</h1>
-        {canManageStores && (
-          <Button onClick={handleAddNewStore}>
-            <Plus className="h-4 w-4 mr-2" /> Add Store
-          </Button>
-        )}
+        <Button onClick={() => setIsAddDialogOpen(true)} disabled={!isAdmin}>
+          <Plus className="h-4 w-4 mr-2" /> Add Store
+        </Button>
       </div>
 
       <Card>
@@ -187,7 +213,7 @@ const StoresPage = () => {
               <div className="relative">
                 <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Search by name or location..."
+                  placeholder="Search by store name or location..."
                   className="pl-10"
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
@@ -196,22 +222,18 @@ const StoresPage = () => {
             </div>
           </div>
 
-          {isLoading ? (
+          {isLoadingStores ? (
             <div className="flex justify-center py-8">
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : error ? (
-            <div className="py-8 text-center text-destructive">
-              Error loading stores. Please try again.
             </div>
           ) : filteredStores?.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-8 text-center">
               <div className="mb-4 p-4 bg-muted rounded-full">
-                <Search className="h-6 w-6 text-muted-foreground" />
+                <StoreIcon className="h-6 w-6 text-muted-foreground" />
               </div>
               <h3 className="text-lg font-medium">No stores found</h3>
               <p className="text-muted-foreground mt-1">
-                Try adjusting your search or add a new store
+                {searchQuery ? "Try adjusting your search" : "Add your first store to get started"}
               </p>
             </div>
           ) : (
@@ -222,57 +244,30 @@ const StoresPage = () => {
                     <TableHead>Store Name</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Manager</TableHead>
-                    <TableHead>Shelves</TableHead>
                     <TableHead className="text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredStores?.map((store) => {
-                    const manager = users?.find(u => u.id === store.managerId);
+                    const manager = managers?.find(m => m.id === store.managerId);
+                    
                     return (
                       <TableRow key={store.id}>
-                        <TableCell className="font-medium">
-                          <div className="flex items-center">
-                            <StoreIcon className="h-4 w-4 mr-2 text-primary" />
-                            {store.name}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex items-center">
-                            <MapPin className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {store.location}
-                          </div>
-                        </TableCell>
+                        <TableCell className="font-medium">{store.name}</TableCell>
+                        <TableCell>{store.location}</TableCell>
                         <TableCell>
                           {manager ? (
-                            <div className="flex items-center">
-                              <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {manager.name}
+                            <div className="flex items-center space-x-2">
+                              <Badge variant="outline">{manager.name}</Badge>
                             </div>
                           ) : (
-                            <Badge variant="outline" className="text-muted-foreground">
-                              No Manager
-                            </Badge>
+                            <span className="text-muted-foreground">No manager assigned</span>
                           )}
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => handleViewShelves(store.id)}
-                          >
-                            View Shelves
-                          </Button>
                         </TableCell>
                         <TableCell className="text-right">
-                          {canManageStores && (
-                            <Button
-                              variant="ghost"
-                              onClick={() => handleEditStore(store)}
-                            >
-                              Edit
-                            </Button>
-                          )}
+                          <Button variant="ghost">
+                            Manage
+                          </Button>
                         </TableCell>
                       </TableRow>
                     );
@@ -284,137 +279,204 @@ const StoresPage = () => {
         </CardContent>
       </Card>
 
-      {/* Store Form Dialog */}
-      <Dialog open={storeFormOpen} onOpenChange={setStoreFormOpen}>
-        <DialogContent className="sm:max-w-md">
+      {/* Add Store Dialog */}
+      <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
+        <DialogContent className="sm:max-w-4xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>
-              {selectedStore ? "Edit Store" : "Add New Store"}
-            </DialogTitle>
+            <DialogTitle>Add Store</DialogTitle>
+            <DialogDescription>
+              Add stores individually or upload in bulk using CSV.
+            </DialogDescription>
           </DialogHeader>
 
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Store Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter store name" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+          <Tabs value={addStoreTab} onValueChange={setAddStoreTab} className="mt-4">
+            <TabsList className="grid grid-cols-2 mb-4">
+              <TabsTrigger value="quick-add">
+                <StoreIcon className="mr-2 h-4 w-4" /> Quick Add
+              </TabsTrigger>
+              <TabsTrigger value="csv-upload">
+                <Upload className="mr-2 h-4 w-4" /> CSV Upload
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="quick-add">
+              <Form {...form}>
+                <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
+                  <div className="grid gap-4">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Store Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter store name" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="location"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Location</FormLabel>
+                          <FormControl>
+                            <Input placeholder="Enter store location" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={form.control}
+                      name="managerUsername"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Manager (Optional)</FormLabel>
+                          <Select
+                            value={field.value || ""}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select a manager" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="">No manager</SelectItem>
+                              {isLoadingManagers ? (
+                                <div className="flex items-center justify-center p-2">
+                                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                                  Loading managers...
+                                </div>
+                              ) : (
+                                managers?.map((manager) => (
+                                  <SelectItem key={manager.id} value={manager.username}>
+                                    {manager.name} ({manager.username})
+                                  </SelectItem>
+                                ))
+                              )}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  <DialogFooter>
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsAddDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="submit" 
+                      disabled={createStoreMutation.isPending}
+                    >
+                      {createStoreMutation.isPending && (
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      )}
+                      Add Store
+                    </Button>
+                  </DialogFooter>
+                </form>
+              </Form>
+            </TabsContent>
+
+            <TabsContent value="csv-upload">
+              <div className="space-y-4">
+                <CSVUpload
+                  onDataParsed={handleCsvData}
+                  headerMapping={{
+                    "name": "name",
+                    "location": "location",
+                    "manager_username": "managerUsername"
+                  }}
+                  isUploading={bulkUploadMutation.isPending}
+                  templateHeaders={[
+                    "name", 
+                    "location", 
+                    "manager_username"
+                  ]}
+                  templateFilename="stores_template.csv"
+                  instructions="Upload a CSV file with store names and locations to add stores in bulk. 
+                    Required columns: name, location. Optional: manager_username (must be an existing manager's username)."
+                />
+
+                {csvData.length > 0 && (
+                  <div className="border rounded-lg p-4 my-4">
+                    <h3 className="text-md font-medium mb-2">CSV Data Preview</h3>
+                    <p className="text-sm text-muted-foreground mb-4">
+                      {csvData.length} records ready to be imported
+                    </p>
+                    
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Store Name</TableHead>
+                            <TableHead>Location</TableHead>
+                            <TableHead>Manager</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {csvData.slice(0, 5).map((item, index) => (
+                            <TableRow key={index}>
+                              <TableCell>{item.name}</TableCell>
+                              <TableCell>{item.location}</TableCell>
+                              <TableCell>{item.managerUsername || "-"}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    {csvData.length > 5 && (
+                      <p className="text-sm text-muted-foreground mt-2">
+                        And {csvData.length - 5} more items...
+                      </p>
+                    )}
+                  </div>
                 )}
-              />
 
-              <FormField
-                control={form.control}
-                name="location"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Location</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Enter store location" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="managerId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Manager</FormLabel>
-                    <FormControl>
-                      <select
-                        className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
-                        value={field.value?.toString() || ""}
-                        onChange={(e) => {
-                          const value = e.target.value;
-                          field.onChange(value ? parseInt(value) : undefined);
-                        }}
-                      >
-                        <option value="">Select a manager</option>
-                        {users?.filter(u => u.role === UserRole.MANAGER).map((user) => (
-                          <option key={user.id} value={user.id}>
-                            {user.name}
-                          </option>
-                        ))}
-                      </select>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button type="submit" disabled={createStoreMutation.isPending || updateStoreMutation.isPending}>
-                  {(createStoreMutation.isPending || updateStoreMutation.isPending) && (
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  )}
-                  {selectedStore ? "Update Store" : "Create Store"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      {/* Shelves Dialog */}
-      <Dialog open={shelvesDlgOpen} onOpenChange={setShelvesDlgOpen}>
-        <DialogContent className="sm:max-w-lg">
-          <DialogHeader>
-            <DialogTitle>
-              Store Shelves
-            </DialogTitle>
-          </DialogHeader>
-
-          {isLoadingShelves ? (
-            <div className="flex justify-center py-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : shelves?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <h3 className="text-lg font-medium">No shelves found</h3>
-              <p className="text-muted-foreground mt-1">
-                This store has no shelves configured
-              </p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Shelf Name</TableHead>
-                    <TableHead>Section</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {shelves?.map((shelf) => (
-                    <TableRow key={shelf.id}>
-                      <TableCell className="font-medium">{shelf.name}</TableCell>
-                      <TableCell>{shelf.section}</TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="outline">Close</Button>
-            </DialogClose>
-            {canManageStores && (
-              <Button>
-                <Plus className="h-4 w-4 mr-2" /> Add Shelf
-              </Button>
-            )}
-          </DialogFooter>
+                <DialogFooter>
+                  <div className="flex justify-end gap-2 w-full">
+                    <Button 
+                      type="button" 
+                      variant="outline" 
+                      onClick={() => setIsAddDialogOpen(false)}
+                    >
+                      Cancel
+                    </Button>
+                    <Button 
+                      type="button" 
+                      onClick={handleUploadCsv} 
+                      disabled={bulkUploadMutation.isPending || csvData.length === 0}
+                    >
+                      {bulkUploadMutation.isPending ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Uploading...
+                        </>
+                      ) : (
+                        <>
+                          <Upload className="mr-2 h-4 w-4" />
+                          Upload Data
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </DialogFooter>
+              </div>
+            </TabsContent>
+          </Tabs>
         </DialogContent>
       </Dialog>
     </div>
