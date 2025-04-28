@@ -42,7 +42,7 @@ import {
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Order, Store as StoreType } from "@shared/schema";
+import { Order, Store as StoreType, UserRole } from "@shared/schema";
 import { Badge } from "@/components/ui/badge";
 
 const OrdersPage = () => {
@@ -149,6 +149,44 @@ const OrdersPage = () => {
     });
 
     createOrderMutation.mutate(formData);
+  };
+
+  // Update order status mutation
+  const updateOrderStatusMutation = useMutation({
+    mutationFn: async ({ orderId, status }: { orderId: number, status: string }) => {
+      const res = await apiRequest("PATCH", `/api/orders/${orderId}`, { status });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/orders"] });
+      toast({
+        title: "Order updated",
+        description: "The order status has been successfully updated.",
+      });
+      setViewOrderDialogOpen(false);
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update order",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Approve order 
+  const handleApproveOrder = (orderId: number) => {
+    updateOrderStatusMutation.mutate({ orderId, status: "processing" });
+  };
+
+  // Complete order
+  const handleCompleteOrder = (orderId: number) => {
+    updateOrderStatusMutation.mutate({ orderId, status: "completed" });
+  };
+
+  // Reject order
+  const handleRejectOrder = (orderId: number) => {
+    updateOrderStatusMutation.mutate({ orderId, status: "cancelled" });
   };
 
   // View order details

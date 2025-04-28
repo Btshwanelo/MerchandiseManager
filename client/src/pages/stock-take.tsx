@@ -28,10 +28,10 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Loader2, Plus, Upload, Store, Camera, Save, File, CheckCircle2 } from "lucide-react";
+import { Loader2, Plus, Upload, Store, Camera, Save, File, CheckCircle2, AlertTriangle, ShoppingCart, RefreshCw } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Product, Store as StoreType, StockLocation } from "@shared/schema";
+import { Product, Store as StoreType, StockLocation, UserRole } from "@shared/schema";
 
 const StockTakePage = () => {
   const { toast } = useToast();
@@ -195,6 +195,58 @@ const StockTakePage = () => {
     },
   });
 
+  // Process items with low quantities and show replenishment prompts
+  const [showLowStockDialog, setShowLowStockDialog] = useState(false);
+  const [lowStockItems, setLowStockItems] = useState<Array<{
+    product: Product,
+    quantity: number,
+    location: StockLocation,
+    needsOrder: boolean
+  }>>([]);
+
+  // Check if items need replenishment or ordering
+  const checkLowStockItems = () => {
+    if (!products) return [];
+    
+    const lowItems = stockTakeItems
+      .filter(item => {
+        const product = products.find(p => p.id === item.productId);
+        return product && item.quantity < product.minStockLevel;
+      })
+      .map(item => {
+        const product = products.find(p => p.id === item.productId);
+        if (!product) return null;
+        
+        // Determine if an order is needed based on location
+        let needsOrder = false;
+        
+        if (item.location === StockLocation.BACK_STORE && item.quantity < 5) {
+          // If back store stock is low, place an order
+          needsOrder = true;
+        } else if (item.location === StockLocation.SHELF && item.quantity < 5) {
+          // For shelf items, check if back store has stock
+          // For this implementation, we'll assume we need to check manually
+          // In a real system, this would check the back store inventory
+          needsOrder = true;
+        }
+        
+        return {
+          product,
+          quantity: item.quantity,
+          location: item.location,
+          needsOrder
+        };
+      })
+      .filter(Boolean) as Array<{
+        product: Product,
+        quantity: number,
+        location: StockLocation,
+        needsOrder: boolean
+      }>;
+      
+    return lowItems;
+  };
+
   // Submit stock take
   const handleSubmit = async () => {
     if (!selectedStore) {
@@ -215,6 +267,21 @@ const StockTakePage = () => {
       return;
     }
 
+    // Check for items with low stock levels
+    const lowItems = checkLowStockItems();
+    
+    if (lowItems.length > 0) {
+      setLowStockItems(lowItems);
+      setShowLowStockDialog(true);
+      return;
+    }
+
+    // If no low stock items, proceed with submission
+    submitStockTake();
+  };
+  
+  // Final submission after checking low stock
+  const submitStockTake = () => {
     // In a real implementation, we would upload the images to a storage service
     // and then submit the form data with the image URLs
     // For this prototype, we're just simulating the process
@@ -531,6 +598,96 @@ const StockTakePage = () => {
           <DialogFooter>
             <DialogClose asChild>
               <Button variant="outline">Close</Button>
+            </DialogClose>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Low Stock Alert Dialog */}
+      <Dialog open={showLowStockDialog} onOpenChange={setShowLowStockDialog}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-warning flex items-center">
+              <AlertTriangle className="h-5 w-5 mr-2" /> Low Stock Alert
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              The following items have low stock levels and may need replenishment or ordering:
+            </p>
+            
+            <div className="border rounded-md overflow-hidden">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Product</TableHead>
+                    <TableHead>Location</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>Action Needed</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {lowStockItems.map((item, index) => (
+                    <TableRow key={index}>
+                      <TableCell className="font-medium">{item.product.name}</TableCell>
+                      <TableCell>{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
+                      <TableCell className="text-warning">{item.quantity}</TableCell>
+                      <TableCell>
+                        {item.needsOrder ? (
+                          <span className="text-destructive flex items-center">
+                            <ShoppingCart className="h-4 w-4 mr-1" /> Order needed
+                          </span>
+                        ) : (
+                          <span className="text-amber-500 flex items-center">
+                            <RefreshCw className="h-4 w-4 mr-1" /> Replenish
+                          </span>
+                        )}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+            
+            {user?.role === UserRole.MERCHANDISER && lowStockItems.some(item => item.needsOrder) && (
+              <div className="bg-muted/30 p-4 rounded-md">
+                <h4 className="font-medium text-sm mb-2">Order Recommendation</h4>
+                <p className="text-xs text-muted-foreground mb-4">
+                  Some items need to be ordered based on your stock take. Would you like to create an order now?
+                </p>
+                <div className="flex gap-2">
+                  <Button 
+                    size="sm" 
+                    onClick={() => {
+                      setShowLowStockDialog(false);
+                      // In a real app, you'd redirect to the order page with these items pre-populated
+                      toast({
+                        title: "Order creation",
+                        description: "Redirecting to order creation page...",
+                      });
+                      
+                      // For now, we'll just submit the stock take
+                      submitStockTake();
+                    }}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-2" /> Create Order
+                  </Button>
+                </div>
+              </div>
+            )}
+          </div>
+          <DialogFooter>
+            <Button 
+              variant="outline" 
+              onClick={() => {
+                setShowLowStockDialog(false);
+                submitStockTake();
+              }}
+            >
+              Submit Without Action
+            </Button>
+            <DialogClose asChild>
+              <Button>Continue Editing</Button>
             </DialogClose>
           </DialogFooter>
         </DialogContent>
