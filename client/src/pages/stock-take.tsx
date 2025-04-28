@@ -528,11 +528,11 @@ const StockTakePage = () => {
                       <TableHeader>
                         <TableRow>
                           <TableHead>Product</TableHead>
-                          <TableHead>SKU</TableHead>
-                          <TableHead>Category</TableHead>
+                          <TableHead className="hidden md:table-cell">SKU</TableHead>
+                          <TableHead className="hidden md:table-cell">Category</TableHead>
                           <TableHead>Quantity</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead>Status</TableHead>
+                          <TableHead className="hidden sm:table-cell">Status</TableHead>
                           <TableHead className="w-10">Action</TableHead>
                         </TableRow>
                       </TableHeader>
@@ -551,12 +551,23 @@ const StockTakePage = () => {
                           
                           return (
                             <TableRow key={index}>
-                              <TableCell className="font-medium">{product.name}</TableCell>
-                              <TableCell>{product.sku}</TableCell>
-                              <TableCell>{product.category}</TableCell>
+                              <TableCell className="font-medium">
+                                <div>{product.name}</div>
+                                <div className="md:hidden text-xs text-muted-foreground mt-1">
+                                  SKU: {product.sku}
+                                </div>
+                                <div className="md:hidden text-xs text-muted-foreground">
+                                  {product.category}
+                                </div>
+                                <div className="sm:hidden text-xs mt-1 flex items-center">
+                                  <span className={`${status.color} font-medium`}>{status.label}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
+                              <TableCell className="hidden md:table-cell">{product.category}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
                               <TableCell>{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
-                              <TableCell className={status.color}>{status.label}</TableCell>
+                              <TableCell className={`hidden sm:table-cell ${status.color}`}>{status.label}</TableCell>
                               <TableCell>
                                 <Button 
                                   variant="ghost" 
@@ -716,7 +727,7 @@ const StockTakePage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Product</TableHead>
-                    <TableHead>Location</TableHead>
+                    <TableHead className="hidden sm:table-cell">Location</TableHead>
                     <TableHead>Quantity</TableHead>
                     <TableHead>Action Needed</TableHead>
                   </TableRow>
@@ -724,8 +735,13 @@ const StockTakePage = () => {
                 <TableBody>
                   {lowStockItems.map((item, index) => (
                     <TableRow key={index}>
-                      <TableCell className="font-medium">{item.product.name}</TableCell>
-                      <TableCell>{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
+                      <TableCell className="font-medium">
+                        <div>{item.product.name}</div>
+                        <div className="sm:hidden text-xs text-muted-foreground mt-1">
+                          {item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
                       <TableCell className="text-warning">{item.quantity}</TableCell>
                       <TableCell>
                         {item.needsOrder ? (
@@ -787,6 +803,95 @@ const StockTakePage = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      
+      {/* Completed Stock Takes Section */}
+      <Card className="mt-8">
+        <CardHeader>
+          <CardTitle>Completed Stock Takes</CardTitle>
+        </CardHeader>
+        <CardContent>
+          {isLoadingStockTakes ? (
+            <div className="flex items-center justify-center p-8">
+              <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            </div>
+          ) : !completedStockTakes || completedStockTakes.length === 0 ? (
+            <div className="text-center py-8 text-muted-foreground">
+              <p>No stock takes found. Complete your first stock take above.</p>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Date</TableHead>
+                    <TableHead>Store</TableHead>
+                    <TableHead>Status</TableHead>
+                    <TableHead className="hidden md:table-cell">Items</TableHead>
+                    <TableHead className="hidden md:table-cell">Comment</TableHead>
+                    <TableHead className="hidden md:table-cell">Pictures</TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {completedStockTakes.map((stockTake) => {
+                    const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
+                    return (
+                      <TableRow key={stockTake.id}>
+                        <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
+                        <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
+                        <TableCell>
+                          <span className={
+                            stockTake.status === 'completed' 
+                              ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' 
+                              : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
+                          }>
+                            {stockTake.status}
+                          </span>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {/* We don't have the count directly, this will be fetched when viewing details */}
+                          <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => {
+                            // View details logic would go here
+                            toast({
+                              title: "Feature Coming Soon",
+                              description: "Stock take details view will be available in a future update.",
+                            });
+                          }}>
+                            View Items
+                          </Button>
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {stockTake.comment && stockTake.comment.length > 0 
+                            ? (stockTake.comment.length > 20 
+                                ? `${stockTake.comment.substring(0, 20)}...` 
+                                : stockTake.comment) 
+                            : '-'}
+                        </TableCell>
+                        <TableCell className="hidden md:table-cell">
+                          {stockTake.pictures && stockTake.pictures.length > 0 ? (
+                            <span className="text-sm">{stockTake.pictures.length} photos</span>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell>
+                          <Button variant="outline" size="sm" onClick={() => {
+                            // View details logic would go here
+                            toast({
+                              title: "Feature Coming Soon",
+                              description: "Stock take details view will be available in a future update.",
+                            });
+                          }}>
+                            View Details
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
