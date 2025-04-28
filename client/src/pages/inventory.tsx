@@ -35,8 +35,11 @@ import {
   PackageCheck, 
   AlertTriangle,
   ScanLine,
-  Barcode 
+  Barcode,
+  RefreshCw,
+  Ban
 } from "lucide-react";
+import { DataLoadError, EmptyDataState } from "@/components/ui/error-state";
 import { 
   Dialog, 
   DialogContent, 
@@ -402,19 +405,19 @@ const InventoryPage = () => {
               <Loader2 className="h-8 w-8 animate-spin text-primary" />
             </div>
           ) : inventoryError ? (
-            <div className="py-8 text-center text-destructive">
-              Error loading inventory data. Please try again.
-            </div>
+            <DataLoadError 
+              entityName="inventory data" 
+              retryAction={() => {
+                queryClient.invalidateQueries({ queryKey: ["/api/inventory", selectedStore] });
+              }} 
+            />
           ) : filteredInventory?.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 text-center">
-              <div className="mb-4 p-4 bg-muted rounded-full">
-                <Search className="h-6 w-6 text-muted-foreground" />
-              </div>
-              <h3 className="text-lg font-medium">No inventory items found</h3>
-              <p className="text-muted-foreground mt-1">
-                Try adjusting your search or filters
-              </p>
-            </div>
+            <EmptyDataState 
+              entityName="inventory items" 
+              description="Try adjusting your search criteria or add new inventory items."
+              actionLabel={isAdmin ? "Add Inventory" : undefined}
+              actionFn={isAdmin ? () => setIsAddDialogOpen(true) : undefined}
+            />
           ) : (
             <div className="overflow-x-auto">
               <Table>
