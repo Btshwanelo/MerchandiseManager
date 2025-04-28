@@ -2,9 +2,11 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, checkRole } from "./auth";
-import { UserRole } from "@shared/schema";
+import { UserRole, StockLocation } from "@shared/schema";
 import { z } from "zod";
 import { insertProductSchema, insertStoreSchema, insertShelfSchema } from "@shared/schema";
+import multer from "multer";
+import path from "path";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes
@@ -351,6 +353,153 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(lowStockItems);
     } catch (error) {
       res.status(500).json({ message: "Failed to get low stock items" });
+    }
+  });
+  
+  // Stock Takes API
+  // Set up multer storage
+  const storage_config = multer.diskStorage({
+    destination: (req, file, cb) => {
+      cb(null, path.join(__dirname, '../uploads'));
+    },
+    filename: (req, file, cb) => {
+      cb(null, Date.now() + '-' + file.originalname);
+    }
+  });
+  
+  const upload = multer({ 
+    storage: storage_config,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: (req, file, cb) => {
+      // Accept images only
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+        return cb(null, false);
+      }
+      cb(null, true);
+    }
+  });
+  
+  app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      // Parse items from the form data
+      const storeId = parseInt(req.body.storeId);
+      const comment = req.body.comment || '';
+      const itemsJson = req.body.items;
+      
+      if (!storeId || !itemsJson) {
+        return res.status(400).json({ message: "Missing required data" });
+      }
+      
+      // Parse the items array
+      let items;
+      try {
+        items = JSON.parse(itemsJson);
+      } catch (e) {
+        return res.status(400).json({ message: "Invalid items data format" });
+      }
+      
+      // Validate the items array
+      if (!Array.isArray(items)) {
+        return res.status(400).json({ message: "Items must be an array" });
+      }
+      
+      // Get file paths if any were uploaded
+      const files = (req.files as Express.Multer.File[]) || [];
+      const filePaths = files.map(file => file.path);
+      
+      // Process each stock take item
+      for (const item of items) {
+        const productId = item.productId;
+        const quantity = item.quantity;
+        const location = item.location;
+        
+        // Get the product to check stock level
+        const product = await storage.getProduct(productId);
+        if (!product) {
+          continue; // Skip if product not found
+        }
+        
+        // Determine if this is for shelf or back store
+        if (location === StockLocation.SHELF) {
+          // Find an existing shelf for this product in this store
+          const shelves = await storage.getShelfByStoreId(storeId);
+          const shelf = shelves.find(s => s.section === 'Main');
+          
+          if (shelf) {
+            // Update the inventory
+            await storage.adjustInventory(productId, shelf.id, quantity, req.user!.id);
+            
+            // Create activity record
+            await storage.createActivity({
+              actionType: 'stock-take',
+              productId,
+              storeId,
+              shelfId: shelf.id,
+              userId: req.user!.id,
+              quantity,
+              status: 'completed',
+              notes: comment
+            });
+            
+            // Create alert if stock is low
+            if (quantity < product.minStockLevel) {
+              await storage.createAlert({
+                productId,
+                storeId,
+                shelfId: shelf.id,
+                type: 'low-stock',
+                status: 'active',
+                message: `Low stock for ${product.name} (${quantity}/${product.minStockLevel})`
+              });
+            }
+          }
+        } else if (location === StockLocation.BACK_STORE) {
+          // For back store, find or create a "Back Store" shelf
+          let backStoreShelf = null;
+          const shelves = await storage.getShelfByStoreId(storeId);
+          backStoreShelf = shelves.find(s => s.section === 'Back Store');
+          
+          if (!backStoreShelf) {
+            backStoreShelf = await storage.createShelf({
+              name: 'Storage',
+              section: 'Back Store',
+              storeId
+            });
+          }
+          
+          // Update the inventory for back store
+          await storage.adjustInventory(productId, backStoreShelf.id, quantity, req.user!.id);
+          
+          // Create activity record
+          await storage.createActivity({
+            actionType: 'stock-take',
+            productId,
+            storeId,
+            shelfId: backStoreShelf.id,
+            userId: req.user!.id,
+            quantity,
+            status: 'completed',
+            notes: `Back store stock take: ${comment}`
+          });
+        }
+      }
+      
+      // Return success response
+      res.status(200).json({ 
+        success: true, 
+        message: "Stock take completed successfully",
+        stockTakeItems: items.length,
+        picturesUploaded: filePaths.length
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to process stock take" });
     }
   });
   

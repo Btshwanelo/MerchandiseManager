@@ -178,12 +178,22 @@ const StockTakePage = () => {
   // Create stock take mutation
   const createStockTakeMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/stock-takes", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
+      try {
+        const res = await apiRequest("POST", "/api/stock-takes", formData, {
+          // Don't set Content-Type header manually - browser will set it with boundary
+          // for multipart/form-data
+        });
+        
+        if (!res.ok) {
+          const errorData = await res.json().catch(() => ({ message: "Server error" }));
+          throw new Error(errorData.message || "Failed to submit stock take");
         }
-      });
-      return await res.json();
+        
+        return await res.json();
+      } catch (error) {
+        console.error("Stock take submission error:", error);
+        throw error;
+      }
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/stock-takes"] });
