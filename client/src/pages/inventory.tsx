@@ -264,11 +264,21 @@ const InventoryPage = () => {
     const product = products?.find(p => p.sku === barcode);
     
     if (product) {
-      setSearchQuery(barcode);
-      toast({
-        title: "Product found",
-        description: `Found ${product.name} with SKU ${barcode}`,
-      });
+      // If we're in add inventory mode and the add dialog is open, select the product
+      if (isAddDialogOpen) {
+        setQuickAddProduct(product.id.toString());
+        toast({
+          title: "Product selected",
+          description: `Selected ${product.name} (${barcode}) for adding inventory`,
+        });
+      } else {
+        // Otherwise just search for it in the main inventory list
+        setSearchQuery(barcode);
+        toast({
+          title: "Product found",
+          description: `Found ${product.name} with SKU ${barcode}`,
+        });
+      }
     } else {
       toast({
         variant: "destructive",
