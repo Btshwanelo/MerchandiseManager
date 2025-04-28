@@ -601,6 +601,72 @@ const OrdersPage = () => {
                   ) : null}
                 </div>
               </div>
+              
+              {/* Order images */}
+              <div className="space-y-2">
+                <p className="text-sm font-medium">Order Images</p>
+                <div className="grid grid-cols-3 gap-2">
+                  {selectedOrder.pictures && selectedOrder.pictures.map((pic: string, index: number) => (
+                    <div key={index} className="border rounded-md h-20 bg-muted/20 flex items-center justify-center overflow-hidden">
+                      <img src={pic} alt={`Order ${index + 1}`} className="h-full w-full object-cover" />
+                    </div>
+                  ))}
+                </div>
+              </div>
+              
+              {/* Management controls for admins and managers */}
+              {user && (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) && selectedOrder.status === "submitted" && (
+                <div className="mt-6 bg-muted/20 rounded-md p-4 space-y-3">
+                  <h4 className="font-medium text-sm">Order Management</h4>
+                  <p className="text-xs text-muted-foreground">As a manager or admin, you can approve or reject this order.</p>
+                  <div className="flex gap-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => handleApproveOrder(selectedOrder.id)}
+                      disabled={updateOrderStatusMutation.isPending}
+                    >
+                      {updateOrderStatusMutation.isPending ? 
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : 
+                        <Check className="h-4 w-4 mr-1" />
+                      }
+                      Approve Order
+                    </Button>
+                    <Button 
+                      size="sm" 
+                      variant="destructive"
+                      onClick={() => handleRejectOrder(selectedOrder.id)}
+                      disabled={updateOrderStatusMutation.isPending}
+                    >
+                      <X className="h-4 w-4 mr-1" />
+                      Reject Order
+                    </Button>
+                  </div>
+                </div>
+              )}
+              
+              {/* Complete order button for processing orders */}
+              {user && (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) && selectedOrder.status === "processing" && (
+                <div className="mt-6 bg-muted/20 rounded-md p-4 space-y-3">
+                  <h4 className="font-medium text-sm">Order Processing</h4>
+                  <p className="text-xs text-muted-foreground">Mark this order as completed when it has been fulfilled.</p>
+                  <div className="flex gap-2 mt-2">
+                    <Button 
+                      size="sm" 
+                      variant="default"
+                      onClick={() => handleCompleteOrder(selectedOrder.id)}
+                      disabled={updateOrderStatusMutation.isPending}
+                      className="bg-success hover:bg-success/90"
+                    >
+                      {updateOrderStatusMutation.isPending ? 
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : 
+                        <Check className="h-4 w-4 mr-1" />
+                      }
+                      Mark as Completed
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
