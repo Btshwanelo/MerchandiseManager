@@ -5,10 +5,13 @@ import { MetricCard } from "@/components/dashboard/metric-card";
 import { InventoryChart } from "@/components/dashboard/inventory-chart";
 import { LowStockList } from "@/components/dashboard/low-stock-list";
 import { ActivityTable } from "@/components/dashboard/activity-table";
-import { Package, Bell, Store, DollarSign } from "lucide-react";
+import { Package, Bell, Store, DollarSign, Users } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import { Card, CardHeader, CardTitle, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Link } from "wouter";
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -163,6 +166,74 @@ const Dashboard = () => {
           <LowStockList />
         </div>
       </section>
+
+      {/* Admin Quick Access Section - Only visible to admins */}
+      {user?.role === UserRole.ADMIN && (
+        <section>
+          <div className="flex items-center justify-between mb-4">
+            <h3 className="text-xl font-medium text-foreground">Admin Management</h3>
+          </div>
+          
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <Card className="border-2 border-primary/20 hover:border-primary transition-colors">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Users className="h-5 w-5 mr-2 text-primary" />
+                  User Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Manage system users, assign roles, and control access.
+                </p>
+                <Link href="/users">
+                  <Button className="w-full">
+                    Manage Users
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 border-primary/20 hover:border-primary transition-colors">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Package className="h-5 w-5 mr-2 text-primary" />
+                  Bulk Import Products
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Import multiple products via CSV upload.
+                </p>
+                <Link href="/products">
+                  <Button className="w-full">
+                    Import Products
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+            
+            <Card className="border-2 border-primary/20 hover:border-primary transition-colors">
+              <CardHeader className="pb-2">
+                <CardTitle className="text-lg flex items-center">
+                  <Store className="h-5 w-5 mr-2 text-primary" />
+                  Store Management
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Add, edit, or remove store locations.
+                </p>
+                <Link href="/stores">
+                  <Button className="w-full">
+                    Manage Stores
+                  </Button>
+                </Link>
+              </CardContent>
+            </Card>
+          </div>
+        </section>
+      )}
 
       {/* Recent Activity Section */}
       <section>
