@@ -435,6 +435,7 @@ const StockTakePage = () => {
                               <TableCell>{product.sku}</TableCell>
                               <TableCell>{product.category}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
+                              <TableCell>{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
                               <TableCell className={status.color}>{status.label}</TableCell>
                               <TableCell>
                                 <Button 
