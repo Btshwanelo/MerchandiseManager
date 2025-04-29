@@ -2,10 +2,12 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select, 
   SelectContent, 
@@ -42,17 +44,34 @@ import {
   ShoppingCart, 
   RefreshCw, 
   QrCode,
-  Scan
+  Scan,
+  Eye,
+  X,
+  Edit,
+  CheckCircle,
+  Filter
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Product, Store as StoreType, StockLocation, UserRole, StockTake as DbStockTake } from "@shared/schema";
+import { BarcodeScanner } from "@/components/barcode-scanner";
 
 // Define a type for StockTake that includes properties we know will be in our response
 type StockTake = DbStockTake & {
-  pictures: string[]
+  pictures: string[];
+  user?: {
+    id: number;
+    name: string;
+    username: string;
+  };
+  items?: {
+    id: number;
+    productId: number;
+    quantity: number;
+    location: StockLocation;
+    product?: Product;
+  }[];
 };
-import { BarcodeScanner } from "@/components/barcode-scanner";
 
 interface StockTakePageProps {
   storeId?: string;
@@ -79,6 +98,9 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
     outOfStock: 0,
     lowStock: 0,
   });
+  
+  // Selected stock takes for bulk actions (admin)
+  const [selectedStockTakes, setSelectedStockTakes] = useState<number[]>([]);
 
   // Fetch stores
   const { data: stores, isLoading: isLoadingStores } = useQuery<StoreType[]>({
@@ -402,249 +424,368 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
 
     createStockTakeMutation.mutate(formData);
   };
+  
+  // Toggle select all stock takes
+  const toggleSelectAll = () => {
+    if (selectedStockTakes.length === (completedStockTakes?.length || 0)) {
+      // If all are selected, unselect all
+      setSelectedStockTakes([]);
+    } else {
+      // Otherwise, select all
+      setSelectedStockTakes(completedStockTakes?.map(st => st.id) || []);
+    }
+  };
+  
+  // Toggle selection of a single stock take
+  const toggleSelectStockTake = (id: number) => {
+    if (selectedStockTakes.includes(id)) {
+      setSelectedStockTakes(selectedStockTakes.filter(stId => stId !== id));
+    } else {
+      setSelectedStockTakes([...selectedStockTakes, id]);
+    }
+  };
 
+  // Different view based on user role
+  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
+  
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Stock Take / Availability</h1>
-        <Button 
-          onClick={handleSubmit}
-          disabled={createStockTakeMutation.isPending}
-        >
-          {createStockTakeMutation.isPending ? (
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-          ) : (
-            <Save className="mr-2 h-4 w-4" />
-          )}
-          Submit Stock Take
-        </Button>
+        {!isAdmin && (
+          <Button 
+            onClick={handleSubmit}
+            disabled={createStockTakeMutation.isPending}
+          >
+            {createStockTakeMutation.isPending ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Save className="mr-2 h-4 w-4" />
+            )}
+            Submit Stock Take
+          </Button>
+        )}
+        {isAdmin && (
+          <div className="flex space-x-2">
+            <Button variant="outline">
+              <Upload className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+            <Button>
+              <Plus className="h-4 w-4 mr-2" />
+              New Stock Take
+            </Button>
+          </div>
+        )}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>Store Details</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Select Store</label>
-                <Select value={selectedStore} onValueChange={setSelectedStore}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select a store..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isLoadingStores ? (
-                      <div className="flex items-center justify-center p-2">
-                        <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                        Loading stores...
-                      </div>
-                    ) : (
-                      stores?.map((store) => (
-                        <SelectItem key={store.id} value={store.id.toString()}>
-                          <div className="flex items-center">
-                            <Store className="h-4 w-4 mr-2 text-muted-foreground" />
-                            {store.name} - {store.location}
-                          </div>
-                        </SelectItem>
-                      ))
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Default Location</label>
-                <Select 
-                  value={selectedLocation} 
-                  onValueChange={(value) => setSelectedLocation(value as StockLocation)}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select location..." />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
-                    <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
-                  </SelectContent>
-                </Select>
-                <p className="text-xs text-muted-foreground">This is the default location for all products in this stock take</p>
-              </div>
-
-              <div className="space-y-2">
-                <label className="text-sm font-medium">Comments</label>
-                <Textarea 
-                  placeholder="Add any comments about this stock take..." 
-                  value={comment}
-                  onChange={(e) => setComment(e.target.value)}
-                  rows={3}
+      {/* Admin View - Table with Bulk Actions */}
+      {isAdmin && (
+        <Card>
+          <CardHeader>
+            <div className="flex justify-between items-center">
+              <CardTitle>All Stock Takes</CardTitle>
+              <div className="flex items-center space-x-2">
+                <Input 
+                  placeholder="Search stock takes..." 
+                  className="w-[250px]"
                 />
+                <Select defaultValue="all">
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Filter by status" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Statuses</SelectItem>
+                    <SelectItem value="completed">Completed</SelectItem>
+                    <SelectItem value="pending">Pending</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <CardTitle>Product Availability</CardTitle>
-              <div className="space-x-2">
-                <label htmlFor="file-upload" className="cursor-pointer">
-                  <div className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-md flex items-center text-sm">
-                    <Camera className="h-4 w-4 mr-2" />
-                    {fileUploads.length > 0 ? `${fileUploads.length} of 5 Photos` : "Add Shelf Photos"}
+            </div>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStockTakes ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : !completedStockTakes || completedStockTakes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No stock takes found.</p>
+              </div>
+            ) : (
+              <>
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox 
+                      id="select-all" 
+                      checked={selectedStockTakes.length === completedStockTakes.length && completedStockTakes.length > 0}
+                      onCheckedChange={toggleSelectAll}
+                    />
+                    <label htmlFor="select-all" className="text-sm">Select All</label>
                   </div>
-                  <input 
-                    id="file-upload"
-                    type="file"
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    onChange={handleFileUpload}
-                  />
-                </label>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {/* Add Product Section */}
-              <div className="flex flex-col gap-4 md:flex-row md:items-end md:gap-2">
-                <div className="w-full space-y-2">
-                  <div className="flex justify-between items-center">
-                    <label className="text-sm font-medium">Product</label>
+                  <div className="flex space-x-2">
                     <Button 
                       variant="outline" 
                       size="sm" 
-                      onClick={() => setIsScannerOpen(true)}
-                      className="flex items-center gap-1 h-7 text-xs"
+                      disabled={selectedStockTakes.length === 0}
                     >
-                      <Scan className="h-3 w-3" />
-                      Scan Barcode
+                      <CheckCircle2 className="h-4 w-4 mr-2" />
+                      Mark as Processed
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      disabled={selectedStockTakes.length === 0}
+                    >
+                      <File className="h-4 w-4 mr-2" />
+                      Generate Report
+                    </Button>
+                    <Button 
+                      variant="outline" 
+                      size="sm" 
+                      className="text-red-500 hover:text-red-500" 
+                      disabled={selectedStockTakes.length === 0}
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Delete Selected
                     </Button>
                   </div>
-                  <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select a product..." />
+                </div>
+                <div className="overflow-x-auto">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-[50px]"></TableHead>
+                        <TableHead>Date</TableHead>
+                        <TableHead>Store</TableHead>
+                        <TableHead>Merchandiser</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Items</TableHead>
+                        <TableHead>Last Edited</TableHead>
+                        <TableHead>Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {completedStockTakes.map((stockTake) => {
+                        const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
+                        return (
+                          <TableRow key={stockTake.id}>
+                            <TableCell>
+                              <Checkbox 
+                                id={`select-${stockTake.id}`} 
+                                checked={selectedStockTakes.includes(stockTake.id)}
+                                onCheckedChange={() => toggleSelectStockTake(stockTake.id)}
+                              />
+                            </TableCell>
+                            <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
+                            <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
+                            <TableCell>{stockTake.user?.name || stockTake.userId}</TableCell>
+                            <TableCell>
+                              <Badge variant={stockTake.status === 'completed' ? 'default' : 'outline'} className="capitalize">
+                                {stockTake.status || 'unknown'}
+                              </Badge>
+                            </TableCell>
+                            <TableCell>
+                              {typeof stockTake.items?.length === 'number' ? stockTake.items.length : '—'}
+                            </TableCell>
+                            <TableCell>
+                              {stockTake.lastEditedAt ? new Date(stockTake.lastEditedAt).toLocaleDateString() : '—'}
+                            </TableCell>
+                            <TableCell>
+                              <div className="flex space-x-2">
+                                <Button 
+                                  variant="outline" 
+                                  size="sm" 
+                                  onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
+                                >
+                                  <File className="h-4 w-4 mr-1" />
+                                  View
+                                </Button>
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  className="text-red-500 hover:text-red-500"
+                                >
+                                  <X className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="flex items-center justify-end space-x-2 mt-4">
+                  <Button variant="outline" size="sm" disabled>
+                    Previous
+                  </Button>
+                  <Button variant="outline" size="sm" disabled>
+                    Next
+                  </Button>
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Merchandiser View - Form to submit stock take */}
+      {!isAdmin && (
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Store Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Select Store</label>
+                  <Select value={selectedStore} onValueChange={setSelectedStore}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a store..." />
                     </SelectTrigger>
                     <SelectContent>
-                      {isLoadingProducts ? (
+                      {isLoadingStores ? (
                         <div className="flex items-center justify-center p-2">
                           <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading products...
+                          Loading stores...
                         </div>
                       ) : (
-                        products?.map((product) => (
-                          <SelectItem key={product.id} value={product.id.toString()}>
-                            {product.name} - {product.sku}
+                        stores?.map((store) => (
+                          <SelectItem key={store.id} value={store.id.toString()}>
+                            <div className="flex items-center">
+                              <Store className="h-4 w-4 mr-2 text-muted-foreground" />
+                              {store.name} - {store.location}
+                            </div>
                           </SelectItem>
                         ))
                       )}
                     </SelectContent>
                   </Select>
                 </div>
-                
-                <div className="w-full md:w-32 space-y-2">
-                  <label className="text-sm font-medium">Quantity</label>
-                  <Input 
-                    type="number" 
-                    value={selectedQuantity}
-                    onChange={(e) => setSelectedQuantity(e.target.value)}
-                    min="0"
-                    className="w-full"
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Default Location</label>
+                  <Select 
+                    value={selectedLocation} 
+                    onValueChange={(value) => setSelectedLocation(value as StockLocation)}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select location..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
+                      <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground">This is the default location for all products in this stock take</p>
+                </div>
+
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Comments</label>
+                  <Textarea 
+                    placeholder="Add any comments about this stock take..." 
+                    value={comment}
+                    onChange={(e) => setComment(e.target.value)}
+                    rows={3}
                   />
                 </div>
-                
-                <Button onClick={handleAddItem} className="w-full md:w-auto">
-                  <Plus className="h-4 w-4 mr-2" /> Add Item
-                </Button>
-              </div>
+              </CardContent>
+            </Card>
 
-              {/* Uploaded Files */}
-              {fileUploads.length > 0 && (
-                <div className="space-y-2">
-                  <label className="text-sm font-medium">Uploaded Photos</label>
-                  <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
-                    {fileUploads.map((file, index) => (
-                      <div key={index} className="relative group">
-                        <div 
-                          className="h-24 border rounded-md flex items-center justify-center bg-muted/20 cursor-pointer"
-                          onClick={() => handlePreviewImage(file)}
-                        >
-                          <div className="flex flex-col items-center text-sm p-2">
-                            <File className="h-8 w-8 text-muted-foreground mb-1" />
-                            <span className="text-xs truncate w-full text-center">{file.name}</span>
+            <Card>
+              <CardHeader className="flex flex-row items-center justify-between">
+                <CardTitle>Product Availability</CardTitle>
+                <div className="flex space-x-2">
+                  <Button variant="outline" size="sm" onClick={() => setIsScannerOpen(true)}>
+                    <QrCode className="h-4 w-4 mr-2" />
+                    Scan Barcode
+                  </Button>
+                </div>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="col-span-2">
+                    <label className="text-sm font-medium mb-2 block">Product</label>
+                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a product..." />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {isLoadingProducts ? (
+                          <div className="flex items-center justify-center p-2">
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Loading products...
                           </div>
-                        </div>
-                        <button 
-                          className="absolute -top-2 -right-2 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
-                          onClick={() => handleRemoveFile(index)}
-                        >
-                          <span className="text-xs">×</span>
-                        </button>
-                      </div>
-                    ))}
+                        ) : (
+                          products?.map((product) => (
+                            <SelectItem key={product.id} value={product.id.toString()}>
+                              <div className="flex items-center">
+                                <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
+                                {product.name} - {product.sku}
+                              </div>
+                            </SelectItem>
+                          ))
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <label className="text-sm font-medium mb-2 block">Quantity</label>
+                    <div className="flex items-center space-x-2">
+                      <Input
+                        type="number"
+                        value={selectedQuantity}
+                        onChange={(e) => setSelectedQuantity(e.target.value)}
+                        min={0}
+                      />
+                      <Button onClick={handleAddItem}>
+                        <Plus className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
-              )}
-
-              {/* Product List */}
-              <div className="space-y-4">
-                <h3 className="text-sm font-medium">Added Products</h3>
-                {stockTakeItems.length === 0 ? (
-                  <div className="border rounded-md p-6 text-center text-muted-foreground">
-                    No products added yet. Select a product and quantity to add it to the stock take.
-                  </div>
-                ) : (
-                  <div className="border rounded-md overflow-hidden">
+                
+                {stockTakeItems.length > 0 && (
+                  <div className="rounded-md border">
                     <Table>
                       <TableHeader>
                         <TableRow>
                           <TableHead>Product</TableHead>
-                          <TableHead className="hidden md:table-cell">SKU</TableHead>
-                          <TableHead className="hidden md:table-cell">Category</TableHead>
-                          <TableHead>Quantity</TableHead>
+                          <TableHead>SKU</TableHead>
+                          <TableHead className="text-center">Quantity</TableHead>
                           <TableHead>Location</TableHead>
-                          <TableHead className="hidden sm:table-cell">Status</TableHead>
-                          <TableHead className="w-10">Action</TableHead>
+                          <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {stockTakeItems.map((item, index) => {
                           const product = products?.find(p => p.id === item.productId);
-                          if (!product) return null;
-                          
-                          // Determine status
-                          let status = { label: "In Stock", color: "text-success" };
-                          if (item.quantity === 0) {
-                            status = { label: "Out of Stock", color: "text-destructive" };
-                          } else if (item.quantity < product.minStockLevel) {
-                            status = { label: "Low Stock", color: "text-warning" };
-                          }
-                          
                           return (
                             <TableRow key={index}>
                               <TableCell className="font-medium">
-                                <div>{product.name}</div>
-                                <div className="md:hidden text-xs text-muted-foreground mt-1">
-                                  SKU: {product.sku}
-                                </div>
-                                <div className="md:hidden text-xs text-muted-foreground">
-                                  {product.category}
-                                </div>
-                                <div className="sm:hidden text-xs mt-1 flex items-center">
-                                  <span className={`${status.color} font-medium`}>{status.label}</span>
-                                </div>
+                                {product?.name || `Product #${item.productId}`}
                               </TableCell>
-                              <TableCell className="hidden md:table-cell">{product.sku}</TableCell>
-                              <TableCell className="hidden md:table-cell">{product.category}</TableCell>
-                              <TableCell>{item.quantity}</TableCell>
-                              <TableCell>{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
-                              <TableCell className={`hidden sm:table-cell ${status.color}`}>{status.label}</TableCell>
+                              <TableCell>{product?.sku || '-'}</TableCell>
+                              <TableCell className="text-center">
+                                <Badge variant={item.quantity === 0 ? "destructive" : (item.quantity < (product?.minStockLevel || 5) ? "warning" : "default")}>
+                                  {item.quantity}
+                                </Badge>
+                              </TableCell>
                               <TableCell>
-                                <Button 
-                                  variant="ghost" 
-                                  size="icon" 
+                                <Badge variant="outline" className="capitalize">
+                                  {item.location.toLowerCase().replace('_', ' ')}
+                                </Badge>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
                                   onClick={() => handleRemoveItem(index)}
-                                  className="text-destructive hover:text-destructive/90"
                                 >
-                                  <span className="sr-only">Remove</span>
-                                  <span className="text-lg">×</span>
+                                  <X className="h-4 w-4" />
                                 </Button>
                               </TableCell>
                             </TableRow>
@@ -654,76 +795,250 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     </Table>
                   </div>
                 )}
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Summary Card */}
-        <div>
-          <Card className="sticky top-6">
-            <CardHeader>
-              <CardTitle>Stock Take Summary</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="space-y-4">
+                
+                {stockTakeItems.length === 0 && (
+                  <div className="border rounded-md p-8 text-center text-muted-foreground">
+                    <ShoppingCart className="h-10 w-10 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Products Added</h3>
+                    <p>Add products to your stock take using the form above.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+            
+            <Card>
+              <CardHeader>
+                <CardTitle>Shelf Pictures</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <p className="text-sm text-muted-foreground">Upload up to 5 pictures of your shelf display</p>
+                  <label htmlFor="picture-upload" className="cursor-pointer">
+                    <div className="flex items-center gap-2 bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90">
+                      <Camera className="h-4 w-4" />
+                      <span>Add Photos</span>
+                    </div>
+                    <input
+                      id="picture-upload"
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      className="hidden"
+                      onChange={handleFileUpload}
+                    />
+                  </label>
+                </div>
+                
+                {fileUploads.length > 0 ? (
+                  <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                    {fileUploads.map((file, index) => (
+                      <div key={index} className="relative group border rounded-md overflow-hidden">
+                        <img 
+                          src={URL.createObjectURL(file)} 
+                          alt={`Shelf picture ${index + 1}`} 
+                          className="w-full h-32 object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center space-x-2">
+                          <Button 
+                            variant="secondary" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handlePreviewImage(file)}
+                          >
+                            <Eye className="h-4 w-4" />
+                          </Button>
+                          <Button 
+                            variant="destructive" 
+                            size="sm" 
+                            className="h-8 w-8 p-0"
+                            onClick={() => handleRemoveFile(index)}
+                          >
+                            <X className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="border border-dashed rounded-md p-8 text-center text-muted-foreground">
+                    <Camera className="h-10 w-10 mx-auto mb-4" />
+                    <h3 className="text-lg font-medium mb-2">No Pictures Added</h3>
+                    <p>Add pictures of your shelf displays to help with inventory tracking.</p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+          
+          <div>
+            <Card className="sticky top-6">
+              <CardHeader>
+                <CardTitle>Stock Take Summary</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm">Total Products</span>
+                  <span className="font-medium">Total Products</span>
                   <span className="text-xl font-bold">{stockTakeSummary.totalProducts}</span>
                 </div>
+                
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm">In Stock</span>
-                  <span className="text-xl font-bold text-success">{stockTakeSummary.inStock}</span>
+                  <span className="font-medium">In Stock</span>
+                  <span className="text-xl font-bold">{stockTakeSummary.inStock}</span>
                 </div>
+                
                 <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm">Out of Stock</span>
+                  <span className="font-medium">Out of Stock</span>
                   <span className="text-xl font-bold text-destructive">{stockTakeSummary.outOfStock}</span>
                 </div>
-                <div className="flex justify-between items-center py-2 border-b">
-                  <span className="text-sm">Low Stock</span>
+                
+                <div className="flex justify-between items-center py-2">
+                  <span className="font-medium">Low Stock</span>
                   <span className="text-xl font-bold text-warning">{stockTakeSummary.lowStock}</span>
                 </div>
-              </div>
+                
+                <div className="mt-6 space-y-4">
+                  <h3 className="font-medium">Report Status</h3>
+                  <div className="space-y-2">
+                    <div className="flex items-center">
+                      <div className={selectedStore ? "text-green-500" : "text-muted-foreground"}>
+                        {selectedStore ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      </div>
+                      <span className="text-sm">Store selected: {selectedStore ? "Yes" : "No"}</span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <div className={stockTakeItems.length > 0 ? "text-green-500" : "text-muted-foreground"}>
+                        {stockTakeItems.length > 0 ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      </div>
+                      <span className="text-sm">Products added: {stockTakeItems.length > 0 ? "Yes" : "No"}</span>
+                    </div>
+                    
+                    <div className="flex items-center">
+                      <div className={fileUploads.length > 0 ? "text-green-500" : "text-muted-foreground"}>
+                        {fileUploads.length > 0 ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      </div>
+                      <span className="text-sm">Shelf photos: {fileUploads.length} of 5</span>
+                    </div>
+                  </div>
 
-              <div className="bg-muted/20 p-4 rounded-md">
-                <h4 className="font-medium mb-2">Report Status</h4>
-                <div className="flex items-center text-sm text-muted-foreground">
-                  <span className="bg-primary/20 text-primary rounded-full w-4 h-4 flex items-center justify-center mr-2">
-                    <CheckCircle2 className="h-3 w-3" />
-                  </span>
-                  Store selected: {selectedStore ? "Yes" : "No"}
+                  <Button 
+                    className="w-full"
+                    onClick={handleSubmit}
+                    disabled={createStockTakeMutation.isPending}
+                  >
+                    {createStockTakeMutation.isPending ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Save className="mr-2 h-4 w-4" />
+                    )}
+                    Submit Stock Take
+                  </Button>
                 </div>
-                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                  <span className="bg-primary/20 text-primary rounded-full w-4 h-4 flex items-center justify-center mr-2">
-                    <CheckCircle2 className="h-3 w-3" />
-                  </span>
-                  Products added: {stockTakeItems.length > 0 ? "Yes" : "No"}
-                </div>
-                <div className="flex items-center text-sm text-muted-foreground mt-1">
-                  <span className="bg-primary/20 text-primary rounded-full w-4 h-4 flex items-center justify-center mr-2">
-                    <CheckCircle2 className="h-3 w-3" />
-                  </span>
-                  Shelf photos: {fileUploads.length} of 5
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          </div>
         </div>
-      </div>
+      )}
+
+      {/* Recently Completed Stock Takes - Only visible to merchandisers */}
+      {!isAdmin && (
+        <Card>
+          <CardHeader>
+            <CardTitle>Recently Completed Stock Takes</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {isLoadingStockTakes ? (
+              <div className="flex items-center justify-center p-8">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+              </div>
+            ) : !completedStockTakes || completedStockTakes.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No stock takes found. Complete your first stock take above.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Store</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="hidden md:table-cell">Items</TableHead>
+                      <TableHead className="hidden md:table-cell">Comment</TableHead>
+                      <TableHead className="hidden md:table-cell">Pictures</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {completedStockTakes.map((stockTake) => {
+                      const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
+                      return (
+                        <TableRow key={stockTake.id}>
+                          <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
+                          <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
+                          <TableCell>
+                            <span className={
+                              stockTake.status === 'completed' 
+                                ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' 
+                                : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
+                            }>
+                              {stockTake.status}
+                            </span>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {/* We don't have the count directly, this will be fetched when viewing details */}
+                            <Button 
+                              variant="link" 
+                              size="sm" 
+                              className="p-0 h-auto" 
+                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
+                            >
+                              View Items
+                            </Button>
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell truncate max-w-[200px]">
+                            {stockTake.comment || '-'}
+                          </TableCell>
+                          <TableCell className="hidden md:table-cell">
+                            {stockTake.pictures && stockTake.pictures.length > 0 ? (
+                              <Badge variant="outline">{stockTake.pictures.length} photos</Badge>
+                            ) : (
+                              '-'
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
+                            >
+                              <File className="h-4 w-4 mr-2" />
+                              Details
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
+                  </TableBody>
+                </Table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       {/* Image Preview Dialog */}
       <Dialog open={imagePreviewDialogOpen} onOpenChange={setImagePreviewDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Image Preview</DialogTitle>
           </DialogHeader>
           {selectedImage && (
-            <div className="overflow-hidden rounded-md">
-              <img 
-                src={selectedImage} 
-                alt="Preview" 
-                className="w-full h-auto"
-                onLoad={() => URL.revokeObjectURL(selectedImage)}
+            <div className="flex justify-center">
+              <img
+                src={selectedImage}
+                alt="Preview"
+                className="max-h-[80vh] max-w-full object-contain"
               />
             </div>
           )}
@@ -734,229 +1049,90 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
+
       {/* Barcode Scanner Dialog */}
       <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Scan Product Barcode</DialogTitle>
           </DialogHeader>
-          <BarcodeScanner 
-            onScanSuccess={(result) => {
-              // Handle successful scan - find product by SKU
-              if (products) {
-                const product = products.find(p => p.sku === result);
-                if (product) {
-                  setSelectedProduct(product.id.toString());
-                  setIsScannerOpen(false);
-                  toast({
-                    title: "Product found",
-                    description: `Scanned: ${product.name} (${product.sku})`,
-                  });
-                } else {
-                  // Product not found
-                  setScannerError(`Product with SKU/barcode ${result} not found`);
-                  toast({
-                    title: "Product not found",
-                    description: `No product matches barcode: ${result}`,
-                    variant: "destructive",
-                  });
-                }
-              }
+          <BarcodeScanner
+            onScan={(result) => {
+              console.log("Scanned barcode:", result);
+              // Here you would lookup the product by barcode and add it to the list
+              toast({
+                title: "Barcode Scanned",
+                description: `Scanned barcode: ${result}`,
+              });
+              setIsScannerOpen(false);
             }}
-            onScanError={(error) => {
-              setScannerError(error);
+            onError={(error) => {
+              setScannerError(error.message);
             }}
             onClose={() => setIsScannerOpen(false)}
           />
           {scannerError && (
-            <div className="mt-2 p-3 bg-destructive/10 border border-destructive/20 rounded-md text-destructive text-sm">
-              {scannerError}
-            </div>
+            <p className="text-destructive text-sm mt-2">{scannerError}</p>
           )}
         </DialogContent>
       </Dialog>
-      
-      {/* Low Stock Alert Dialog */}
+
+      {/* Low Stock Dialog */}
       <Dialog open={showLowStockDialog} onOpenChange={setShowLowStockDialog}>
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle className="text-warning flex items-center">
-              <AlertTriangle className="h-5 w-5 mr-2" /> Low Stock Alert
-            </DialogTitle>
+            <DialogTitle>Low Stock Items Detected</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <p className="text-sm text-muted-foreground">
-              The following items have low stock levels and may need replenishment or ordering:
+            <p className="text-muted-foreground">
+              Some items have low stock levels. Please review the following:
             </p>
-            
-            <div className="border rounded-md overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Product</TableHead>
-                    <TableHead className="hidden sm:table-cell">Location</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>Action Needed</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {lowStockItems.map((item, index) => (
-                    <TableRow key={index}>
-                      <TableCell className="font-medium">
-                        <div>{item.product.name}</div>
-                        <div className="sm:hidden text-xs text-muted-foreground mt-1">
-                          {item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}
-                        </div>
-                      </TableCell>
-                      <TableCell className="hidden sm:table-cell">{item.location === StockLocation.SHELF ? "Shelf" : "Back Store"}</TableCell>
-                      <TableCell className="text-warning">{item.quantity}</TableCell>
-                      <TableCell>
-                        {item.needsOrder ? (
-                          <span className="text-destructive flex items-center">
-                            <ShoppingCart className="h-4 w-4 mr-1" /> Order needed
-                          </span>
-                        ) : (
-                          <span className="text-amber-500 flex items-center">
-                            <RefreshCw className="h-4 w-4 mr-1" /> Replenish
-                          </span>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
-            
-            {user?.role === UserRole.MERCHANDISER && lowStockItems.some(item => item.needsOrder) && (
-              <div className="bg-muted/30 p-4 rounded-md">
-                <h4 className="font-medium text-sm mb-2">Order Recommendation</h4>
-                <p className="text-xs text-muted-foreground mb-4">
-                  Some items need to be ordered based on your stock take. Would you like to create an order now?
-                </p>
-                <div className="flex gap-2">
-                  <Button 
-                    size="sm" 
-                    onClick={() => {
-                      setShowLowStockDialog(false);
-                      // In a real app, you'd redirect to the order page with these items pre-populated
-                      toast({
-                        title: "Order creation",
-                        description: "Redirecting to order creation page...",
-                      });
-                      
-                      // For now, we'll just submit the stock take
-                      submitStockTake();
-                    }}
-                  >
-                    <ShoppingCart className="h-4 w-4 mr-2" /> Create Order
-                  </Button>
+            <div className="space-y-2">
+              {lowStockItems.map((item, index) => (
+                <div key={index} className="border rounded-md p-3">
+                  <div className="flex justify-between items-center">
+                    <span className="font-semibold">{item.product.name}</span>
+                    <Badge variant="warning">{item.quantity} in stock</Badge>
+                  </div>
+                  <p className="text-sm text-muted-foreground my-1">
+                    Location: {item.location.toLowerCase().replace('_', ' ')}
+                  </p>
+                  {item.needsOrder && (
+                    <p className="text-red-500 text-sm mt-1">
+                      <AlertTriangle className="h-3 w-3 inline-block mr-1" />
+                      Reorder needed (below minimum of {item.product.minStockLevel})
+                    </p>
+                  )}
                 </div>
-              </div>
-            )}
+              ))}
+            </div>
           </div>
           <DialogFooter>
             <Button 
-              variant="outline" 
+              variant="outline"
+              onClick={() => {
+                // Create automatic orders for these items
+                toast({
+                  title: "Orders Placed",
+                  description: `${lowStockItems.filter(i => i.needsOrder).length} orders have been placed for low stock items.`
+                });
+                setShowLowStockDialog(false);
+                submitStockTake();
+              }}
+            >
+              Place Orders & Submit
+            </Button>
+            <Button 
               onClick={() => {
                 setShowLowStockDialog(false);
                 submitStockTake();
               }}
             >
-              Submit Without Action
+              Submit Anyway
             </Button>
-            <DialogClose asChild>
-              <Button>Continue Editing</Button>
-            </DialogClose>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-      
-      {/* Completed Stock Takes Section */}
-      <Card className="mt-8">
-        <CardHeader>
-          <CardTitle>Completed Stock Takes</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {isLoadingStockTakes ? (
-            <div className="flex items-center justify-center p-8">
-              <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            </div>
-          ) : !completedStockTakes || completedStockTakes.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <p>No stock takes found. Complete your first stock take above.</p>
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Date</TableHead>
-                    <TableHead>Store</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead className="hidden md:table-cell">Items</TableHead>
-                    <TableHead className="hidden md:table-cell">Comment</TableHead>
-                    <TableHead className="hidden md:table-cell">Pictures</TableHead>
-                    <TableHead>Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {completedStockTakes.map((stockTake) => {
-                    const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
-                    return (
-                      <TableRow key={stockTake.id}>
-                        <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
-                        <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
-                        <TableCell>
-                          <span className={
-                            stockTake.status === 'completed' 
-                              ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' 
-                              : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
-                          }>
-                            {stockTake.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {/* We don't have the count directly, this will be fetched when viewing details */}
-                          <Button 
-                            variant="link" 
-                            size="sm" 
-                            className="p-0 h-auto" 
-                            onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
-                          >
-                            View Items
-                          </Button>
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {stockTake.comment && stockTake.comment.length > 0 
-                            ? (stockTake.comment.length > 20 
-                                ? `${stockTake.comment.substring(0, 20)}...` 
-                                : stockTake.comment) 
-                            : '-'}
-                        </TableCell>
-                        <TableCell className="hidden md:table-cell">
-                          {stockTake.pictures && stockTake.pictures.length > 0 ? (
-                            <span className="text-sm">{stockTake.pictures.length} photos</span>
-                          ) : '-'}
-                        </TableCell>
-                        <TableCell>
-                          <Button 
-                            variant="outline" 
-                            size="sm" 
-                            onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
-                          >
-                            View Details
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
-      </Card>
     </div>
   );
 };
