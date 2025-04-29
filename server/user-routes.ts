@@ -34,7 +34,7 @@ export function registerUserRoutes(app: Express) {
   // Get all users (admin/manager only)
   app.get("/api/users", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -62,7 +62,7 @@ export function registerUserRoutes(app: Express) {
   // Get user by ID (admin/manager only, or self)
   app.get("/api/users/:id", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -99,7 +99,7 @@ export function registerUserRoutes(app: Express) {
   // Update user (admin/manager only, or self)
   app.patch("/api/users/:id", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -179,7 +179,7 @@ export function registerUserRoutes(app: Express) {
   // Change password
   app.post("/api/change-password", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -232,7 +232,7 @@ export function registerUserRoutes(app: Express) {
     try {
       const { userId } = req.body;
       
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -459,7 +459,7 @@ export function registerUserRoutes(app: Express) {
   // Invite user (admin/manager only) - in a real app, this would send an email
   app.post("/api/invite-user", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
