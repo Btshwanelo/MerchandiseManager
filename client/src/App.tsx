@@ -25,6 +25,7 @@ import { useEffect } from "react";
 
 // New pages
 import StockTake from "@/pages/stock-take";
+import StockTakeDetail from "@/pages/stock-take-detail";
 import Merchandising from "@/pages/merchandising";
 import CompetitorMerchandising from "@/pages/competitor-merchandising";
 import Flows from "@/pages/flows";
@@ -189,6 +190,12 @@ function Router() {
           return <ProtectedRoute path="/stock-take/:storeId" component={StockTakeWithParams} />;
         }}
       </Route>
+      
+      <ProtectedRoute path="/stock-take-detail/:id" component={() => (
+        <Layout>
+          <StockTakeDetail />
+        </Layout>
+      )} />
       
       <ProtectedRoute path="/merchandising" component={() => (
         <Layout>
