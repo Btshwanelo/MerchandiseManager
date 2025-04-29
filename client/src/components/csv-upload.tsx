@@ -65,6 +65,7 @@ export function CSVUpload<T>({
 
     try {
       setError(null);
+      // Pass the file directly to parseCSV
       const parsedData = await parseCSV<T>(file, headerMapping);
       onDataParsed(parsedData);
       toast({
