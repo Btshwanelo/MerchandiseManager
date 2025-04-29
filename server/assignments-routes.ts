@@ -118,7 +118,6 @@ export function registerAssignmentRoutes(app: express.Express) {
             dueDate: dueDate,
             createdBy: req.user!.id,
             status: "pending",
-            completedAt: null,
             notes: workItemData.notes || null,
             attachments: workItemData.attachments || []
           });
