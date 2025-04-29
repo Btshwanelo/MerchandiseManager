@@ -68,7 +68,19 @@ export function registerAssignmentRoutes(app: express.Express) {
   // Create a new store assignment (admin/manager only)
   app.post("/api/assignments", isAdminOrManager, async (req, res) => {
     try {
-      const parseResult = insertStoreAssignmentSchema.safeParse(req.body);
+      // Create a modified schema that converts date strings to Date objects
+      const assignmentSchema = insertStoreAssignmentSchema.extend({
+        startDate: z.coerce.date(),
+        endDate: z.coerce.date().nullable().optional(),
+      });
+      
+      // Add assignedBy to request body using current user
+      const requestWithAssigner = {
+        ...req.body,
+        assignedBy: req.user!.id
+      };
+      
+      const parseResult = assignmentSchema.safeParse(requestWithAssigner);
       
       if (!parseResult.success) {
         return res.status(400).json({ 
@@ -77,11 +89,8 @@ export function registerAssignmentRoutes(app: express.Express) {
         });
       }
       
-      // Add the current user as the assigner
-      const assignmentData = {
-        ...parseResult.data,
-        assignedBy: req.user!.id,
-      };
+      // Use the parsed data
+      const assignmentData = parseResult.data;
       
       const newAssignment = await storage.createStoreAssignment(assignmentData);
       
@@ -90,16 +99,27 @@ export function registerAssignmentRoutes(app: express.Express) {
         const createdWorkItems = [];
         
         for (const workItemData of req.body.workItems) {
+          // Default due date: 1 week from now
+          const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+          
+          // Convert date string to Date object if provided, otherwise use default
+          const dueDate = workItemData.dueDate 
+            ? new Date(workItemData.dueDate) 
+            : defaultDueDate;
+          
           const workItem = await storage.createWorkItem({
             title: workItemData.title || `Work at ${newAssignment.storeId}`,
-            description: workItemData.description,
+            description: workItemData.description || null,
             type: workItemData.type || WorkItemType.STOCK_TAKE,
             userId: newAssignment.userId,
             storeId: newAssignment.storeId,
             storeAssignmentId: newAssignment.id,
             priority: workItemData.priority || "medium",
-            dueDate: workItemData.dueDate || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // Default: 1 week
+            dueDate: dueDate,
             createdBy: req.user!.id,
+            status: "pending",
+            completedAt: null,
+            notes: workItemData.notes || null,
             attachments: workItemData.attachments || []
           });
           
@@ -317,7 +337,7 @@ export function registerAssignmentRoutes(app: express.Express) {
         actionType: 'work-item-completed',
         storeId: existing.storeId,
         userId: req.user!.id,
-        productId: null,
+        productId: 0, // Use a valid numeric ID
         status: 'completed',
         notes: `Completed work item: ${existing.title}`,
       });
