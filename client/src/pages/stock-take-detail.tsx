@@ -1,27 +1,17 @@
-import { useState, useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useLocation, useRoute, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
-} from "@/components/ui/select";
-import { 
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-  DialogClose,
-  DialogTrigger,
-} from "@/components/ui/dialog";
+  Card, 
+  CardContent, 
+  CardDescription, 
+  CardFooter, 
+  CardHeader, 
+  CardTitle 
+} from "@/components/ui/card";
 import { 
   Table, 
   TableBody, 
@@ -30,503 +20,634 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
+import { Separator } from "@/components/ui/separator";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
 import { 
-  Alert,
-  AlertTitle,
-  AlertDescription 
-} from "@/components/ui/alert";
+  Dialog, 
+  DialogContent, 
+  DialogHeader, 
+  DialogTitle, 
+  DialogDescription,
+  DialogFooter,
+  DialogClose 
+} from "@/components/ui/dialog";
 import { 
-  Form, 
-  FormControl, 
-  FormField, 
-  FormItem, 
-  FormLabel, 
-  FormMessage 
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
+import { Input } from "@/components/ui/input";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
 } from "@/components/ui/form";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, ArrowLeft, Save, Edit, AlertTriangle, User, Calendar, Store, ShoppingBag, CheckCircle } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { z } from "zod";
-import { 
-  Loader2, 
-  Save, 
-  Store, 
-  Camera, 
-  Image,
-  Edit,
-  History,
-  Check,
-  AlertTriangle,
-  ArrowLeft
-} from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { formatDistanceToNow, format } from 'date-fns';
 import { 
   Product, 
   Store as StoreType, 
   StockLocation, 
-  UserRole, 
   StockTake as DbStockTake, 
-  StockTakeItem 
+  StockTakeItem as DbStockTakeItem, 
+  User as UserType,
+  UserRole 
 } from "@shared/schema";
+import * as z from "zod";
 
-// Define a type for StockTake that includes properties we know will be in our response
+// Define types that extend the database models
 type StockTake = DbStockTake & {
   pictures: string[];
-  items: (StockTakeItem & { product: Product })[];
+  user?: UserType;
+  store?: StoreType;
+  lastEditedBy?: UserType;
+  items?: StockTakeItemWithDetails[];
 };
 
-// Define stock take edit form schema
-const stockTakeEditSchema = z.object({
-  comment: z.string().optional(),
-  status: z.string(),
-  auditComment: z.string().min(1, { message: "Audit comment is required when editing someone else's stock take" }).optional()
+type StockTakeItemWithDetails = DbStockTakeItem & {
+  product?: Product;
+};
+
+// Form schema for editing stock take items
+const editStockTakeItemSchema = z.object({
+  quantity: z.coerce.number().min(0, "Quantity must be a positive number"),
+  location: z.enum([StockLocation.SHELF, StockLocation.BACK_STORE]),
+  auditComment: z.string().min(5, "Audit comment must be at least 5 characters"),
 });
 
-type StockTakeEditFormValues = z.infer<typeof stockTakeEditSchema>;
+type EditStockTakeItemFormValues = z.infer<typeof editStockTakeItemSchema>;
 
 const StockTakeDetailPage = () => {
+  const { id } = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [, setLocation] = useLocation();
-  const [, params] = useRoute<{ id: string }>("/stock-take/:id");
-  const stockTakeId = params?.id;
-  const [isEditing, setIsEditing] = useState(false);
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [imagePreviewDialogOpen, setImagePreviewDialogOpen] = useState(false);
-  
-  // Determine if user is admin or manager
-  const isAdminOrManager = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
-  
-  // Fetch the stock take detail
-  const { 
-    data: stockTake, 
-    isLoading: isLoadingStockTake,
-    refetch: refetchStockTake
-  } = useQuery<StockTake>({
-    queryKey: [`/api/stock-takes/${stockTakeId}`],
-    enabled: !!stockTakeId && !!user,
+  const [editingItemId, setEditingItemId] = useState<number | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [currentItemBeingEdited, setCurrentItemBeingEdited] = useState<StockTakeItemWithDetails | null>(null);
+  const [activeTab, setActiveTab] = useState("details");
+  const [imageDialogOpen, setImageDialogOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState("");
+
+  // Fetch the stock take with its items
+  const { data: stockTake, isLoading } = useQuery<StockTake>({
+    queryKey: ["/api/stock-takes", id],
+    enabled: !!id,
   });
-  
-  // Fetch stores for showing store name
-  const { data: stores } = useQuery<StoreType[]>({
-    queryKey: ["/api/stores"],
-    enabled: !!user,
-  });
-  
-  // Check if the current user is editing someone else's stock take
-  const isEditingOthersStockTake = stockTake && user && stockTake.userId !== user.id;
-  
-  // Setup form for stock take editing
-  const form = useForm<StockTakeEditFormValues>({
-    resolver: zodResolver(
-      isEditingOthersStockTake 
-        ? stockTakeEditSchema
-        : stockTakeEditSchema.omit({ auditComment: true })
-    ),
+
+  // Form setup
+  const form = useForm<EditStockTakeItemFormValues>({
+    resolver: zodResolver(editStockTakeItemSchema),
     defaultValues: {
-      comment: stockTake?.comment || '',
-      status: stockTake?.status || 'completed',
-      auditComment: ''
-    }
+      quantity: 0,
+      location: StockLocation.SHELF,
+      auditComment: "",
+    },
   });
-  
-  // Update form values when stock take data is loaded
-  useEffect(() => {
-    if (stockTake) {
-      form.reset({
-        comment: stockTake.comment || '',
-        status: stockTake.status || 'completed',
-        auditComment: ''
-      });
-    }
-  }, [stockTake, form]);
-  
-  // View an image in the preview dialog
-  const handleViewImage = (imageUrl: string) => {
-    setSelectedImage(imageUrl);
-    setImagePreviewDialogOpen(true);
+
+  // Handle opening the edit dialog for an item
+  const handleEditItem = (item: StockTakeItemWithDetails) => {
+    setCurrentItemBeingEdited(item);
+    form.reset({
+      quantity: item.quantity,
+      location: item.location,
+      auditComment: "",
+    });
+    setIsEditDialogOpen(true);
   };
-  
-  // Update stock take mutation
-  const updateStockTakeMutation = useMutation({
-    mutationFn: async (data: StockTakeEditFormValues) => {
-      // Create form data to handle the multipart/form-data submission
-      const formData = new FormData();
-      formData.append('comment', data.comment || '');
-      formData.append('status', data.status);
-      
-      // Only include audit comment if required (admin/manager editing someone else's work)
-      if (isEditingOthersStockTake && data.auditComment) {
-        formData.append('auditComment', data.auditComment);
-      }
-      
-      // Use fetch directly for better control over FormData
-      const response = await fetch(`/api/stock-takes/${stockTakeId}`, {
-        method: 'PUT',
-        body: formData,
-        credentials: 'include'
-      });
-      
-      if (!response.ok) {
-        let errorMessage = "Failed to update stock take";
-        try {
-          const errorData = await response.json();
-          errorMessage = errorData.message || errorMessage;
-        } catch (e) {
-          // If response is not JSON, try to get text
-          const errorText = await response.text().catch(() => "");
-          if (errorText) errorMessage = errorText;
-        }
-        throw new Error(errorMessage);
-      }
-      
-      return await response.json();
+
+  // Handle the submission of edits
+  const editStockTakeItemMutation = useMutation({
+    mutationFn: async (data: EditStockTakeItemFormValues & { itemId: number }) => {
+      const { itemId, ...updateData } = data;
+      const response = await apiRequest("PUT", `/api/stock-take-items/${itemId}`, updateData);
+      return response.json();
     },
     onSuccess: () => {
-      // Invalidate and refetch the stock take data
-      queryClient.invalidateQueries({ queryKey: [`/api/stock-takes/${stockTakeId}`] });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-takes"] });
-      
       toast({
-        title: "Stock take updated",
-        description: "The stock take has been successfully updated."
+        title: "Item updated",
+        description: "The stock take item has been updated successfully.",
       });
-      
-      // Exit edit mode
-      setIsEditing(false);
-      
-      // Refetch the stock take to get the updated data
-      refetchStockTake();
+      queryClient.invalidateQueries({ queryKey: ["/api/stock-takes", id] });
+      setIsEditDialogOpen(false);
+      setCurrentItemBeingEdited(null);
+      form.reset();
     },
     onError: (error: Error) => {
       toast({
-        title: "Failed to update stock take",
+        title: "Failed to update item",
         description: error.message,
-        variant: "destructive"
+        variant: "destructive",
       });
-    }
+    },
   });
-  
-  // Form submission handler
-  const onSubmit = (data: StockTakeEditFormValues) => {
-    updateStockTakeMutation.mutate(data);
+
+  // Handle the form submission
+  const onSubmit = (values: EditStockTakeItemFormValues) => {
+    if (!currentItemBeingEdited) {
+      toast({
+        title: "Error",
+        description: "No item selected for editing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    editStockTakeItemMutation.mutate({
+      ...values,
+      itemId: currentItemBeingEdited.id,
+    });
   };
-  
-  // Get store name from store ID
-  const getStoreName = (storeId?: number) => {
-    if (!storeId || !stores) return "Unknown Store";
-    const store = stores.find(s => s.id === storeId);
-    return store ? store.name : `Store #${storeId}`;
+
+  // View image in a dialog
+  const handleViewImage = (imageUrl: string) => {
+    setSelectedImage(imageUrl);
+    setImageDialogOpen(true);
   };
-  
-  // Format date for display
-  const formatDate = (dateString?: string | Date | null) => {
-    if (!dateString) return "Unknown Date";
-    const date = new Date(dateString);
-    return date.toLocaleDateString() + " " + date.toLocaleTimeString();
-  };
-  
-  if (isLoadingStockTake) {
+
+  // Check if the user is allowed to edit
+  const canEdit = user?.role === UserRole.ADMIN;
+
+  if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <span className="ml-2">Loading stock take details...</span>
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
       </div>
     );
   }
-  
+
   if (!stockTake) {
     return (
-      <Alert variant="destructive" className="mt-4">
-        <AlertTriangle className="h-4 w-4" />
-        <AlertTitle>Error</AlertTitle>
-        <AlertDescription>
-          Stock take not found or you don't have permission to view it. 
-          <Button variant="link" className="p-0 h-auto font-normal" onClick={() => setLocation('/stock-take')}>
-            Return to Stock Takes
+      <div className="space-y-4">
+        <div className="flex items-center space-x-2">
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={() => setLocation("/stock-take")}
+          >
+            <ArrowLeft className="mr-2 h-4 w-4" />
+            Back to Stock Takes
           </Button>
-        </AlertDescription>
-      </Alert>
+        </div>
+        <Card>
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center justify-center py-10">
+              <AlertTriangle className="h-10 w-10 text-yellow-500 mb-4" />
+              <h3 className="text-xl font-semibold mb-2">Stock Take Not Found</h3>
+              <p className="text-muted-foreground text-center">
+                The requested stock take could not be found or you don't have permission to view it.
+              </p>
+              <Button 
+                className="mt-6" 
+                onClick={() => setLocation("/stock-take")}
+              >
+                Return to Stock Takes
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     );
   }
-  
+
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center">
-        <div className="flex items-center gap-2">
-          <Button variant="outline" size="sm" onClick={() => setLocation('/stock-take')}>
-            <ArrowLeft className="h-4 w-4 mr-1" />
-            Back
-          </Button>
-          <h1 className="text-2xl font-bold">Stock Take Details</h1>
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={() => setLocation("/stock-take")}
+            >
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back
+            </Button>
+            <h1 className="text-2xl font-bold">Stock Take Details</h1>
+          </div>
+          {stockTake.store && (
+            <p className="text-muted-foreground">
+              {stockTake.store.name} - {format(new Date(stockTake.createdAt), 'PPP')}
+            </p>
+          )}
         </div>
-        {isAdminOrManager && !isEditing && (
-          <Button onClick={() => setIsEditing(true)}>
-            <Edit className="h-4 w-4 mr-2" />
-            Edit Stock Take
-          </Button>
-        )}
       </div>
-      
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div className="lg:col-span-2 space-y-6">
+
+      <Tabs defaultValue="details" className="space-y-6" onValueChange={setActiveTab}>
+        <TabsList>
+          <TabsTrigger value="details">Details</TabsTrigger>
+          <TabsTrigger value="items">Items</TabsTrigger>
+          {stockTake.pictures && stockTake.pictures.length > 0 && (
+            <TabsTrigger value="photos">Photos ({stockTake.pictures.length})</TabsTrigger>
+          )}
+          <TabsTrigger value="audit">Audit Log</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="details" className="space-y-6">
           <Card>
             <CardHeader>
               <CardTitle>Stock Take Information</CardTitle>
               <CardDescription>
-                Recorded on {formatDate(stockTake.date)} at {getStoreName(stockTake.storeId)}
+                Basic information about this stock take
               </CardDescription>
             </CardHeader>
-            
-            {isEditing ? (
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="comment"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Comments</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              placeholder="Add comments about this stock take..." 
-                              className="resize-none"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="status"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Status</FormLabel>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger>
-                                <SelectValue placeholder="Select a status" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="draft">Draft</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    {isEditingOthersStockTake && (
-                      <FormField
-                        control={form.control}
-                        name="auditComment"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="font-bold text-red-500">Audit Comment (Required)</FormLabel>
-                            <FormControl>
-                              <Textarea 
-                                placeholder="Explain why you are editing this stock take..."
-                                className="resize-none"
-                                {...field}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    )}
-                    
-                    <div className="flex justify-end space-x-2 pt-4">
-                      <Button 
-                        type="button" 
-                        variant="outline" 
-                        onClick={() => setIsEditing(false)}
-                      >
-                        Cancel
-                      </Button>
-                      <Button 
-                        type="submit"
-                        disabled={updateStockTakeMutation.isPending}
-                      >
-                        {updateStockTakeMutation.isPending ? (
-                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        ) : (
-                          <Save className="mr-2 h-4 w-4" />
-                        )}
-                        Save Changes
-                      </Button>
-                    </div>
-                  </form>
-                </Form>
-              </CardContent>
-            ) : (
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Store</h3>
-                  <div className="flex items-center">
-                    <Store className="h-4 w-4 mr-2 text-muted-foreground" />
-                    <span>{getStoreName(stockTake.storeId)}</span>
-                  </div>
-                </div>
-                
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Status</h3>
+            <CardContent className="space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
                   <div>
-                    <span className={
-                      stockTake.status === 'completed' 
-                        ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' 
-                        : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
-                    }>
-                      <Check className="h-3 w-3 mr-1" />
-                      {stockTake.status === 'completed' ? 'Completed' : 'Draft'}
-                    </span>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Date Submitted</h3>
+                    <div className="flex items-center">
+                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{format(new Date(stockTake.createdAt), 'PPP p')}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Store</h3>
+                    <div className="flex items-center">
+                      <Store className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{stockTake.store?.name || 'Unknown'}</span>
+                    </div>
+                  </div>
+                  
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Submitted By</h3>
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span>{stockTake.user?.name || 'Unknown'}</span>
+                    </div>
                   </div>
                 </div>
                 
-                <div className="space-y-2">
-                  <h3 className="text-sm font-medium">Comments</h3>
-                  <p className="text-sm text-muted-foreground">{stockTake.comment || 'No comments'}</p>
-                </div>
-                
-                {stockTake.auditComment && (
-                  <div className="space-y-2 p-3 border border-amber-200 bg-amber-50 rounded-md">
-                    <h3 className="text-sm font-medium flex items-center">
-                      <History className="h-4 w-4 mr-2 text-amber-500" />
-                      Audit Information
-                    </h3>
-                    <p className="text-sm">
-                      <span className="font-medium">Last edited:</span> {formatDate(stockTake.lastEditedAt)}
-                    </p>
-                    <p className="text-sm">
-                      <span className="font-medium">Reason for edit:</span> {stockTake.auditComment}
-                    </p>
+                <div className="space-y-4">
+                  <div>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+                    <Badge className="capitalize">
+                      {stockTake.status.toLowerCase()}
+                    </Badge>
                   </div>
-                )}
-              </CardContent>
-            )}
-          </Card>
-          
-          <Card>
-            <CardHeader>
-              <CardTitle>Product Items</CardTitle>
-              <CardDescription>
-                Items recorded in this stock take
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              {stockTake.items?.length > 0 ? (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Product</TableHead>
-                      <TableHead>SKU</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>Location</TableHead>
-                      <TableHead>Min Stock Level</TableHead>
-                      <TableHead>Status</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stockTake.items.map((item) => (
-                      <TableRow key={item.id}>
-                        <TableCell>{item.product.name}</TableCell>
-                        <TableCell>{item.product.sku}</TableCell>
-                        <TableCell>{item.quantity}</TableCell>
-                        <TableCell>
-                          {item.location === StockLocation.SHELF ? 'Shelf' : 'Back Store'}
-                        </TableCell>
-                        <TableCell>{item.product.minStockLevel}</TableCell>
-                        <TableCell>
-                          {item.quantity < item.product.minStockLevel ? (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                              <AlertTriangle className="h-3 w-3 mr-1" />
-                              Low Stock
-                            </span>
-                          ) : (
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800">
-                              <Check className="h-3 w-3 mr-1" />
-                              In Stock
+
+                  {stockTake.items && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Items</h3>
+                      <div className="flex items-center">
+                        <ShoppingBag className="h-4 w-4 mr-2 text-muted-foreground" />
+                        <span>{stockTake.items.length} products</span>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {stockTake.lastEditedAt && (
+                    <div>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Last Edited</h3>
+                      <div className="flex items-start">
+                        <Calendar className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
+                        <div className="flex flex-col">
+                          <span>{format(new Date(stockTake.lastEditedAt), 'PPP p')}</span>
+                          {stockTake.lastEditedBy && (
+                            <span className="text-sm text-muted-foreground">
+                              by {stockTake.lastEditedBy.name}
                             </span>
                           )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <p>No products recorded in this stock take.</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {stockTake.comment && (
+                <div className="pt-4">
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Comments</h3>
+                  <div className="bg-muted p-4 rounded-md">
+                    {stockTake.comment}
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
-        
-        <div className="space-y-6">
+        </TabsContent>
+
+        <TabsContent value="items" className="space-y-6">
           <Card>
             <CardHeader>
-              <CardTitle>Photos</CardTitle>
+              <CardTitle>Stock Take Items</CardTitle>
               <CardDescription>
-                Pictures taken during stock take
+                Individual items recorded in this stock take
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {stockTake.pictures && stockTake.pictures.length > 0 ? (
-                <div className="grid grid-cols-2 gap-2">
-                  {stockTake.pictures.map((pic, index) => (
+              {stockTake.items && stockTake.items.length > 0 ? (
+                <div className="rounded-md border">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Product</TableHead>
+                        <TableHead>SKU</TableHead>
+                        <TableHead className="text-center">Quantity</TableHead>
+                        <TableHead>Location</TableHead>
+                        <TableHead className="text-right">Actions</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {stockTake.items.map((item) => (
+                        <TableRow key={item.id}>
+                          <TableCell className="font-medium">
+                            {item.product?.name || 'Unknown Product'}
+                          </TableCell>
+                          <TableCell>
+                            {item.product?.sku || '-'}
+                          </TableCell>
+                          <TableCell className="text-center">
+                            <Badge variant={item.quantity === 0 ? "destructive" : (item.quantity < (item.product?.minStockLevel || 5) ? "warning" : "default")}>
+                              {item.quantity}
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline" className="capitalize">
+                              {item.location.toLowerCase().replace('_', ' ')}
+                            </Badge>
+                          </TableCell>
+                          <TableCell className="text-right">
+                            {canEdit && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleEditItem(item)}
+                                disabled={editStockTakeItemMutation.isPending}
+                              >
+                                {editStockTakeItemMutation.isPending && editingItemId === item.id ? (
+                                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                ) : (
+                                  <Edit className="h-4 w-4 mr-2" />
+                                )}
+                                Edit
+                              </Button>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-10">
+                  <ShoppingBag className="h-10 w-10 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Items Found</h3>
+                  <p className="text-muted-foreground text-center">
+                    There are no items recorded in this stock take.
+                  </p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        {stockTake.pictures && stockTake.pictures.length > 0 && (
+          <TabsContent value="photos" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Stock Take Photos</CardTitle>
+                <CardDescription>
+                  Photos submitted with this stock take
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {stockTake.pictures.map((picture, index) => (
                     <div 
                       key={index} 
-                      className="relative aspect-square rounded-md overflow-hidden cursor-pointer border"
-                      onClick={() => handleViewImage(pic)}
+                      className="border rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105"
+                      onClick={() => handleViewImage(picture)}
                     >
                       <img 
-                        src={pic} 
-                        alt={`Stock take image ${index + 1}`} 
-                        className="object-cover w-full h-full"
+                        src={picture} 
+                        alt={`Stock take photo ${index + 1}`} 
+                        className="w-full h-48 object-cover"
                       />
+                      <div className="p-2 bg-muted text-center">
+                        <span className="text-sm">Photo {index + 1}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        )}
+
+        <TabsContent value="audit" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Audit History</CardTitle>
+              <CardDescription>
+                Record of changes made to this stock take
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              {stockTake.lastEditedAt ? (
+                <div className="space-y-4">
+                  <div className="flex items-start space-x-4 border-l-2 border-primary pl-4 pb-4">
+                    <div className="rounded-full bg-primary h-8 w-8 flex items-center justify-center">
+                      <Edit className="h-4 w-4 text-primary-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">Stock Take Edited</span>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(stockTake.lastEditedAt), 'PPP p')}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">{stockTake.lastEditedBy?.name || 'Admin'}</span> edited this stock take.
+                      </p>
+                      {stockTake.auditComment && (
+                        <div className="mt-2 bg-muted p-3 rounded-md">
+                          <p className="text-sm"><span className="font-medium">Comment:</span> {stockTake.auditComment}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4 border-l-2 border-muted pl-4">
+                    <div className="rounded-full bg-muted h-8 w-8 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-foreground" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">Stock Take Created</span>
+                        <span className="text-sm text-muted-foreground">
+                          {format(new Date(stockTake.createdAt), 'PPP p')}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> created this stock take.
+                      </p>
+                    </div>
+                  </div>
+                </div>
               ) : (
-                <div className="text-center py-6 text-muted-foreground">
-                  <Camera className="mx-auto h-10 w-10 opacity-20 mb-2" />
-                  <p>No photos available for this stock take.</p>
+                <div className="flex flex-col items-center justify-center py-10">
+                  <AlertTriangle className="h-10 w-10 text-muted-foreground mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">No Audit History</h3>
+                  <p className="text-muted-foreground text-center">
+                    This stock take has not been edited since creation.
+                  </p>
                 </div>
               )}
             </CardContent>
           </Card>
-        </div>
-      </div>
-      
-      {/* Image preview dialog */}
-      <Dialog open={imagePreviewDialogOpen} onOpenChange={setImagePreviewDialogOpen}>
-        <DialogContent className="max-w-3xl">
+        </TabsContent>
+      </Tabs>
+
+      {/* Edit Item Dialog */}
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
           <DialogHeader>
-            <DialogTitle>Stock Take Photo</DialogTitle>
+            <DialogTitle>Edit Stock Take Item</DialogTitle>
+            <DialogDescription>
+              Update the quantity and location of this stock take item.
+              As an admin, you must provide a reason for this edit.
+            </DialogDescription>
           </DialogHeader>
-          <div className="flex items-center justify-center">
-            {selectedImage && (
-              <img 
-                src={selectedImage} 
-                alt="Stock take detailed view" 
-                className="max-h-[70vh] object-contain"
+          
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+              {currentItemBeingEdited?.product && (
+                <div className="rounded-md bg-muted p-4 mb-4">
+                  <h4 className="font-medium">{currentItemBeingEdited.product.name}</h4>
+                  <p className="text-sm text-muted-foreground">
+                    SKU: {currentItemBeingEdited.product.sku}
+                  </p>
+                </div>
+              )}
+              
+              <div className="grid grid-cols-2 gap-4">
+                <FormField
+                  control={form.control}
+                  name="quantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantity</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min="0" 
+                          {...field} 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                
+                <FormField
+                  control={form.control}
+                  name="location"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Location</FormLabel>
+                      <div className="flex space-x-2">
+                        <Button
+                          type="button"
+                          variant={field.value === StockLocation.SHELF ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => form.setValue("location", StockLocation.SHELF)}
+                        >
+                          Shelf
+                        </Button>
+                        <Button
+                          type="button"
+                          variant={field.value === StockLocation.BACK_STORE ? "default" : "outline"}
+                          className="flex-1"
+                          onClick={() => form.setValue("location", StockLocation.BACK_STORE)}
+                        >
+                          Back Store
+                        </Button>
+                      </div>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+              
+              <FormField
+                control={form.control}
+                name="auditComment"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      <span className="flex items-center">
+                        Audit Comment
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger className="ml-1">
+                              <AlertTriangle className="h-4 w-4 text-yellow-500" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>Required: Explain why you're editing this stock take item</p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </span>
+                    </FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="e.g., Correcting counting error based on physical verification" 
+                        className="min-h-[80px]"
+                        {...field} 
+                      />
+                    </FormControl>
+                    <FormDescription>
+                      Please provide a detailed reason for this edit for audit purposes.
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            )}
-          </div>
-          <DialogFooter>
-            <DialogClose asChild>
-              <Button variant="secondary">Close</Button>
-            </DialogClose>
-          </DialogFooter>
+              
+              <DialogFooter>
+                <Button 
+                  type="button" 
+                  variant="outline" 
+                  onClick={() => setIsEditDialogOpen(false)}
+                  disabled={editStockTakeItemMutation.isPending}
+                >
+                  Cancel
+                </Button>
+                <Button 
+                  type="submit"
+                  disabled={editStockTakeItemMutation.isPending}
+                >
+                  {editStockTakeItemMutation.isPending && (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  )}
+                  Save Changes
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Image Preview Dialog */}
+      <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
+        <DialogContent className="sm:max-w-[800px] p-1">
+          <img 
+            src={selectedImage} 
+            alt="Stock take photo" 
+            className="w-full h-auto"
+          />
         </DialogContent>
       </Dialog>
     </div>

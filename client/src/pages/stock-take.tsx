@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -60,6 +61,7 @@ interface StockTakePageProps {
 const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, setLocation] = useLocation();
   const [selectedStore, setSelectedStore] = useState<string>(storeId || "");
   const [comment, setComment] = useState<string>("");
   const [stockTakeItems, setStockTakeItems] = useState<Array<{productId: number, quantity: number, location: StockLocation}>>([]);
@@ -916,13 +918,12 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                         </TableCell>
                         <TableCell className="hidden md:table-cell">
                           {/* We don't have the count directly, this will be fetched when viewing details */}
-                          <Button variant="link" size="sm" className="p-0 h-auto" onClick={() => {
-                            // View details logic would go here
-                            toast({
-                              title: "Feature Coming Soon",
-                              description: "Stock take details view will be available in a future update.",
-                            });
-                          }}>
+                          <Button 
+                            variant="link" 
+                            size="sm" 
+                            className="p-0 h-auto" 
+                            onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
+                          >
                             View Items
                           </Button>
                         </TableCell>
@@ -939,13 +940,11 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                           ) : '-'}
                         </TableCell>
                         <TableCell>
-                          <Button variant="outline" size="sm" onClick={() => {
-                            // View details logic would go here
-                            toast({
-                              title: "Feature Coming Soon",
-                              description: "Stock take details view will be available in a future update.",
-                            });
-                          }}>
+                          <Button 
+                            variant="outline" 
+                            size="sm" 
+                            onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`)}
+                          >
                             View Details
                           </Button>
                         </TableCell>
