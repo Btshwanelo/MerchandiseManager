@@ -1044,19 +1044,22 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                             <Button 
                               variant="outline" 
                               size="sm" 
-                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`, {
-                                stockTake: {
-                                  id: stockTake.id,
-                                  user: stockTake.user,
-                                  store: stockTake.store,
-                                  items: stockTake.items,
-                                  date: stockTake.date,
-                                  status: stockTake.status,
-                                  pictures: stockTake.pictures,
-                                  comment: stockTake.comment,
-                                  lastEditedAt: stockTake.lastEditedAt,
-                                  lastEditedBy: stockTake.lastEditedBy,
-                                  auditComment: stockTake.auditComment
+                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`, { 
+                                replace: false,
+                                state: { 
+                                  stockTake: {
+                                    id: stockTake.id,
+                                    user: stockTake.user,
+                                    store: stockTake.store,
+                                    items: stockTake.items,
+                                    date: stockTake.date,
+                                    status: stockTake.status,
+                                    pictures: stockTake.pictures,
+                                    comment: stockTake.comment,
+                                    lastEditedAt: stockTake.lastEditedAt,
+                                    lastEditedBy: stockTake.lastEditedBy,
+                                    auditComment: stockTake.auditComment
+                                  }
                                 }
                               })}
                             >
