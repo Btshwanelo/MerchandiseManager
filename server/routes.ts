@@ -10,6 +10,60 @@ import path from "path";
 import { registerUserRoutes } from "./user-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Endpoint for bulk deleting items
+  app.delete("/api/bulk-delete/:resource", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const { resource } = req.params;
+      const { ids } = req.body as { ids: number[] };
+      
+      if (!Array.isArray(ids) || ids.length === 0) {
+        return res.status(400).json({ message: "Invalid or empty ids array" });
+      }
+      
+      let deleteCount = 0;
+      let success = false;
+      
+      // Perform deletion based on resource type
+      switch (resource) {
+        case "products":
+          for (const id of ids) {
+            success = await storage.deleteProduct(id);
+            if (success) deleteCount++;
+          }
+          break;
+        case "stores":
+          for (const id of ids) {
+            success = await storage.deleteStore(id);
+            if (success) deleteCount++;
+          }
+          break;
+        case "users":
+          for (const id of ids) {
+            // Prevent deleting own account
+            if (id === req.user!.id) {
+              continue;
+            }
+            success = await storage.deleteUser(id);
+            if (success) deleteCount++;
+          }
+          break;
+        // Add other resources as needed
+        default:
+          return res.status(404).json({ message: "Resource type not supported for bulk deletion" });
+      }
+      
+      res.json({ 
+        success: true, 
+        deletedCount: deleteCount,
+        message: `Successfully deleted ${deleteCount} ${resource}`
+      });
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to perform bulk deletion" });
+    }
+  });
   // Set up authentication routes
   setupAuth(app);
   

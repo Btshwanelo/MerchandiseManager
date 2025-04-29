@@ -13,6 +13,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Select, 
   SelectContent, 
@@ -46,6 +47,7 @@ import {
 } from "lucide-react";
 import { Store, User as UserType, UserRole, insertStoreSchema } from "@shared/schema";
 import { CSVUpload } from "@/components/csv-upload";
+import { BulkActions } from "@/components/bulk-actions";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -66,11 +68,13 @@ const StoresPage = () => {
   const { user } = useAuth();
   // Allow admin and manager to add stores
   const canAddStore = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
+  const isAdmin = user?.role === UserRole.ADMIN;
   
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [addStoreTab, setAddStoreTab] = useState<string>("quick-add");
   const [csvData, setCsvData] = useState<StoreCSVItem[]>([]);
+  const [selectedStores, setSelectedStores] = useState<Store[]>([]);
 
   // Define form schema for store creation
   const formSchema = insertStoreSchema.extend({
@@ -191,11 +195,45 @@ const StoresPage = () => {
     createStoreMutation.mutate(values);
   };
 
+  // Mutation for bulk delete
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const response = await apiRequest("DELETE", "/api/bulk-delete/stores", { ids });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Stores deleted",
+        description: data.message,
+      });
+      // Invalidate stores query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/stores"] });
+      setSelectedStores([]);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Deletion failed",
+        description: error instanceof Error ? error.message : "An error occurred during deletion",
+      });
+    }
+  });
+
+  // Handle bulk delete
+  const handleBulkDelete = async (ids: (number | string)[]) => {
+    const numericIds = ids.map(id => Number(id));
+    await bulkDeleteMutation.mutateAsync(numericIds);
+  };
+
   // Filter stores based on search query
   const filteredStores = stores?.filter(store => 
     store.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
     store.location.toLowerCase().includes(searchQuery.toLowerCase())
   );
+  
+  // Check if a store is selected
+  const isStoreSelected = (store: Store) => 
+    selectedStores.some(s => s.id === store.id);
 
   return (
     <div className="space-y-6">
@@ -246,9 +284,21 @@ const StoresPage = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              {filteredStores && (
+                <BulkActions
+                  selectedItems={selectedStores}
+                  allItems={filteredStores}
+                  setSelectedItems={setSelectedStores}
+                  getItemId={(store) => store.id}
+                  onDelete={isAdmin ? handleBulkDelete : undefined}
+                  isUserAdmin={isAdmin}
+                />
+              )}
+              
               <Table>
                 <TableHeader>
                   <TableRow>
+                    <TableHead className="w-[40px]"></TableHead>
                     <TableHead>Store Name</TableHead>
                     <TableHead>Location</TableHead>
                     <TableHead>Manager</TableHead>
@@ -258,9 +308,23 @@ const StoresPage = () => {
                 <TableBody>
                   {filteredStores?.map((store) => {
                     const manager = managers?.find(m => m.id === store.managerId);
+                    const isSelected = isStoreSelected(store);
                     
                     return (
-                      <TableRow key={store.id}>
+                      <TableRow key={store.id} className={isSelected ? "bg-muted/30" : undefined}>
+                        <TableCell className="w-[40px]">
+                          <Checkbox 
+                            checked={isSelected}
+                            onCheckedChange={(checked) => {
+                              if (checked) {
+                                setSelectedStores(prev => [...prev, store]);
+                              } else {
+                                setSelectedStores(prev => prev.filter(s => s.id !== store.id));
+                              }
+                            }}
+                            aria-label={`Select ${store.name}`}
+                          />
+                        </TableCell>
                         <TableCell className="font-medium">{store.name}</TableCell>
                         <TableCell>{store.location}</TableCell>
                         <TableCell>
