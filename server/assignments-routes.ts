@@ -95,6 +95,8 @@ export function registerAssignmentRoutes(app: express.Express) {
   // Create a new store assignment (admin/manager only)
   app.post("/api/assignments", isAdminOrManager, async (req, res) => {
     try {
+      console.log("Received assignment request:", JSON.stringify(req.body, null, 2));
+      
       // Create a modified schema that converts date strings to Date objects
       const assignmentSchema = insertStoreAssignmentSchema.extend({
         startDate: z.coerce.date(),
@@ -107,9 +109,12 @@ export function registerAssignmentRoutes(app: express.Express) {
         assignedBy: req.user!.id
       };
       
+      console.log("Request with assigner:", JSON.stringify(requestWithAssigner, null, 2));
+      
       const parseResult = assignmentSchema.safeParse(requestWithAssigner);
       
       if (!parseResult.success) {
+        console.error("Validation error:", parseResult.error.errors);
         return res.status(400).json({ 
           error: "Invalid assignment data", 
           details: parseResult.error.errors 
@@ -118,21 +123,45 @@ export function registerAssignmentRoutes(app: express.Express) {
       
       // Use the parsed data
       const assignmentData = parseResult.data;
+      console.log("Parsed assignment data:", JSON.stringify(assignmentData, null, 2));
       
       const newAssignment = await storage.createStoreAssignment(assignmentData);
       
       // If work items are specified, create them automatically
       if (req.body.workItems && Array.isArray(req.body.workItems)) {
+        console.log("Processing work items:", JSON.stringify(req.body.workItems, null, 2));
         const createdWorkItems = [];
         
         for (const workItemData of req.body.workItems) {
+          console.log("Processing work item:", JSON.stringify(workItemData, null, 2));
           // Default due date: 1 week from now
           const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
           
-          // Convert date string to Date object if provided, otherwise use default
-          const dueDate = workItemData.dueDate 
-            ? new Date(workItemData.dueDate) 
-            : defaultDueDate;
+          // Handle different date formats
+          let dueDate;
+          try {
+            if (workItemData.dueDate) {
+              if (workItemData.dueDate instanceof Date) {
+                dueDate = workItemData.dueDate;
+              } else if (typeof workItemData.dueDate === 'string') {
+                dueDate = new Date(workItemData.dueDate);
+              } else {
+                console.log("Invalid due date format, using default");
+                dueDate = defaultDueDate;
+              }
+            } else {
+              dueDate = defaultDueDate;
+            }
+            
+            // Validate date is valid
+            if (isNaN(dueDate.getTime())) {
+              console.log("Invalid date detected, using default");
+              dueDate = defaultDueDate;
+            }
+          } catch (error) {
+            console.error("Error processing due date:", error);
+            dueDate = defaultDueDate;
+          }
           
           const workItem = await storage.createWorkItem({
             title: workItemData.title || `Work at ${newAssignment.storeId}`,

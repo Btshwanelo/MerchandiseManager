@@ -341,6 +341,19 @@ type StoreAssignmentWithRelations = StoreAssignment & {
     console.log("Submitting form values:", formattedValues);
     createAssignmentMutation.mutate(formattedValues);
   };
+  
+  // Debug function to check form state
+  const debugForm = () => {
+    console.log("Form values:", assignmentForm.getValues());
+    console.log("Form errors:", assignmentForm.formState.errors);
+    console.log("Form is valid:", assignmentForm.formState.isValid);
+    
+    // Manual submission if the form appears valid
+    if (Object.keys(assignmentForm.formState.errors).length === 0) {
+      const values = assignmentForm.getValues();
+      onSubmitAssignment(values);
+    }
+  };
 
   // Handle work item form submission
   const onSubmitWorkItem = (values: WorkItemFormValues) => {
@@ -956,7 +969,8 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   Cancel
                 </Button>
                 <Button 
-                  type="submit" 
+                  type="button"
+                  onClick={debugForm}
                   disabled={createAssignmentMutation.isPending}
                 >
                   {createAssignmentMutation.isPending && (
