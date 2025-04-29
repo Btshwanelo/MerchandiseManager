@@ -179,11 +179,16 @@ function Router() {
         </Layout>
       )} />
       
-      <ProtectedRoute path="/stock-take/:storeId" component={(params) => (
-        <Layout>
-          <StockTake storeId={params.storeId} />
-        </Layout>
-      )} />
+      <Route path="/stock-take/:storeId">
+        {(params: { storeId: string }) => {
+          const StockTakeWithParams = () => (
+            <Layout>
+              <StockTake storeId={params.storeId} />
+            </Layout>
+          );
+          return <ProtectedRoute path="/stock-take/:storeId" component={StockTakeWithParams} />;
+        }}
+      </Route>
       
       <ProtectedRoute path="/merchandising" component={() => (
         <Layout>

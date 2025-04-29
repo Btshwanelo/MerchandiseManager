@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -53,10 +53,14 @@ type StockTake = DbStockTake & {
 };
 import { BarcodeScanner } from "@/components/barcode-scanner";
 
-const StockTakePage = () => {
+interface StockTakePageProps {
+  storeId?: string;
+}
+
+const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const [selectedStore, setSelectedStore] = useState<string>("");
+  const [selectedStore, setSelectedStore] = useState<string>(storeId || "");
   const [comment, setComment] = useState<string>("");
   const [stockTakeItems, setStockTakeItems] = useState<Array<{productId: number, quantity: number, location: StockLocation}>>([]);
   const [fileUploads, setFileUploads] = useState<File[]>([]);
@@ -89,6 +93,24 @@ const StockTakePage = () => {
     queryKey: ["/api/stock-takes"],
     enabled: !!user,
   });
+  
+  // Update the selected store when storeId prop changes or stores are loaded
+  useEffect(() => {
+    if (storeId && storeId !== selectedStore) {
+      setSelectedStore(storeId);
+      
+      // Show a toast notification to indicate we're working with this store
+      if (stores) {
+        const store = stores.find(s => s.id.toString() === storeId);
+        if (store) {
+          toast({
+            title: "Store selected",
+            description: `You are now working on stock take for ${store.name}`,
+          });
+        }
+      }
+    }
+  }, [storeId, stores, selectedStore, toast]);
 
   // Add item to stock take
   const handleAddItem = () => {
