@@ -356,11 +356,81 @@ export type InsertDeal = z.infer<typeof insertDealSchema>;
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
 
+export type StoreAssignment = typeof storeAssignments.$inferSelect;
+export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
+
+export type WorkItem = typeof workItems.$inferSelect;
+export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
+
+// Store Assignments table to connect merchandisers to stores
+export const storeAssignments = pgTable("store_assignments", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  storeId: integer("store_id").references(() => stores.id).notNull(),
+  assignedBy: integer("assigned_by").references(() => users.id).notNull(), // Admin or manager who made the assignment
+  startDate: timestamp("start_date").notNull(), // When assignment becomes active
+  endDate: timestamp("end_date"), // Optional end date (can be null for ongoing assignments)
+  status: text("status").notNull().default("active"), // active, completed, cancelled 
+  createdAt: timestamp("created_at").defaultNow(),
+}, (table) => {
+  return {
+    unq: unique().on(table.userId, table.storeId, table.startDate),
+  };
+});
+
+export const insertStoreAssignmentSchema = createInsertSchema(storeAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Work Items table for merchandiser task assignments
+export enum WorkItemStatus {
+  PENDING = "pending",     // Not yet started
+  IN_PROGRESS = "in_progress", // Started but not completed
+  COMPLETED = "completed",   // Completed
+  CANCELLED = "cancelled"   // Cancelled or no longer needed
+}
+
+export enum WorkItemType {
+  STOCK_TAKE = "stock_take",         // Regular stock taking task
+  INVENTORY_COUNT = "inventory_count", // Full inventory count
+  MERCHANDISING = "merchandising",    // Setting up merchandising/displays
+  ORDER_PLACEMENT = "order_placement"  // Placing orders for products
+}
+
+export const workItems = pgTable("work_items", {
+  id: serial("id").primaryKey(),
+  title: text("title").notNull(),
+  description: text("description"),
+  type: text("type").notNull(),
+  userId: integer("user_id").references(() => users.id).notNull(), // Assigned merchandiser
+  storeId: integer("store_id").references(() => stores.id).notNull(), // Store location
+  storeAssignmentId: integer("store_assignment_id").references(() => storeAssignments.id).notNull(), // Related store assignment
+  dueDate: timestamp("due_date").notNull(), // When the work should be completed
+  priority: text("priority").notNull().default("medium"), // low, medium, high
+  status: text("status").notNull().default("pending"),
+  completedAt: timestamp("completed_at"),
+  notes: text("notes"),
+  attachments: text("attachments").array(), 
+  createdBy: integer("created_by").references(() => users.id).notNull(), // Admin or manager who created the work item
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const insertWorkItemSchema = createInsertSchema(workItems).omit({
+  id: true,
+  completedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 // Relations
 export const usersRelations = relations(users, ({ many }) => ({
   stores: many(stores),
   activities: many(activities),
   alerts: many(alerts, { relationName: "resolvedByUser" }),
+  storeAssignments: many(storeAssignments, { relationName: "assignedStores" }),
+  workItems: many(workItems, { relationName: "assignedWorkItems" }),
 }));
 
 export const storesRelations = relations(stores, ({ one, many }) => ({
@@ -375,6 +445,8 @@ export const storesRelations = relations(stores, ({ one, many }) => ({
   merchandisingPromotions: many(merchandisingPromotions),
   competitorMerchandising: many(competitorMerchandising),
   orders: many(orders),
+  storeAssignments: many(storeAssignments),
+  workItems: many(workItems),
 }));
 
 export const productsRelations = relations(products, ({ many }) => ({
@@ -517,5 +589,42 @@ export const ordersRelations = relations(orders, ({ one }) => ({
   user: one(users, {
     fields: [orders.userId],
     references: [users.id],
+  }),
+}));
+
+export const storeAssignmentsRelations = relations(storeAssignments, ({ one, many }) => ({
+  user: one(users, {
+    fields: [storeAssignments.userId],
+    references: [users.id],
+  }),
+  store: one(stores, {
+    fields: [storeAssignments.storeId],
+    references: [stores.id],
+  }),
+  assignedByUser: one(users, {
+    fields: [storeAssignments.assignedBy],
+    references: [users.id],
+    relationName: "assignedByUser",
+  }),
+  workItems: many(workItems),
+}));
+
+export const workItemsRelations = relations(workItems, ({ one }) => ({
+  user: one(users, {
+    fields: [workItems.userId],
+    references: [users.id],
+  }),
+  store: one(stores, {
+    fields: [workItems.storeId],
+    references: [stores.id],
+  }),
+  storeAssignment: one(storeAssignments, {
+    fields: [workItems.storeAssignmentId],
+    references: [storeAssignments.id],
+  }),
+  createdByUser: one(users, {
+    fields: [workItems.createdBy],
+    references: [users.id],
+    relationName: "createdByUser",
   }),
 }));
