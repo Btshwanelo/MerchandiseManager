@@ -163,11 +163,27 @@ export const stockTakes = pgTable("stock_takes", {
   comment: text("comment"),
   pictures: text("pictures").array(), // Store URLs to shelf pictures
   status: text("status").notNull().default("draft"),
+  lastEditedBy: integer("last_edited_by").references(() => users.id),
+  lastEditedAt: timestamp("last_edited_at"),
+  auditComment: text("audit_comment"), // Required when admin/manager edits a submitted stock take
 });
 
 export const insertStockTakeSchema = createInsertSchema(stockTakes).omit({
   id: true,
   date: true,
+  lastEditedBy: true,
+  lastEditedAt: true,
+  auditComment: true,
+});
+
+export const updateStockTakeSchema = createInsertSchema(stockTakes).omit({
+  id: true,
+  storeId: true,
+  userId: true,
+  date: true,
+}).extend({
+  auditComment: z.string().min(1, { message: "Audit comment is required when editing a submitted stock take" })
+    .optional().default("")
 });
 
 // Stock take items table

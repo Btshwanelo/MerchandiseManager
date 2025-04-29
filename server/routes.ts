@@ -498,6 +498,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update a stock take (with required audit comment for admins/managers)
+  app.put("/api/stock-takes/:id", upload.array('pictures', 5), async (req, res) => {
+    try {
+      // Authentication check
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized - Please log in" });
+      }
+      
+      const stockTakeId = parseInt(req.params.id);
+      const user = req.user!;
+      
+      // Get the existing stock take
+      const existingStockTake = await storage.getStockTake(stockTakeId);
+      if (!existingStockTake) {
+        return res.status(404).json({ message: "Stock take not found" });
+      }
+      
+      // Check if user has permission to edit this stock take
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER && existingStockTake.userId !== user.id) {
+        return res.status(403).json({ message: "Not authorized to edit this stock take" });
+      }
+      
+      // If an admin or manager is editing a stock take that isn't theirs, require an audit comment
+      const isAdminManagerEditingOthersWork = 
+        (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) && 
+        existingStockTake.userId !== user.id;
+      
+      // Get the audit comment from the request
+      const auditComment = req.body.auditComment || '';
+      
+      // If admin/manager is editing someone else's stock take, enforce audit comment requirement
+      if (isAdminManagerEditingOthersWork && !auditComment.trim()) {
+        return res.status(400).json({ 
+          message: "Audit comment is required when editing a stock take created by another user" 
+        });
+      }
+      
+      // Parse the updated data
+      const comment = req.body.comment || '';
+      const status = req.body.status || existingStockTake.status;
+      
+      // Parse items from the form data if provided
+      let items: InsertStockTakeItem[] = [];
+      if (req.body.items) {
+        try {
+          const parsedItems = JSON.parse(req.body.items);
+          if (Array.isArray(parsedItems)) {
+            items = parsedItems.map(item => ({
+              stockTakeId,
+              productId: item.productId,
+              quantity: item.quantity,
+              location: item.location
+            }));
+          }
+        } catch (e) {
+          return res.status(400).json({ message: "Invalid items data format" });
+        }
+      }
+      
+      // Prepare the update data
+      const updateData: Partial<StockTake> = {
+        comment,
+        status
+      };
+      
+      // Get file paths if any were uploaded
+      const files = (req.files as Express.Multer.File[]) || [];
+      if (files.length > 0) {
+        // Handle the new pictures
+        const pictureUrls = files.map(file => file.path);
+        
+        // Combine with any existing pictures if we want to keep them
+        if (existingStockTake.pictures) {
+          updateData.pictures = [...existingStockTake.pictures, ...pictureUrls];
+        } else {
+          updateData.pictures = pictureUrls;
+        }
+      }
+      
+      // Update the stock take record
+      const updatedStockTake = await storage.updateStockTake(
+        stockTakeId, 
+        updateData, 
+        user.id, 
+        auditComment
+      );
+      
+      // Update items if provided
+      if (items.length > 0) {
+        await storage.updateStockTakeItems(stockTakeId, items);
+      }
+      
+      // Return the updated stock take with its items
+      const result = await storage.getStockTakeWithItems(stockTakeId);
+      
+      res.json({
+        success: true,
+        message: "Stock take updated successfully",
+        stockTake: result
+      });
+    } catch (error) {
+      console.error("Error updating stock take:", error);
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to update stock take" });
+    }
+  });
+  
   // Create a new stock take
   app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
     try {

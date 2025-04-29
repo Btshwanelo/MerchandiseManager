@@ -109,6 +109,8 @@ export interface IStorage {
   getStockTakesByUserId(userId: number): Promise<StockTake[]>;
   getStockTakeWithItems(id: number): Promise<(StockTake & { items: (StockTakeItem & { product: Product })[] }) | undefined>;
   createStockTake(stockTake: InsertStockTake): Promise<StockTake>;
+  updateStockTake(id: number, data: Partial<StockTake>, editorId: number, auditComment: string): Promise<StockTake>;
+  updateStockTakeItems(stockTakeId: number, items: InsertStockTakeItem[]): Promise<StockTakeItem[]>;
   
   // StockTakeItem methods
   getStockTakeItem(id: number): Promise<StockTakeItem | undefined>;
@@ -967,6 +969,58 @@ export class DatabaseStorage implements IStorage {
   async createStockTake(stockTake: InsertStockTake): Promise<StockTake> {
     const [newStockTake] = await db.insert(stockTakes).values(stockTake).returning();
     return newStockTake;
+  }
+  
+  async updateStockTake(id: number, data: Partial<StockTake>, editorId: number, auditComment: string): Promise<StockTake> {
+    // Prepare update data with audit information
+    const updateData = {
+      ...data,
+      lastEditedBy: editorId,
+      lastEditedAt: new Date(),
+      auditComment: auditComment,
+    };
+    
+    // Update the stock take
+    const [updatedStockTake] = await db
+      .update(stockTakes)
+      .set(updateData)
+      .where(eq(stockTakes.id, id))
+      .returning();
+    
+    // Record this activity
+    await db.insert(activities).values({
+      userId: editorId,
+      type: "stock_take_edit",
+      action: "edit",
+      details: JSON.stringify({
+        stockTakeId: id,
+        changes: data,
+        comment: auditComment
+      }),
+      timestamp: new Date()
+    });
+    
+    return updatedStockTake;
+  }
+  
+  async updateStockTakeItems(stockTakeId: number, items: InsertStockTakeItem[]): Promise<StockTakeItem[]> {
+    // First, remove existing items
+    await db
+      .delete(stockTakeItems)
+      .where(eq(stockTakeItems.stockTakeId, stockTakeId));
+    
+    // Then insert the new items
+    if (items.length === 0) return [];
+    
+    const newItems = await db
+      .insert(stockTakeItems)
+      .values(items.map(item => ({
+        ...item,
+        stockTakeId
+      })))
+      .returning();
+    
+    return newItems;
   }
 
   // Stock Take Items methods
