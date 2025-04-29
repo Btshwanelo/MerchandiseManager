@@ -119,7 +119,7 @@ const UserManagementPage = () => {
   const onSubmit = (values: UserFormValues) => {
     // Remove confirmPassword before sending
     const { confirmPassword, ...userData } = values;
-    createUserMutation.mutate(userData);
+    createUserMutation.mutate(values);
   };
 
   const handleAddNewUser = () => {

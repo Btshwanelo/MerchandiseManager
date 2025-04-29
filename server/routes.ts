@@ -250,7 +250,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   app.post("/api/inventory/adjust", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -284,7 +284,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Quick add inventory route - allows adding inventory and creates a shelf if needed
   app.post("/api/inventory/quick-add", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -440,7 +440,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get stock takes
   app.get("/api/stock-takes", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -468,7 +468,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get a single stock take with its items
   app.get("/api/stock-takes/:id", async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
       
@@ -497,7 +497,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new stock take
   app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
     try {
-      if (!req.isAuthenticated()) {
+      if (!req.user) {
         return res.status(401).json({ message: "Unauthorized - Please log in" });
       }
       
@@ -506,7 +506,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         body: req.body,
         files: req.files ? (req.files as Express.Multer.File[]).map(f => f.originalname) : [],
         user: req.user ? req.user.username : 'none',
-        auth: req.isAuthenticated(),
+        auth: !!req.user,
         contentType: req.headers['content-type']
       });
       

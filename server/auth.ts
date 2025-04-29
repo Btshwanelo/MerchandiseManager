@@ -1,11 +1,16 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
-import { Express } from "express";
+import express, { Express } from "express";
 import session from "express-session";
 import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser, UserRole } from "@shared/schema";
+
+// Use the express Request and Response types
+type Request = express.Request;
+type Response = express.Response;
+type NextFunction = express.NextFunction;
 
 declare global {
   namespace Express {
@@ -55,7 +60,7 @@ async function comparePasswords(supplied: string, stored: string) {
 
 // Middleware to check role-based access
 export function checkRole(...roles: UserRole[]) {
-  return (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
+  return (req: Request, res: Response, next: NextFunction) => {
     // Check if user exists in request
     if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
@@ -157,7 +162,7 @@ export function setupAuth(app: Express) {
     }
     
     // Standard password authentication for regular users
-    passport.authenticate("local", (err, user, info) => {
+    passport.authenticate("local", (err: any, user: SelectUser | false, info: any) => {
       if (err) return next(err);
       if (!user) return res.status(401).json({ message: "Invalid credentials" });
       
@@ -176,7 +181,7 @@ export function setupAuth(app: Express) {
   });
 
   app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) return res.sendStatus(401);
+    if (!req.user) return res.sendStatus(401);
     res.json(req.user);
   });
 }
