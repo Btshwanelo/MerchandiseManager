@@ -76,6 +76,22 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
+  // Get assignments for a specific user (admin/manager only)
+  app.get("/api/users/:userId/assignments", isAdminOrManager, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const assignments = await storage.getStoreAssignmentsByUserId(userId);
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching user assignments:", error);
+      res.status(500).json({ error: "Failed to fetch user assignments" });
+    }
+  });
+  
   // Create a new store assignment (admin/manager only)
   app.post("/api/assignments", isAdminOrManager, async (req, res) => {
     try {
