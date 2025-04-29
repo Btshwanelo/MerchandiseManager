@@ -1022,6 +1022,217 @@ export class DatabaseStorage implements IStorage {
     const result = await db.delete(users).where(eq(users.id, id));
     return result.rowCount > 0;
   }
+  
+  // Password reset methods
+  async createPasswordResetToken(tokenData: { userId: number, token: string, expiresAt: Date }): Promise<any> {
+    // In a real implementation, this would store the token in the database
+    // For now, let's log that we would handle it
+    console.log('Creating password reset token for user', tokenData.userId);
+    return { id: Date.now(), ...tokenData };
+  }
+  
+  async getPasswordResetToken(tokenString: string): Promise<{ id: number, userId: number, token: string, expiresAt: Date } | undefined> {
+    // In a real implementation, this would find the token in the database
+    // For now, we'll return undefined to indicate token not found
+    console.log('Attempting to find password reset token', tokenString);
+    return undefined;
+  }
+  
+  async deletePasswordResetToken(id: number): Promise<boolean> {
+    // In a real implementation, this would delete the token from the database
+    console.log('Deleting password reset token', id);
+    return true;
+  }
+  
+  // Store Assignment methods
+  async getStoreAssignment(id: number): Promise<StoreAssignment | undefined> {
+    const [assignment] = await db.select().from(storeAssignments).where(eq(storeAssignments.id, id));
+    return assignment;
+  }
+  
+  async getAllStoreAssignments(): Promise<StoreAssignment[]> {
+    return db.select().from(storeAssignments);
+  }
+  
+  async getStoreAssignmentsByUserId(userId: number): Promise<(StoreAssignment & { store: Store })[]> {
+    const result = await db.select({
+      assignment: storeAssignments,
+      store: stores
+    })
+    .from(storeAssignments)
+    .innerJoin(stores, eq(storeAssignments.storeId, stores.id))
+    .where(eq(storeAssignments.userId, userId));
+    
+    return result.map(({ assignment, store }) => ({
+      ...assignment,
+      store
+    }));
+  }
+  
+  async getStoreAssignmentsByStoreId(storeId: number): Promise<(StoreAssignment & { user: User })[]> {
+    const result = await db.select({
+      assignment: storeAssignments,
+      user: users
+    })
+    .from(storeAssignments)
+    .innerJoin(users, eq(storeAssignments.userId, users.id))
+    .where(eq(storeAssignments.storeId, storeId));
+    
+    return result.map(({ assignment, user }) => ({
+      ...assignment,
+      user
+    }));
+  }
+  
+  async getActiveStoreAssignments(): Promise<(StoreAssignment & { user: User, store: Store })[]> {
+    const now = new Date();
+    
+    const result = await db.select({
+      assignment: storeAssignments,
+      user: users,
+      store: stores
+    })
+    .from(storeAssignments)
+    .innerJoin(users, eq(storeAssignments.userId, users.id))
+    .innerJoin(stores, eq(storeAssignments.storeId, stores.id))
+    .where(
+      and(
+        eq(storeAssignments.status, 'active'),
+        // Either endDate is null or it's in the future
+        sql`(${storeAssignments.endDate} IS NULL OR ${storeAssignments.endDate} > ${now})`
+      )
+    );
+    
+    return result.map(({ assignment, user, store }) => ({
+      ...assignment,
+      user,
+      store
+    }));
+  }
+  
+  async createStoreAssignment(assignment: InsertStoreAssignment): Promise<StoreAssignment> {
+    const [newAssignment] = await db.insert(storeAssignments).values(assignment).returning();
+    return newAssignment;
+  }
+  
+  async updateStoreAssignment(id: number, assignment: Partial<InsertStoreAssignment>): Promise<StoreAssignment | undefined> {
+    const [updatedAssignment] = await db
+      .update(storeAssignments)
+      .set(assignment)
+      .where(eq(storeAssignments.id, id))
+      .returning();
+    return updatedAssignment;
+  }
+  
+  async deleteStoreAssignment(id: number): Promise<boolean> {
+    const result = await db.delete(storeAssignments).where(eq(storeAssignments.id, id));
+    return result.rowCount > 0;
+  }
+  
+  // Work Item methods
+  async getWorkItem(id: number): Promise<WorkItem | undefined> {
+    const [workItem] = await db.select().from(workItems).where(eq(workItems.id, id));
+    return workItem;
+  }
+  
+  async getAllWorkItems(): Promise<WorkItem[]> {
+    return db.select().from(workItems);
+  }
+  
+  async getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]> {
+    const result = await db.select({
+      workItem: workItems,
+      store: stores
+    })
+    .from(workItems)
+    .innerJoin(stores, eq(workItems.storeId, stores.id))
+    .where(eq(workItems.userId, userId));
+    
+    return result.map(({ workItem, store }) => ({
+      ...workItem,
+      store
+    }));
+  }
+  
+  async getWorkItemsByStoreId(storeId: number): Promise<(WorkItem & { user: User })[]> {
+    const result = await db.select({
+      workItem: workItems,
+      user: users
+    })
+    .from(workItems)
+    .innerJoin(users, eq(workItems.userId, users.id))
+    .where(eq(workItems.storeId, storeId));
+    
+    return result.map(({ workItem, user }) => ({
+      ...workItem,
+      user
+    }));
+  }
+  
+  async getWorkItemsByAssignmentId(assignmentId: number): Promise<WorkItem[]> {
+    return db.select().from(workItems).where(eq(workItems.storeAssignmentId, assignmentId));
+  }
+  
+  async getActiveWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
+    const result = await db.select({
+      workItem: workItems,
+      user: users,
+      store: stores
+    })
+    .from(workItems)
+    .innerJoin(users, eq(workItems.userId, users.id))
+    .innerJoin(stores, eq(workItems.storeId, stores.id))
+    .where(
+      and(
+        eq(workItems.status, WorkItemStatus.PENDING).or(eq(workItems.status, WorkItemStatus.IN_PROGRESS))
+      )
+    );
+    
+    return result.map(({ workItem, user, store }) => ({
+      ...workItem,
+      user,
+      store
+    }));
+  }
+  
+  async createWorkItem(workItem: InsertWorkItem): Promise<WorkItem> {
+    const [newWorkItem] = await db.insert(workItems).values({
+      ...workItem,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    }).returning();
+    return newWorkItem;
+  }
+  
+  async updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined> {
+    const [updatedWorkItem] = await db
+      .update(workItems)
+      .set({
+        ...workItem,
+        updatedAt: new Date()
+      })
+      .where(eq(workItems.id, id))
+      .returning();
+    return updatedWorkItem;
+  }
+  
+  async completeWorkItem(id: number): Promise<WorkItem | undefined> {
+    const [completedWorkItem] = await db
+      .update(workItems)
+      .set({
+        status: WorkItemStatus.COMPLETED,
+        completedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(workItems.id, id))
+      .returning();
+    return completedWorkItem;
+  }
+  
+  async deleteWorkItem(id: number): Promise<boolean> {
+    const result = await db.delete(workItems).where(eq(workItems.id, id));
+    return result.rowCount > 0;
+  }
 
   // Store methods
   async getStore(id: number): Promise<Store | undefined> {

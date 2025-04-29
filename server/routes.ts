@@ -71,6 +71,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up user management routes
   registerUserRoutes(app);
   
+  // Set up store assignment and work item routes
+  registerAssignmentRoutes(app);
+  
   // Dashboard routes
   app.get("/api/dashboard", async (req, res) => {
     try {
