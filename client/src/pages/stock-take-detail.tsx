@@ -99,9 +99,12 @@ const StockTakeDetailPage = () => {
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
   
-  // Get stock take from location state if available
-  const [locationState] = useLocation();
-  const passedStockTake = locationState && (locationState as any).stockTake;
+  // Get stock take from window history state if available
+  const passedStockTake = window.history.state?.stockTake;
+  
+  // Log for debugging
+  console.log("History state:", window.history.state);
+  console.log("Passed stock take data:", passedStockTake);
 
   // Fetch the stock take with its items if not passed through state
   const { data: fetchedStockTake, isLoading: isLoadingStockTake } = useQuery<StockTake>({
