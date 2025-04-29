@@ -633,10 +633,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       for (const item of items) {
         try {
           // Find or create the product
-          const product = await storage.getProductBySku(item.productSku);
+          let product = await storage.getProductBySku(item.productSku);
           if (!product) {
-            errors.push({ item, error: `Product with SKU ${item.productSku} not found` });
-            continue;
+            // Create a new product with the SKU
+            try {
+              product = await storage.createProduct({
+                name: `Product ${item.productSku}`,
+                sku: item.productSku,
+                description: `Auto-created from inventory upload`,
+                category: 'Other',
+                price: 0, // Default price, can be updated later
+                minStockLevel: 5
+              });
+              console.log(`Created new product with SKU ${item.productSku}`);
+            } catch (error) {
+              errors.push({ item, error: `Failed to create product with SKU ${item.productSku}: ${error instanceof Error ? error.message : 'Unknown error'}` });
+              continue;
+            }
           }
           
           // Find the store
