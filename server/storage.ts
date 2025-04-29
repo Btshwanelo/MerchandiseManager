@@ -1,10 +1,11 @@
 import {
-  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems,
+  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
   type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
-  type StockTakeItem, type InsertStockTakeItem
+  type StockTakeItem, type InsertStockTakeItem, type StoreAssignment, type InsertStoreAssignment,
+  type WorkItem, type InsertWorkItem, WorkItemStatus
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -31,6 +32,28 @@ export interface IStorage {
   createPasswordResetToken(token: { userId: number, token: string, expiresAt: Date }): Promise<any>;
   getPasswordResetToken(token: string): Promise<{ id: number, userId: number, token: string, expiresAt: Date } | undefined>;
   deletePasswordResetToken(id: number): Promise<boolean>;
+  
+  // Store Assignment methods
+  getStoreAssignment(id: number): Promise<StoreAssignment | undefined>;
+  getAllStoreAssignments(): Promise<StoreAssignment[]>;
+  getStoreAssignmentsByUserId(userId: number): Promise<(StoreAssignment & { store: Store })[]>;
+  getStoreAssignmentsByStoreId(storeId: number): Promise<(StoreAssignment & { user: User })[]>;
+  getActiveStoreAssignments(): Promise<(StoreAssignment & { user: User, store: Store })[]>;
+  createStoreAssignment(assignment: InsertStoreAssignment): Promise<StoreAssignment>;
+  updateStoreAssignment(id: number, assignment: Partial<InsertStoreAssignment>): Promise<StoreAssignment | undefined>;
+  deleteStoreAssignment(id: number): Promise<boolean>;
+  
+  // Work Item methods
+  getWorkItem(id: number): Promise<WorkItem | undefined>;
+  getAllWorkItems(): Promise<WorkItem[]>;
+  getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]>;
+  getWorkItemsByStoreId(storeId: number): Promise<(WorkItem & { user: User })[]>;
+  getWorkItemsByAssignmentId(assignmentId: number): Promise<WorkItem[]>;
+  getActiveWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]>;
+  createWorkItem(workItem: InsertWorkItem): Promise<WorkItem>;
+  updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined>;
+  completeWorkItem(id: number): Promise<WorkItem | undefined>;
+  deleteWorkItem(id: number): Promise<boolean>;
   
   // Store methods
   getStore(id: number): Promise<Store | undefined>;
@@ -113,6 +136,8 @@ export class MemStorage implements IStorage {
   private activities: Map<number, Activity>;
   private alerts: Map<number, Alert>;
   private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
+  private storeAssignments: Map<number, StoreAssignment>;
+  private workItems: Map<number, WorkItem>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -122,6 +147,8 @@ export class MemStorage implements IStorage {
   currentInventoryId: number;
   currentActivityId: number;
   currentAlertId: number;
+  currentStoreAssignmentId: number;
+  currentWorkItemId: number;
 
   constructor() {
     this.users = new Map();
@@ -132,6 +159,8 @@ export class MemStorage implements IStorage {
     this.activities = new Map();
     this.alerts = new Map();
     this.passwordResetTokens = new Map();
+    this.storeAssignments = new Map();
+    this.workItems = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -145,6 +174,8 @@ export class MemStorage implements IStorage {
     this.currentActivityId = 1;
     this.currentAlertId = 1;
     this.resetTokenIdCounter = 1;
+    this.currentStoreAssignmentId = 1;
+    this.currentWorkItemId = 1;
     
     // Initialize with sample admin user
     this.createUser({
