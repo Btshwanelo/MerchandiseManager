@@ -8,6 +8,7 @@ import { insertProductSchema, insertStoreSchema, insertShelfSchema } from "@shar
 import multer from "multer";
 import path from "path";
 import { registerUserRoutes } from "./user-routes";
+import { registerAssignmentRoutes } from "./assignments-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint for bulk deleting items

@@ -700,6 +700,193 @@ export class MemStorage implements IStorage {
     return updatedAlert;
   }
   
+  // Store Assignment methods
+  async getStoreAssignment(id: number): Promise<StoreAssignment | undefined> {
+    return this.storeAssignments.get(id);
+  }
+  
+  async getAllStoreAssignments(): Promise<StoreAssignment[]> {
+    return Array.from(this.storeAssignments.values());
+  }
+  
+  async getStoreAssignmentsByUserId(userId: number): Promise<(StoreAssignment & { store: Store })[]> {
+    const assignments = Array.from(this.storeAssignments.values()).filter(
+      (assignment) => assignment.userId === userId
+    );
+    
+    return Promise.all(assignments.map(async (assignment) => {
+      const store = await this.getStore(assignment.storeId);
+      if (!store) {
+        throw new Error('Referenced store not found');
+      }
+      return { ...assignment, store };
+    }));
+  }
+  
+  async getStoreAssignmentsByStoreId(storeId: number): Promise<(StoreAssignment & { user: User })[]> {
+    const assignments = Array.from(this.storeAssignments.values()).filter(
+      (assignment) => assignment.storeId === storeId
+    );
+    
+    return Promise.all(assignments.map(async (assignment) => {
+      const user = await this.getUser(assignment.userId);
+      if (!user) {
+        throw new Error('Referenced user not found');
+      }
+      return { ...assignment, user };
+    }));
+  }
+  
+  async getActiveStoreAssignments(): Promise<(StoreAssignment & { user: User, store: Store })[]> {
+    const now = new Date();
+    const assignments = Array.from(this.storeAssignments.values()).filter(
+      (assignment) => {
+        // Assignment is active if status is 'active' and either
+        // endDate is null (ongoing) or endDate is in the future
+        return assignment.status === 'active' && 
+               (assignment.endDate === null || assignment.endDate > now);
+      }
+    );
+    
+    return Promise.all(assignments.map(async (assignment) => {
+      const user = await this.getUser(assignment.userId);
+      const store = await this.getStore(assignment.storeId);
+      
+      if (!user || !store) {
+        throw new Error('Referenced user or store not found');
+      }
+      
+      return { ...assignment, user, store };
+    }));
+  }
+  
+  async createStoreAssignment(assignment: InsertStoreAssignment): Promise<StoreAssignment> {
+    const id = this.currentStoreAssignmentId++;
+    const storeAssignment: StoreAssignment = {
+      ...assignment,
+      id,
+      createdAt: new Date(),
+    };
+    this.storeAssignments.set(id, storeAssignment);
+    return storeAssignment;
+  }
+  
+  async updateStoreAssignment(id: number, assignment: Partial<InsertStoreAssignment>): Promise<StoreAssignment | undefined> {
+    const storeAssignment = await this.getStoreAssignment(id);
+    if (!storeAssignment) return undefined;
+    
+    const updatedAssignment = { ...storeAssignment, ...assignment };
+    this.storeAssignments.set(id, updatedAssignment);
+    return updatedAssignment;
+  }
+  
+  async deleteStoreAssignment(id: number): Promise<boolean> {
+    return this.storeAssignments.delete(id);
+  }
+  
+  // Work Item methods
+  async getWorkItem(id: number): Promise<WorkItem | undefined> {
+    return this.workItems.get(id);
+  }
+  
+  async getAllWorkItems(): Promise<WorkItem[]> {
+    return Array.from(this.workItems.values());
+  }
+  
+  async getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]> {
+    const items = Array.from(this.workItems.values()).filter(
+      (item) => item.userId === userId
+    );
+    
+    return Promise.all(items.map(async (item) => {
+      const store = await this.getStore(item.storeId);
+      if (!store) {
+        throw new Error('Referenced store not found');
+      }
+      return { ...item, store };
+    }));
+  }
+  
+  async getWorkItemsByStoreId(storeId: number): Promise<(WorkItem & { user: User })[]> {
+    const items = Array.from(this.workItems.values()).filter(
+      (item) => item.storeId === storeId
+    );
+    
+    return Promise.all(items.map(async (item) => {
+      const user = await this.getUser(item.userId);
+      if (!user) {
+        throw new Error('Referenced user not found');
+      }
+      return { ...item, user };
+    }));
+  }
+  
+  async getWorkItemsByAssignmentId(assignmentId: number): Promise<WorkItem[]> {
+    return Array.from(this.workItems.values()).filter(
+      (item) => item.storeAssignmentId === assignmentId
+    );
+  }
+  
+  async getActiveWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
+    const items = Array.from(this.workItems.values()).filter(
+      (item) => item.status === 'pending' || item.status === 'in_progress'
+    );
+    
+    return Promise.all(items.map(async (item) => {
+      const user = await this.getUser(item.userId);
+      const store = await this.getStore(item.storeId);
+      
+      if (!user || !store) {
+        throw new Error('Referenced user or store not found');
+      }
+      
+      return { ...item, user, store };
+    }));
+  }
+  
+  async createWorkItem(workItem: InsertWorkItem): Promise<WorkItem> {
+    const id = this.currentWorkItemId++;
+    const newWorkItem: WorkItem = {
+      ...workItem,
+      id,
+      createdAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.workItems.set(id, newWorkItem);
+    return newWorkItem;
+  }
+  
+  async updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined> {
+    const item = await this.getWorkItem(id);
+    if (!item) return undefined;
+    
+    const updatedItem = { 
+      ...item, 
+      ...workItem, 
+      updatedAt: new Date() 
+    };
+    this.workItems.set(id, updatedItem);
+    return updatedItem;
+  }
+  
+  async completeWorkItem(id: number): Promise<WorkItem | undefined> {
+    const item = await this.getWorkItem(id);
+    if (!item) return undefined;
+    
+    const completedItem = { 
+      ...item, 
+      status: 'completed', 
+      completedAt: new Date(),
+      updatedAt: new Date()
+    };
+    this.workItems.set(id, completedItem);
+    return completedItem;
+  }
+  
+  async deleteWorkItem(id: number): Promise<boolean> {
+    return this.workItems.delete(id);
+  }
+  
   // Dashboard methods
   async getDashboardStats(): Promise<{
     totalProducts: number,
