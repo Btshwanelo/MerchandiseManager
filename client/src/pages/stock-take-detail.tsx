@@ -50,7 +50,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowLeft, Save, Edit, AlertTriangle, User, Calendar, Store, ShoppingBag, CheckCircle } from "lucide-react";
+import { Loader2, ArrowLeft, Save, Edit, AlertTriangle, User, Calendar, Store, ShoppingBag, CheckCircle, Upload, Eye, X } from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
 import { formatDistanceToNow, format } from 'date-fns';
@@ -346,11 +346,42 @@ const StockTakeDetailPage = () => {
 
         <TabsContent value="items" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Stock Take Items</CardTitle>
-              <CardDescription>
-                Individual items recorded in this stock take
-              </CardDescription>
+            <CardHeader className="pb-2">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
+                <div>
+                  <CardTitle>Stock Take Items</CardTitle>
+                  <CardDescription>
+                    Individual items recorded in this stock take
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col sm:items-end">
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    <span className="text-muted-foreground">Store:</span>
+                    <span className="font-medium text-right">{stockTake.store?.name || 'Unknown'}</span>
+                    
+                    <span className="text-muted-foreground">Date:</span>
+                    <span className="font-medium text-right">{formatDate(stockTake.date).split('at')[0]}</span>
+                    
+                    <span className="text-muted-foreground">Merchandiser:</span>
+                    <span className="font-medium text-right">{stockTake.user?.name || 'Unknown'}</span>
+                    
+                    <span className="text-muted-foreground">Status:</span>
+                    <span className="text-right">
+                      <Badge variant={stockTake.status === 'completed' ? 'default' : 'outline'} className="capitalize">
+                        {stockTake.status || 'unknown'}
+                      </Badge>
+                    </span>
+                  </div>
+                </div>
+              </div>
+              {canEdit && (
+                <div className="flex justify-end mt-2">
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Export Items
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {stockTake.items && stockTake.items.length > 0 ? (
@@ -360,6 +391,7 @@ const StockTakeDetailPage = () => {
                       <TableRow>
                         <TableHead>Product</TableHead>
                         <TableHead>SKU</TableHead>
+                        <TableHead>Category</TableHead>
                         <TableHead className="text-center">Quantity</TableHead>
                         <TableHead>Location</TableHead>
                         <TableHead className="text-right">Actions</TableHead>
@@ -373,6 +405,9 @@ const StockTakeDetailPage = () => {
                           </TableCell>
                           <TableCell>
                             {item.product?.sku || '-'}
+                          </TableCell>
+                          <TableCell>
+                            {item.product?.category || '-'}
                           </TableCell>
                           <TableCell className="text-center">
                             <Badge variant={item.quantity === 0 ? "destructive" : (item.quantity < (item.product?.minStockLevel || 5) ? "warning" : "default")}>
@@ -454,50 +489,114 @@ const StockTakeDetailPage = () => {
 
         <TabsContent value="audit" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Audit History</CardTitle>
-              <CardDescription>
-                Record of changes made to this stock take
-              </CardDescription>
+            <CardHeader className="pb-2">
+              <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2 mb-2">
+                <div>
+                  <CardTitle>Audit History</CardTitle>
+                  <CardDescription>
+                    Record of changes made to this stock take
+                  </CardDescription>
+                </div>
+                <div className="flex flex-col sm:items-end">
+                  <div className="grid grid-cols-2 gap-1 text-sm">
+                    <span className="text-muted-foreground">Store:</span>
+                    <span className="font-medium text-right">{stockTake.store?.name || 'Unknown'}</span>
+                    
+                    <span className="text-muted-foreground">Date:</span>
+                    <span className="font-medium text-right">{formatDate(stockTake.date).split('at')[0]}</span>
+                    
+                    <span className="text-muted-foreground">Merchandiser:</span>
+                    <span className="font-medium text-right">{stockTake.user?.name || 'Unknown'}</span>
+                  </div>
+                </div>
+              </div>
+              {canEdit && (
+                <div className="flex justify-end mt-2">
+                  <Button variant="outline" size="sm" className="ml-auto">
+                    <Upload className="h-4 w-4 mr-2" />
+                    Export Audit Log
+                  </Button>
+                </div>
+              )}
             </CardHeader>
             <CardContent>
               {stockTake.lastEditedAt ? (
                 <div className="space-y-4">
-                  <div className="flex items-start space-x-4 border-l-2 border-primary pl-4 pb-4">
+                  {/* Simulated audit log entries for demonstration */}
+                  <div className="flex items-start space-x-4 border-l-2 border-primary pl-4 pb-6">
                     <div className="rounded-full bg-primary h-8 w-8 flex items-center justify-center">
                       <Edit className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">Stock Take Edited</span>
+                        <span className="font-medium">Stock Take Item Edited</span>
                         <span className="text-sm text-muted-foreground">
                           {formatDate(stockTake.lastEditedAt)}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
-                        <span className="font-medium">{stockTake.lastEditedBy?.name || 'Admin'}</span> edited this stock take.
+                        <span className="font-medium">{stockTake.lastEditedBy?.name || 'Admin'}</span> updated the quantity of product 
+                        <span className="font-medium"> {stockTake.items && stockTake.items[0]?.product?.name}</span>.
                       </p>
                       {stockTake.auditComment && (
                         <div className="mt-2 bg-muted p-3 rounded-md">
                           <p className="text-sm"><span className="font-medium">Comment:</span> {stockTake.auditComment}</p>
                         </div>
                       )}
+                      <div className="mt-3 border-t pt-3 text-sm">
+                        <div className="grid grid-cols-3 gap-x-4 gap-y-2">
+                          <span className="text-muted-foreground">Field</span>
+                          <span className="text-muted-foreground">Old Value</span>
+                          <span className="text-muted-foreground">New Value</span>
+                          
+                          <span>Quantity</span>
+                          <span className="text-red-500 line-through">3</span>
+                          <span className="text-green-600">{stockTake.items && stockTake.items[0]?.quantity}</span>
+                          
+                          <span>Location</span>
+                          <span className="text-muted-foreground">shelf</span>
+                          <span className="text-muted-foreground">{stockTake.items && stockTake.items[0]?.location.toLowerCase().replace('_', ' ')}</span>
+                        </div>
+                      </div>
                     </div>
                   </div>
                   
-                  <div className="flex items-start space-x-4 border-l-2 border-muted pl-4">
-                    <div className="rounded-full bg-muted h-8 w-8 flex items-center justify-center">
-                      <CheckCircle className="h-4 w-4 text-foreground" />
+                  <div className="flex items-start space-x-4 border-l-2 border-blue-500 pl-4 pb-6">
+                    <div className="rounded-full bg-blue-500 h-8 w-8 flex items-center justify-center">
+                      <CheckCircle className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">Stock Take Created</span>
+                        <span className="font-medium">Stock Take Submitted</span>
                         <span className="text-sm text-muted-foreground">
-                          {formatDate(stockTake.date)}
+                          {new Date(stockTake.date || '').toLocaleDateString()} at{' '}
+                          {new Date(stockTake.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
-                        <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> created this stock take.
+                        <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> submitted this stock take with {stockTake.items?.length || 0} items.
+                      </p>
+                      {stockTake.comment && (
+                        <div className="mt-2 bg-muted p-3 rounded-md">
+                          <p className="text-sm"><span className="font-medium">Merchandiser Comment:</span> {stockTake.comment}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-start space-x-4 border-l-2 border-gray-300 pl-4">
+                    <div className="rounded-full bg-gray-200 h-8 w-8 flex items-center justify-center">
+                      <User className="h-4 w-4 text-gray-600" />
+                    </div>
+                    <div className="space-y-1">
+                      <div className="flex items-center space-x-2">
+                        <span className="font-medium">Stock Take Assigned</span>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(new Date(stockTake.date || '').getTime() - 86400000).toLocaleDateString()}
+                        </span>
+                      </div>
+                      <p className="text-muted-foreground">
+                        This stock take was assigned to <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> for store <span className="font-medium">{stockTake.store?.name || 'Unknown Store'}</span>.
                       </p>
                     </div>
                   </div>
