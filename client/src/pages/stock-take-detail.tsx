@@ -98,12 +98,20 @@ const StockTakeDetailPage = () => {
   const [activeTab, setActiveTab] = useState("details");
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
+  
+  // Get stock take from location state if available
+  const [locationState] = useLocation();
+  const passedStockTake = locationState && (locationState as any).stockTake;
 
-  // Fetch the stock take with its items
-  const { data: stockTake, isLoading } = useQuery<StockTake>({
+  // Fetch the stock take with its items if not passed through state
+  const { data: fetchedStockTake, isLoading: isLoadingStockTake } = useQuery<StockTake>({
     queryKey: ["/api/stock-takes", id],
-    enabled: !!id,
+    enabled: !!id && !passedStockTake,
   });
+  
+  // Use passed stock take data or fetched data
+  const stockTake = passedStockTake || fetchedStockTake;
+  const isLoading = !passedStockTake && isLoadingStockTake;
 
   // Form setup
   const form = useForm<EditStockTakeItemFormValues>({
