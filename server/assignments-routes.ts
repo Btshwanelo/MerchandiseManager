@@ -30,11 +30,22 @@ export function registerAssignmentRoutes(app: express.Express) {
   // Get all store assignments (admin/manager only)
   app.get("/api/assignments", isAdminOrManager, async (req, res) => {
     try {
-      const assignments = await storage.getActiveStoreAssignments();
+      const assignments = await storage.getAllStoreAssignments();
       res.json(assignments);
     } catch (error) {
       console.error("Error fetching store assignments:", error);
       res.status(500).json({ error: "Failed to fetch store assignments" });
+    }
+  });
+  
+  // Get active store assignments (admin/manager only)
+  app.get("/api/assignments/active", isAdminOrManager, async (req, res) => {
+    try {
+      const assignments = await storage.getActiveStoreAssignments();
+      res.json(assignments);
+    } catch (error) {
+      console.error("Error fetching active store assignments:", error);
+      res.status(500).json({ error: "Failed to fetch active store assignments" });
     }
   });
   
@@ -245,7 +256,18 @@ export function registerAssignmentRoutes(app: express.Express) {
   // Create a new work item (admin/manager only)
   app.post("/api/work-items", isAdminOrManager, async (req, res) => {
     try {
-      const parseResult = insertWorkItemSchema.safeParse(req.body);
+      // Create a modified schema that converts date strings to Date objects
+      const workItemSchema = insertWorkItemSchema.extend({
+        dueDate: z.coerce.date(),
+      });
+      
+      // Add createdBy to request body using current user
+      const requestWithCreator = {
+        ...req.body,
+        createdBy: req.user!.id
+      };
+      
+      const parseResult = workItemSchema.safeParse(requestWithCreator);
       
       if (!parseResult.success) {
         return res.status(400).json({ 
@@ -254,11 +276,8 @@ export function registerAssignmentRoutes(app: express.Express) {
         });
       }
       
-      // Add the current user as the creator
-      const workItemData = {
-        ...parseResult.data,
-        createdBy: req.user!.id,
-      };
+      // Use the parsed data which now has proper Date objects
+      const workItemData = parseResult.data;
       
       const newWorkItem = await storage.createWorkItem(workItemData);
       res.status(201).json(newWorkItem);
