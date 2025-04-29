@@ -299,7 +299,7 @@ const StockTakeDetailPage = () => {
                   <div>
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
                     <Badge className="capitalize">
-                      {stockTake.status.toLowerCase()}
+                      {stockTake.status ? stockTake.status.toLowerCase() : 'unknown'}
                     </Badge>
                   </div>
 
