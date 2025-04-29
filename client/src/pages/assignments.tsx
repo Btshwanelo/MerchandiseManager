@@ -113,7 +113,7 @@ const AssignmentsPage = () => {
         description: z.string().optional(),
         type: z.string(),
         priority: z.string(),
-        dueDate: z.date(),
+        dueDate: z.coerce.date(),
       })
     ).optional(),
   });
@@ -328,7 +328,18 @@ type StoreAssignmentWithRelations = StoreAssignment & {
 
   // Handle assignment form submission
   const onSubmitAssignment = (values: AssignmentFormValues) => {
-    createAssignmentMutation.mutate(values);
+    // Ensure dates are properly coerced to Date objects before submission
+    const formattedValues = {
+      ...values,
+      workItems: values.workItems?.map(item => ({
+        ...item,
+        // Ensure dueDate is a proper Date instance
+        dueDate: item.dueDate instanceof Date ? item.dueDate : new Date(item.dueDate as any)
+      }))
+    };
+    
+    console.log("Submitting form values:", formattedValues);
+    createAssignmentMutation.mutate(formattedValues);
   };
 
   // Handle work item form submission
