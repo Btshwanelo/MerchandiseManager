@@ -10,7 +10,7 @@ import {
 import session from "express-session";
 import createMemoryStore from "memorystore";
 import { db } from "./db";
-import { eq, and, desc, lte, count, sum, sql } from "drizzle-orm";
+import { eq, and, or, desc, lte, count, sum, sql } from "drizzle-orm";
 import connectPg from "connect-pg-simple";
 import { pool } from "./db";
 
@@ -1183,8 +1183,9 @@ export class DatabaseStorage implements IStorage {
     .innerJoin(users, eq(workItems.userId, users.id))
     .innerJoin(stores, eq(workItems.storeId, stores.id))
     .where(
-      and(
-        eq(workItems.status, WorkItemStatus.PENDING).or(eq(workItems.status, WorkItemStatus.IN_PROGRESS))
+      or(
+        eq(workItems.status, WorkItemStatus.PENDING),
+        eq(workItems.status, WorkItemStatus.IN_PROGRESS)
       )
     );
     
