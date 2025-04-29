@@ -120,7 +120,7 @@ const StockTakeDetailPage = () => {
     setCurrentItemBeingEdited(item);
     form.reset({
       quantity: item.quantity,
-      location: item.location,
+      location: item.location as StockLocation, // Ensure we cast to enum type
       auditComment: "",
     });
     setIsEditDialogOpen(true);
@@ -237,7 +237,7 @@ const StockTakeDetailPage = () => {
           </div>
           {stockTake.store && (
             <p className="text-muted-foreground">
-              {stockTake.store.name} - {format(new Date(stockTake.createdAt), 'PPP')}
+              {stockTake.store.name} - {format(new Date(stockTake.date), 'PPP')}
             </p>
           )}
         </div>
@@ -268,7 +268,7 @@ const StockTakeDetailPage = () => {
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Date Submitted</h3>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{format(new Date(stockTake.createdAt), 'PPP p')}</span>
+                      <span>{format(new Date(stockTake.date), 'PPP p')}</span>
                     </div>
                   </div>
                   
@@ -487,7 +487,7 @@ const StockTakeDetailPage = () => {
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">Stock Take Created</span>
                         <span className="text-sm text-muted-foreground">
-                          {format(new Date(stockTake.createdAt), 'PPP p')}
+                          {format(new Date(stockTake.date || new Date()), 'PPP p')}
                         </span>
                       </div>
                       <p className="text-muted-foreground">

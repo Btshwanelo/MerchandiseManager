@@ -824,7 +824,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         storeId: parentStockTake.storeId,
         productId: existingItem.productId,
         actionType: 'edit-stock-take-item',
-        timestamp: new Date(),
         status: 'completed',
         notes: auditComment,
         shelfId: null,
