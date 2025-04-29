@@ -242,6 +242,27 @@ function Router() {
         )} 
       />
       
+      {/* Store Assignments Routes */}
+      <ProtectedRoute 
+        path="/assignments" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER]}
+        component={() => (
+          <Layout>
+            <Assignments />
+          </Layout>
+        )} 
+      />
+      
+      <ProtectedRoute 
+        path="/my-assignments" 
+        roles={[UserRole.MERCHANDISER]}
+        component={() => (
+          <Layout>
+            <MyAssignments />
+          </Layout>
+        )} 
+      />
+      
       <Route component={NotFound} />
     </Switch>
   );

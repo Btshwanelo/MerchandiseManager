@@ -17,7 +17,9 @@ import {
   FileText,
   FileSpreadsheet,
   ShoppingCart,
-  Laptop
+  Laptop,
+  ClipboardList,
+  Calendar
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -86,6 +88,20 @@ const navigationItems: NavItem[] = [
     icon: <FileText className="h-5 w-5" />,
     section: "merchandising",
     roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
+  {
+    href: "/assignments",
+    label: "Store Assignments",
+    icon: <Calendar className="h-5 w-5" />,
+    section: "merchandising",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
+  {
+    href: "/my-assignments",
+    label: "My Assignments",
+    icon: <ClipboardList className="h-5 w-5" />,
+    section: "merchandising",
+    roles: [UserRole.MERCHANDISER]
   },
 
   // Documents & Orders

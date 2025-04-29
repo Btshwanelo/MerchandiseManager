@@ -98,7 +98,7 @@ const AssignmentsPage = () => {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState<boolean>(false);
   const [isViewWorkItemsDialogOpen, setIsViewWorkItemsDialogOpen] = useState<boolean>(false);
   const [isCreateWorkItemDialogOpen, setIsCreateWorkItemDialogOpen] = useState<boolean>(false);
-  const [selectedAssignment, setSelectedAssignment] = useState<StoreAssignment | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<StoreAssignmentWithRelations | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
   const [selectedTab, setSelectedTab] = useState<string>("active");
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
@@ -161,13 +161,19 @@ const AssignmentsPage = () => {
     }
   });
 
-  // Queries for data fetching
+  // Define expanded types for the store assignments with relations
+type StoreAssignmentWithRelations = StoreAssignment & {
+  store?: StoreType;
+  user?: UserType;
+};
+
+// Queries for data fetching
   const { 
     data: allAssignments, 
     isLoading: isLoadingAssignments, 
     error: assignmentsError,
     refetch: refetchAssignments
-  } = useQuery<StoreAssignment[]>({
+  } = useQuery<StoreAssignmentWithRelations[]>({
     queryKey: ["/api/assignments"],
   });
 
@@ -176,7 +182,7 @@ const AssignmentsPage = () => {
     isLoading: isLoadingActiveAssignments,
     error: activeAssignmentsError,
     refetch: refetchActiveAssignments
-  } = useQuery<StoreAssignment[]>({
+  } = useQuery<StoreAssignmentWithRelations[]>({
     queryKey: ["/api/assignments/active"],
   });
 
