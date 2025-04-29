@@ -346,7 +346,7 @@ type StoreAssignmentWithRelations = StoreAssignment & {
   };
 
   // Handle opening the view work items dialog
-  const handleViewWorkItems = (assignment: StoreAssignment) => {
+  const handleViewWorkItems = (assignment: StoreAssignmentWithRelations) => {
     setSelectedAssignment(assignment);
     fetchWorkItems(assignment.id);
     setIsViewWorkItemsDialogOpen(true);
@@ -365,7 +365,7 @@ type StoreAssignmentWithRelations = StoreAssignment & {
   };
 
   // Handle opening delete dialog
-  const handleOpenDeleteDialog = (assignment: StoreAssignment) => {
+  const handleOpenDeleteDialog = (assignment: StoreAssignmentWithRelations) => {
     setSelectedAssignment(assignment);
     setIsDeleteDialogOpen(true);
   };
@@ -377,17 +377,17 @@ type StoreAssignmentWithRelations = StoreAssignment & {
   };
 
   // Handle completing an assignment
-  const handleCompleteAssignment = (assignment: StoreAssignment) => {
+  const handleCompleteAssignment = (assignment: StoreAssignmentWithRelations) => {
     updateAssignmentStatusMutation.mutate({ id: assignment.id, status: "completed" });
   };
 
   // Handle cancelling an assignment
-  const handleCancelAssignment = (assignment: StoreAssignment) => {
+  const handleCancelAssignment = (assignment: StoreAssignmentWithRelations) => {
     updateAssignmentStatusMutation.mutate({ id: assignment.id, status: "cancelled" });
   };
 
   // Filter assignments based on search query
-  const filterAssignments = (assignments: StoreAssignment[] | undefined) => {
+  const filterAssignments = (assignments: StoreAssignmentWithRelations[] | undefined) => {
     if (!assignments) return [];
     
     return assignments.filter(assignment => {
@@ -1093,7 +1093,7 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Task description" />
+                      <Textarea {...field} value={field.value || ''} placeholder="Task description" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

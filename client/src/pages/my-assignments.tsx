@@ -56,11 +56,22 @@ import {
   ArrowUpRight,
   ExternalLink
 } from "lucide-react";
-import { StoreAssignment, WorkItem, WorkItemStatus, UserRole } from "@shared/schema";
+import { StoreAssignment, WorkItem, WorkItemStatus, UserRole, Store as StoreType, User as UserType } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
+
+// Define extended types with relations
+type StoreAssignmentWithRelations = StoreAssignment & {
+  store?: StoreType;
+  user?: UserType;
+};
+
+type WorkItemWithRelations = WorkItem & {
+  store?: StoreType;
+  user?: UserType;
+};
 
 // Convert API dates to readable format
 const formatDate = (dateString: string | Date | null | undefined) => {
