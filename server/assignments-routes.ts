@@ -269,6 +269,22 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
+  // Get work items for a specific user (admin/manager only)
+  app.get("/api/users/:userId/work-items", isAdminOrManager, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ error: "Invalid user ID" });
+      }
+      
+      const workItems = await storage.getWorkItemsByUserId(userId);
+      res.json(workItems);
+    } catch (error) {
+      console.error("Error fetching user work items:", error);
+      res.status(500).json({ error: "Failed to fetch user work items" });
+    }
+  });
+  
   // Create a new work item (admin/manager only)
   app.post("/api/work-items", isAdminOrManager, async (req, res) => {
     try {

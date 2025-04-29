@@ -32,6 +32,8 @@ import ProductSheets from "@/pages/product-sheets";
 import ListPrices from "@/pages/list-prices";
 import Deals from "@/pages/deals";
 import Orders from "@/pages/orders";
+import Assignments from "@/pages/assignments";
+import MyAssignments from "@/pages/my-assignments";
 
 // Redirector component for different user roles
 function RoleBasedRedirect() {
