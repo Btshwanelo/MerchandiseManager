@@ -750,15 +750,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
             continue;
           }
           
-          // Find manager if specified
+          // Find manager if specified but don't block creation if not found
           let managerId = null;
           if (item.managerUsername) {
             const manager = await storage.getUserByUsername(item.managerUsername);
             if (manager && manager.role === UserRole.MANAGER) {
               managerId = manager.id;
             } else {
-              errors.push({ item, error: `Manager with username ${item.managerUsername} not found or not a manager` });
-              continue;
+              // Log a warning but continue with the store creation
+              console.warn(`Manager with username ${item.managerUsername} not found or not a manager. Creating store without a manager.`);
             }
           }
           
