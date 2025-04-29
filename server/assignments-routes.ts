@@ -331,15 +331,21 @@ export function registerAssignmentRoutes(app: express.Express) {
       
       const completed = await storage.completeWorkItem(id);
       
-      // Create an activity record for this completion
-      await storage.createActivity({
-        actionType: 'work-item-completed',
-        storeId: existing.storeId,
-        userId: req.user!.id,
-        productId: 0, // Use a valid numeric ID
-        status: 'completed',
-        notes: `Completed work item: ${existing.title}`,
-      });
+      // Get a valid product ID for the activity record
+      const products = await storage.getAllProducts();
+      const productId = products.length > 0 ? products[0].id : null;
+      
+      // Create an activity record for this completion only if we have a valid product
+      if (productId !== null) {
+        await storage.createActivity({
+          actionType: 'work-item-completed',
+          storeId: existing.storeId,
+          userId: req.user!.id,
+          productId: productId,
+          status: 'completed',
+          notes: `Completed work item: ${existing.title}`,
+        });
+      }
       
       res.json(completed);
     } catch (error) {
