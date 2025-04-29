@@ -129,15 +129,7 @@ const AssignmentsPage = () => {
       startDate: new Date(),
       endDate: null,
       status: "active",
-      workItems: [
-        {
-          title: "Initial Stock Take",
-          description: "Complete a full stock take of the store",
-          type: "stock_take",
-          priority: "medium",
-          dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // One week from now
-        }
-      ]
+      workItems: [] // No pre-filled work items
     }
   });
 
