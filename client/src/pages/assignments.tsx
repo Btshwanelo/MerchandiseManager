@@ -1093,7 +1093,15 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   <FormItem>
                     <FormLabel>Description</FormLabel>
                     <FormControl>
-                      <Textarea {...field} value={field.value || ''} placeholder="Task description" />
+                      <Textarea 
+                        placeholder="Task description"
+                        onChange={field.onChange}
+                        onBlur={field.onBlur}
+                        name={field.name}
+                        ref={field.ref}
+                        value={field.value || ''}
+                        disabled={field.disabled}
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

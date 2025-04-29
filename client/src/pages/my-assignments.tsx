@@ -86,8 +86,8 @@ const MyAssignmentsPage = () => {
   // State variables
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [selectedTab, setSelectedTab] = useState<string>("active");
-  const [selectedAssignment, setSelectedAssignment] = useState<StoreAssignment | null>(null);
-  const [selectedWorkItem, setSelectedWorkItem] = useState<WorkItem | null>(null);
+  const [selectedAssignment, setSelectedAssignment] = useState<StoreAssignmentWithRelations | null>(null);
+  const [selectedWorkItem, setSelectedWorkItem] = useState<WorkItemWithRelations | null>(null);
   const [isWorkItemDialogOpen, setIsWorkItemDialogOpen] = useState<boolean>(false);
   const [completionNotes, setCompletionNotes] = useState<string>("");
   
@@ -97,8 +97,8 @@ const MyAssignmentsPage = () => {
     isLoading: isLoadingAssignments,
     error: assignmentsError,
     refetch: refetchAssignments
-  } = useQuery<StoreAssignment[]>({
-    queryKey: ["/api/user/assignments", user?.id],
+  } = useQuery<StoreAssignmentWithRelations[]>({
+    queryKey: ["/api/my-assignments"],
     enabled: !!user?.id,
   });
 
@@ -107,8 +107,8 @@ const MyAssignmentsPage = () => {
     isLoading: isLoadingWorkItems,
     error: workItemsError,
     refetch: refetchWorkItems
-  } = useQuery<WorkItem[]>({
-    queryKey: ["/api/user/work-items", user?.id],
+  } = useQuery<WorkItemWithRelations[]>({
+    queryKey: ["/api/my-work-items"],
     enabled: !!user?.id,
   });
 
@@ -128,7 +128,7 @@ const MyAssignmentsPage = () => {
         description: "Work item status has been successfully updated",
       });
       // Invalidate work items query to refresh data
-      queryClient.invalidateQueries({ queryKey: ["/api/user/work-items", user?.id] });
+      queryClient.invalidateQueries({ queryKey: ["/api/my-work-items"] });
       setIsWorkItemDialogOpen(false);
       setSelectedWorkItem(null);
       setCompletionNotes("");
@@ -181,7 +181,7 @@ const MyAssignmentsPage = () => {
   const displayedWorkItems = selectedTab === "active" ? activeWorkItems : completedWorkItems;
 
   // Handle starting a work item
-  const handleStartWorkItem = (workItem: WorkItem) => {
+  const handleStartWorkItem = (workItem: WorkItemWithRelations) => {
     updateWorkItemStatusMutation.mutate({ 
       id: workItem.id, 
       status: WorkItemStatus.IN_PROGRESS 
@@ -189,7 +189,7 @@ const MyAssignmentsPage = () => {
   };
 
   // Handle opening the complete work item dialog
-  const handleOpenCompleteDialog = (workItem: WorkItem) => {
+  const handleOpenCompleteDialog = (workItem: WorkItemWithRelations) => {
     setSelectedWorkItem(workItem);
     setIsWorkItemDialogOpen(true);
   };
@@ -216,7 +216,7 @@ const MyAssignmentsPage = () => {
 
   // Function to render work item priority badge
   const renderPriorityBadge = (priority: string) => {
-    let variant = "default";
+    let variant: "default" | "destructive" | "outline" | "secondary" | "success" | "warning" = "default";
     if (priority === "high") variant = "destructive";
     if (priority === "low") variant = "outline";
     
@@ -229,7 +229,7 @@ const MyAssignmentsPage = () => {
 
   // Function to render work item status badge
   const renderStatusBadge = (status: string) => {
-    let variant: "default" | "success" | "warning" | "destructive" | "outline" = "default";
+    let variant: "default" | "destructive" | "outline" | "secondary" | "success" | "warning" = "default";
     if (status === WorkItemStatus.COMPLETED) variant = "success";
     if (status === WorkItemStatus.IN_PROGRESS) variant = "warning";
     if (status === WorkItemStatus.CANCELLED) variant = "destructive";
