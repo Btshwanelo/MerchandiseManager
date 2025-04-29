@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useLocation } from "wouter";
 import { 
   Table, 
   TableBody, 
@@ -82,6 +83,7 @@ const formatDate = (dateString: string | Date | null | undefined) => {
 const MyAssignmentsPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   
   // State variables
   const [searchQuery, setSearchQuery] = useState<string>("");
@@ -203,6 +205,14 @@ const MyAssignmentsPage = () => {
       status: WorkItemStatus.COMPLETED,
       notes: completionNotes
     });
+  };
+  
+  // Handle work item row click to navigate to stock take
+  const handleWorkItemClick = (workItem: WorkItemWithRelations) => {
+    // Navigate to stock take page with the store ID
+    if (workItem.type === "stock_take" && workItem.storeId) {
+      navigate(`/stock-take/${workItem.storeId}`);
+    }
   };
 
   // Determine loading and error states
@@ -400,7 +410,11 @@ const MyAssignmentsPage = () => {
                 ) : (
                   <div className="space-y-4">
                     {displayedWorkItems.map((workItem) => (
-                      <Card key={workItem.id} className="overflow-hidden">
+                      <Card 
+                        key={workItem.id} 
+                        className={`overflow-hidden ${workItem.type === 'stock_take' ? 'cursor-pointer hover:bg-muted/30 transition-colors' : ''}`}
+                        onClick={workItem.type === 'stock_take' ? () => handleWorkItemClick(workItem) : undefined}
+                      >
                         <div className={`h-1.5 w-full ${
                           workItem.priority === 'high' ? "bg-destructive" :
                           workItem.priority === 'medium' ? "bg-amber-500" :
@@ -409,7 +423,12 @@ const MyAssignmentsPage = () => {
                         <CardContent className="p-4">
                           <div className="flex justify-between items-start">
                             <div>
-                              <h4 className="font-medium text-lg">{workItem.title}</h4>
+                              <div className="flex items-start">
+                                <h4 className="font-medium text-lg">{workItem.title}</h4>
+                                {workItem.type === 'stock_take' && (
+                                  <ArrowUpRight className="h-4 w-4 ml-2 text-muted-foreground" />
+                                )}
+                              </div>
                               <div className="flex items-center text-sm text-muted-foreground">
                                 <Store className="h-4 w-4 mr-1" />
                                 <span>{workItem.store?.name}</span>
