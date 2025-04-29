@@ -430,6 +430,23 @@ const StockTakePage = () => {
               </div>
 
               <div className="space-y-2">
+                <label className="text-sm font-medium">Default Location</label>
+                <Select 
+                  value={selectedLocation} 
+                  onValueChange={(value) => setSelectedLocation(value as StockLocation)}
+                >
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select location..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
+                    <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
+                  </SelectContent>
+                </Select>
+                <p className="text-xs text-muted-foreground">This is the default location for all products in this stock take</p>
+              </div>
+
+              <div className="space-y-2">
                 <label className="text-sm font-medium">Comments</label>
                 <Textarea 
                   placeholder="Add any comments about this stock take..." 
