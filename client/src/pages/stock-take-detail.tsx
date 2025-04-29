@@ -115,6 +115,12 @@ const StockTakeDetailPage = () => {
     },
   });
 
+  // Helper function to safely format dates
+  const formatDate = (date: Date | string | null) => {
+    if (!date) return 'Unknown date';
+    return format(new Date(date), 'PPP p');
+  };
+
   // Handle opening the edit dialog for an item
   const handleEditItem = (item: StockTakeItemWithDetails) => {
     setCurrentItemBeingEdited(item);
@@ -237,7 +243,7 @@ const StockTakeDetailPage = () => {
           </div>
           {stockTake.store && (
             <p className="text-muted-foreground">
-              {stockTake.store.name} - {format(new Date(stockTake.date), 'PPP')}
+              {stockTake.store.name} - {formatDate(stockTake.date)}
             </p>
           )}
         </div>
@@ -268,7 +274,7 @@ const StockTakeDetailPage = () => {
                     <h3 className="text-sm font-medium text-muted-foreground mb-1">Date Submitted</h3>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{format(new Date(stockTake.date), 'PPP p')}</span>
+                      <span>{formatDate(stockTake.date)}</span>
                     </div>
                   </div>
                   
@@ -313,7 +319,7 @@ const StockTakeDetailPage = () => {
                       <div className="flex items-start">
                         <Calendar className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
                         <div className="flex flex-col">
-                          <span>{format(new Date(stockTake.lastEditedAt), 'PPP p')}</span>
+                          <span>{formatDate(stockTake.lastEditedAt)}</span>
                           {stockTake.lastEditedBy && (
                             <span className="text-sm text-muted-foreground">
                               by {stockTake.lastEditedBy.name}
@@ -465,7 +471,7 @@ const StockTakeDetailPage = () => {
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">Stock Take Edited</span>
                         <span className="text-sm text-muted-foreground">
-                          {format(new Date(stockTake.lastEditedAt), 'PPP p')}
+                          {formatDate(stockTake.lastEditedAt)}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
@@ -487,7 +493,7 @@ const StockTakeDetailPage = () => {
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">Stock Take Created</span>
                         <span className="text-sm text-muted-foreground">
-                          {format(new Date(stockTake.date || new Date()), 'PPP p')}
+                          {formatDate(stockTake.date)}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
