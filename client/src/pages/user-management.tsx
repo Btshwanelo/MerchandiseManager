@@ -13,6 +13,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
 import { 
   Dialog,
   DialogContent,
@@ -51,6 +52,7 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator
 } from "@/components/ui/dropdown-menu";
+import { BulkActions } from "@/components/bulk-actions";
 
 const UserManagementPage = () => {
   const { toast } = useToast();
@@ -58,6 +60,7 @@ const UserManagementPage = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [userFormOpen, setUserFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+  const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
   // Extended user schema with validations
   const userFormSchema = insertUserSchema.extend({
@@ -90,7 +93,7 @@ const UserManagementPage = () => {
 
   // Create user mutation
   const createUserMutation = useMutation({
-    mutationFn: async (values: Omit<UserFormValues, "confirmPassword">) => {
+    mutationFn: async (values: UserFormValues) => {
       const { confirmPassword, ...userData } = values;
       const res = await apiRequest("POST", "/api/register", userData);
       return await res.json();
@@ -131,6 +134,40 @@ const UserManagementPage = () => {
     });
     setUserFormOpen(true);
   };
+  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const response = await apiRequest("DELETE", "/api/bulk-delete/users", { ids });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Users deleted",
+        description: data.message,
+      });
+      // Invalidate users query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setSelectedUsers([]);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Deletion failed",
+        description: error instanceof Error ? error.message : "An error occurred during deletion",
+      });
+    }
+  });
+
+  // Handle bulk delete
+  const handleBulkDelete = async (ids: (number | string)[]) => {
+    const numericIds = ids.map(id => Number(id));
+    await bulkDeleteMutation.mutateAsync(numericIds);
+  };
+  
+  // Check if a user is selected
+  const isUserSelected = (user: User) => 
+    selectedUsers.some(u => u.id === user.id);
 
   // Filter users based on search query
   const filteredUsers = users?.filter((user) => {
@@ -209,9 +246,21 @@ const UserManagementPage = () => {
             </div>
           ) : (
             <div className="overflow-x-auto">
+              {filteredUsers && currentUser?.role === UserRole.ADMIN && (
+                <BulkActions
+                  selectedItems={selectedUsers}
+                  allItems={filteredUsers}
+                  setSelectedItems={setSelectedUsers}
+                  getItemId={(user) => user.id}
+                  onDelete={handleBulkDelete}
+                  isUserAdmin={currentUser?.role === UserRole.ADMIN}
+                />
+              )}
+              
               <Table>
                 <TableHeader>
                   <TableRow>
+                    {currentUser?.role === UserRole.ADMIN && <TableHead className="w-[40px]"></TableHead>}
                     <TableHead>Name</TableHead>
                     <TableHead>Username</TableHead>
                     <TableHead>Email</TableHead>
@@ -221,54 +270,76 @@ const UserManagementPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredUsers?.map((user) => (
-                    <TableRow key={user.id}>
-                      <TableCell className="font-medium">
-                        <div className="flex items-center">
-                          <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-2">
-                            {user.name.charAt(0).toUpperCase()}
-                          </div>
-                          {user.name}
-                          {user.id === currentUser?.id && (
-                            <Badge variant="secondary" className="ml-2">You</Badge>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>{user.username}</TableCell>
-                      <TableCell>{user.email}</TableCell>
-                      <TableCell>{getRoleBadge(user.role)}</TableCell>
-                      <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
-                      <TableCell className="text-right">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <UserCog className="h-4 w-4" />
-                              <span className="sr-only">Manage user</span>
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <Link href={`/user-detail/${user.id}`}>
-                              <DropdownMenuItem>
-                                <Eye className="h-4 w-4 mr-2" />
-                                View Details
-                              </DropdownMenuItem>
-                            </Link>
-                            {currentUser?.role === UserRole.ADMIN && (
-                              <>
-                                <DropdownMenuSeparator />
-                                <Link href={`/users`}>
-                                  <DropdownMenuItem>
-                                    <UserPlus className="h-4 w-4 mr-2" />
-                                    Masquerade as User
-                                  </DropdownMenuItem>
-                                </Link>
-                              </>
+                  {filteredUsers?.map((user) => {
+                    const isSelected = isUserSelected(user);
+                    
+                    return (
+                      <TableRow key={user.id} className={isSelected ? "bg-muted/30" : undefined}>
+                        {currentUser?.role === UserRole.ADMIN && (
+                          <TableCell className="w-[40px]">
+                            {/* Prevent selecting yourself for deletion */}
+                            {user.id !== currentUser.id ? (
+                              <Checkbox 
+                                checked={isSelected}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedUsers(prev => [...prev, user]);
+                                  } else {
+                                    setSelectedUsers(prev => prev.filter(u => u.id !== user.id));
+                                  }
+                                }}
+                                aria-label={`Select ${user.name}`}
+                              />
+                            ) : null}
+                          </TableCell>
+                        )}
+                        <TableCell className="font-medium">
+                          <div className="flex items-center">
+                            <div className="w-8 h-8 rounded-full bg-primary/20 text-primary flex items-center justify-center mr-2">
+                              {user.name.charAt(0).toUpperCase()}
+                            </div>
+                            {user.name}
+                            {user.id === currentUser?.id && (
+                              <Badge variant="secondary" className="ml-2">You</Badge>
                             )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                          </div>
+                        </TableCell>
+                        <TableCell>{user.username}</TableCell>
+                        <TableCell>{user.email}</TableCell>
+                        <TableCell>{getRoleBadge(user.role)}</TableCell>
+                        <TableCell>{user.createdAt ? new Date(user.createdAt).toLocaleDateString() : ''}</TableCell>
+                        <TableCell className="text-right">
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <UserCog className="h-4 w-4" />
+                                <span className="sr-only">Manage user</span>
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              <Link href={`/user-detail/${user.id}`}>
+                                <DropdownMenuItem>
+                                  <Eye className="h-4 w-4 mr-2" />
+                                  View Details
+                                </DropdownMenuItem>
+                              </Link>
+                              {currentUser?.role === UserRole.ADMIN && (
+                                <>
+                                  <DropdownMenuSeparator />
+                                  <Link href={`/users`}>
+                                    <DropdownMenuItem>
+                                      <UserPlus className="h-4 w-4 mr-2" />
+                                      Masquerade as User
+                                    </DropdownMenuItem>
+                                  </Link>
+                                </>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

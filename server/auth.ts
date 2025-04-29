@@ -56,11 +56,12 @@ async function comparePasswords(supplied: string, stored: string) {
 // Middleware to check role-based access
 export function checkRole(...roles: UserRole[]) {
   return (req: Express.Request, res: Express.Response, next: Express.NextFunction) => {
-    if (!req.isAuthenticated()) {
+    // Check if user exists in request
+    if (!req.user) {
       return res.status(401).json({ message: "Unauthorized" });
     }
     
-    if (!roles.includes(req.user!.role as UserRole)) {
+    if (!roles.includes(req.user.role as UserRole)) {
       return res.status(403).json({ message: "Forbidden: Insufficient permissions" });
     }
     
