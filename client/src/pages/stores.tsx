@@ -85,7 +85,7 @@ const StoresPage = () => {
     defaultValues: {
       name: "",
       location: "",
-      managerUsername: ""
+      managerUsername: "none"
     }
   });
 
@@ -103,11 +103,12 @@ const StoresPage = () => {
   // Mutation for creating a store
   const createStoreMutation = useMutation({
     mutationFn: async (data: FormValues) => {
-      // If managerUsername is provided, find the manager and use their ID
+      // If managerUsername is provided and not 'none', find the manager and use their ID
       let managerId = null;
       
-      if (data.managerUsername) {
-        const manager = managers?.find(m => m.username === data.managerUsername);
+      if (data.managerUsername && data.managerUsername !== 'none') {
+        const manager = managers?.find(m => m.username === data.managerUsername || 
+                                      `manager-${m.id}` === data.managerUsername);
         if (manager) {
           managerId = manager.id;
         }
@@ -351,7 +352,7 @@ const StoresPage = () => {
                         <FormItem>
                           <FormLabel>Manager (Optional)</FormLabel>
                           <Select
-                            value={field.value || ""}
+                            value={field.value || "none"}
                             onValueChange={field.onChange}
                           >
                             <FormControl>
@@ -360,7 +361,7 @@ const StoresPage = () => {
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">No manager</SelectItem>
+                              <SelectItem value="none">No manager</SelectItem>
                               {isLoadingManagers ? (
                                 <div className="flex items-center justify-center p-2">
                                   <Loader2 className="h-4 w-4 animate-spin mr-2" />
@@ -378,8 +379,8 @@ const StoresPage = () => {
                               ) : (
                                 managers && managers.length > 0 ? 
                                 managers.map((manager) => (
-                                  <SelectItem key={manager.id} value={manager.username || ""}>
-                                    {manager.name} ({manager.username})
+                                  <SelectItem key={manager.id} value={manager.username || `manager-${manager.id}`}>
+                                    {manager.name} ({manager.username || "No username"})
                                   </SelectItem>
                                 )) : 
                                 <SelectItem value="no-managers">No managers available</SelectItem>
