@@ -26,6 +26,7 @@ import { DataLoadError, EmptyDataState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Product, insertProductSchema } from "@shared/schema";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
@@ -42,6 +43,7 @@ import { useToast } from "@/hooks/use-toast";
 import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import { BulkActions } from "@/components/bulk-actions";
 
 const ProductsPage = () => {
   const { toast } = useToast();
@@ -51,6 +53,7 @@ const ProductsPage = () => {
   const [productFormOpen, setProductFormOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
 
   // Check if user can edit/add products
   const canManageProducts = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
@@ -200,6 +203,40 @@ const ProductsPage = () => {
       deleteProductMutation.mutate(selectedProduct.id);
     }
   };
+  
+  // Bulk delete mutation
+  const bulkDeleteMutation = useMutation({
+    mutationFn: async (ids: number[]) => {
+      const response = await apiRequest("DELETE", "/api/bulk-delete/products", { ids });
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Products deleted",
+        description: data.message,
+      });
+      // Invalidate products query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setSelectedProducts([]);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Deletion failed",
+        description: error instanceof Error ? error.message : "An error occurred during deletion",
+      });
+    }
+  });
+
+  // Handle bulk delete
+  const handleBulkDelete = async (ids: (number | string)[]) => {
+    const numericIds = ids.map(id => Number(id));
+    await bulkDeleteMutation.mutateAsync(numericIds);
+  };
+  
+  // Check if a product is selected
+  const isProductSelected = (product: Product) => 
+    selectedProducts.some(p => p.id === product.id);
 
   // Filter products based on search query and tab
   const filteredProducts = products?.filter((product) => {
@@ -283,9 +320,21 @@ const ProductsPage = () => {
                 />
               ) : (
                 <div className="overflow-x-auto">
+                  {filteredProducts && user?.role === UserRole.ADMIN && (
+                    <BulkActions
+                      selectedItems={selectedProducts}
+                      allItems={filteredProducts}
+                      setSelectedItems={setSelectedProducts}
+                      getItemId={(product) => product.id}
+                      onDelete={handleBulkDelete}
+                      isUserAdmin={user?.role === UserRole.ADMIN}
+                    />
+                  )}
+                  
                   <Table>
                     <TableHeader>
                       <TableRow>
+                        {user?.role === UserRole.ADMIN && <TableHead className="w-[40px]"></TableHead>}
                         <TableHead>Product Name</TableHead>
                         <TableHead>SKU</TableHead>
                         <TableHead>Category</TableHead>
@@ -295,39 +344,58 @@ const ProductsPage = () => {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {filteredProducts?.map((product) => (
-                        <TableRow key={product.id}>
-                          <TableCell className="font-medium">{product.name}</TableCell>
-                          <TableCell>{product.sku}</TableCell>
-                          <TableCell>
-                            <Badge variant="outline">{product.category}</Badge>
-                          </TableCell>
-                          <TableCell>${(product.price / 100).toFixed(2)}</TableCell>
-                          <TableCell>{product.minStockLevel} units</TableCell>
-                          {canManageProducts && (
-                            <TableCell className="text-right">
-                              <div className="flex justify-end gap-2">
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEditProduct(product)}
-                                >
-                                  <Pencil className="h-4 w-4" />
-                                </Button>
-                                {user?.role === UserRole.ADMIN && (
+                      {filteredProducts?.map((product) => {
+                        const isSelected = isProductSelected(product);
+                        
+                        return (
+                          <TableRow key={product.id} className={isSelected ? "bg-muted/30" : undefined}>
+                            {user?.role === UserRole.ADMIN && (
+                              <TableCell className="w-[40px]">
+                                <Checkbox 
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => {
+                                    if (checked) {
+                                      setSelectedProducts(prev => [...prev, product]);
+                                    } else {
+                                      setSelectedProducts(prev => prev.filter(p => p.id !== product.id));
+                                    }
+                                  }}
+                                  aria-label={`Select ${product.name}`}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium">{product.name}</TableCell>
+                            <TableCell>{product.sku}</TableCell>
+                            <TableCell>
+                              <Badge variant="outline">{product.category}</Badge>
+                            </TableCell>
+                            <TableCell>${(product.price / 100).toFixed(2)}</TableCell>
+                            <TableCell>{product.minStockLevel} units</TableCell>
+                            {canManageProducts && (
+                              <TableCell className="text-right">
+                                <div className="flex justify-end gap-2">
                                   <Button
                                     variant="ghost"
                                     size="icon"
-                                    onClick={() => handleDeleteProduct(product)}
+                                    onClick={() => handleEditProduct(product)}
                                   >
-                                    <Trash2 className="h-4 w-4 text-destructive" />
+                                    <Pencil className="h-4 w-4" />
                                   </Button>
-                                )}
-                              </div>
-                            </TableCell>
-                          )}
-                        </TableRow>
-                      ))}
+                                  {user?.role === UserRole.ADMIN && (
+                                    <Button
+                                      variant="ghost"
+                                      size="icon"
+                                      onClick={() => handleDeleteProduct(product)}
+                                    >
+                                      <Trash2 className="h-4 w-4 text-destructive" />
+                                    </Button>
+                                  )}
+                                </div>
+                              </TableCell>
+                            )}
+                          </TableRow>
+                        );
+                      })}
                     </TableBody>
                   </Table>
                 </div>
