@@ -64,7 +64,8 @@ type StoreCSVItem = {
 const StoresPage = () => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const isAdmin = user?.role === UserRole.ADMIN;
+  // Allow admin and manager to add stores
+  const canAddStore = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
   
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
@@ -199,7 +200,7 @@ const StoresPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Store Management</h1>
-        <Button onClick={() => setIsAddDialogOpen(true)} disabled={!isAdmin}>
+        <Button onClick={() => setIsAddDialogOpen(true)} disabled={!canAddStore}>
           <Plus className="h-4 w-4 mr-2" /> Add Store
         </Button>
       </div>
@@ -291,18 +292,24 @@ const StoresPage = () => {
           <DialogHeader>
             <DialogTitle>Add Store</DialogTitle>
             <DialogDescription>
-              Add stores individually or upload in bulk using CSV.
+              {user?.role === UserRole.ADMIN ? (
+                "Add stores individually or upload in bulk using CSV. Admin users can access both options."
+              ) : (
+                "Add a new store by filling out the form below. Bulk CSV uploading is restricted to admin users only."
+              )}
             </DialogDescription>
           </DialogHeader>
 
           <Tabs value={addStoreTab} onValueChange={setAddStoreTab} className="mt-4">
-            <TabsList className="grid grid-cols-2 mb-4">
+            <TabsList className={`${user?.role === UserRole.ADMIN ? 'grid grid-cols-2' : ''} mb-4`}>
               <TabsTrigger value="quick-add">
                 <StoreIcon className="mr-2 h-4 w-4" /> Quick Add
               </TabsTrigger>
-              <TabsTrigger value="csv-upload">
-                <Upload className="mr-2 h-4 w-4" /> CSV Upload
-              </TabsTrigger>
+              {user?.role === UserRole.ADMIN && (
+                <TabsTrigger value="csv-upload">
+                  <Upload className="mr-2 h-4 w-4" /> CSV Upload
+                </TabsTrigger>
+              )}
             </TabsList>
 
             <TabsContent value="quick-add">

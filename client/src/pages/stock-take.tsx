@@ -526,22 +526,6 @@ const StockTakePage = () => {
                   />
                 </div>
                 
-                <div className="w-full md:w-40 space-y-2">
-                  <label className="text-sm font-medium">Location</label>
-                  <Select 
-                    value={selectedLocation} 
-                    onValueChange={(value) => setSelectedLocation(value as StockLocation)}
-                  >
-                    <SelectTrigger className="w-full">
-                      <SelectValue placeholder="Select location..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
-                      <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
                 <Button onClick={handleAddItem} className="w-full md:w-auto">
                   <Plus className="h-4 w-4 mr-2" /> Add Item
                 </Button>
