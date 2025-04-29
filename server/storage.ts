@@ -116,6 +116,7 @@ export interface IStorage {
   getStockTakeItem(id: number): Promise<StockTakeItem | undefined>;
   getStockTakeItemsByStockTakeId(stockTakeId: number): Promise<StockTakeItem[]>;
   createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem>;
+  updateStockTakeItem(id: number, data: Partial<StockTakeItem>): Promise<StockTakeItem>;
   
   // Dashboard methods
   getDashboardStats(): Promise<{
@@ -1036,6 +1037,20 @@ export class DatabaseStorage implements IStorage {
   async createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem> {
     const [newItem] = await db.insert(stockTakeItems).values(item).returning();
     return newItem;
+  }
+  
+  async updateStockTakeItem(id: number, data: Partial<StockTakeItem>): Promise<StockTakeItem> {
+    const [updatedItem] = await db
+      .update(stockTakeItems)
+      .set(data)
+      .where(eq(stockTakeItems.id, id))
+      .returning();
+    
+    if (!updatedItem) {
+      throw new Error(`Stock take item with ID ${id} not found`);
+    }
+    
+    return updatedItem;
   }
 
   // User methods

@@ -777,6 +777,76 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Update a specific stock take item
+  app.put("/api/stock-take-items/:id", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const itemId = parseInt(req.params.id);
+      
+      // Get the existing stock take item
+      const existingItem = await storage.getStockTakeItem(itemId);
+      if (!existingItem) {
+        return res.status(404).json({ message: "Stock take item not found" });
+      }
+      
+      // Get the parent stock take to update its audit information
+      const parentStockTake = await storage.getStockTake(existingItem.stockTakeId);
+      if (!parentStockTake) {
+        return res.status(404).json({ message: "Parent stock take not found" });
+      }
+      
+      // Validate the incoming data
+      const { quantity, location, auditComment } = req.body;
+      
+      // Audit comment is required
+      if (!auditComment || auditComment.trim().length < 5) {
+        return res.status(400).json({ 
+          message: "An audit comment of at least 5 characters is required" 
+        });
+      }
+      
+      // Update the item
+      const updatedItem = await storage.updateStockTakeItem(itemId, {
+        quantity: parseInt(quantity),
+        location
+      });
+      
+      // Update the parent stock take with audit information
+      await storage.updateStockTake(
+        parentStockTake.id,
+        {}, // No direct changes to the stock take itself
+        req.user!.id, // Record who made the edit
+        auditComment // Record why the edit was made
+      );
+      
+      // Create an audit log activity
+      await storage.createActivity({
+        userId: req.user!.id,
+        storeId: parentStockTake.storeId,
+        productId: existingItem.productId,
+        actionType: 'edit-stock-take-item',
+        timestamp: new Date(),
+        status: 'completed',
+        notes: auditComment,
+        shelfId: null,
+        quantity: parseInt(quantity),
+        fromShelfId: null,
+        toShelfId: null
+      });
+      
+      res.json({
+        success: true,
+        message: "Stock take item updated successfully",
+        item: updatedItem
+      });
+    } catch (error) {
+      console.error("Error updating stock take item:", error);
+      res.status(500).json({ 
+        message: "Failed to update stock take item",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+  
   // Bulk upload inventory via CSV
   app.post("/api/inventory/bulk-upload", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
