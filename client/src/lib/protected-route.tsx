@@ -65,11 +65,18 @@ export function ProtectedRoute({
     );
   }
 
-  // Check role access if roles are specified
+  // Check role access if roles are specified with improved error message
   if (roles && roles.length > 0 && !roles.includes(user.role as UserRole)) {
     return (
       <Route path={path}>
-        <ForbiddenError />
+        <ForbiddenError 
+          customTitle="Role-based access restricted"
+          customDescription={`This section requires ${roles.join(' or ')} permissions. Your current role (${user.role}) does not have access to this area.`}
+          customAction={{
+            label: "Go to your dashboard",
+            onClick: () => setLocation("/"),
+          }}
+        />
       </Route>
     );
   }

@@ -26,7 +26,7 @@ async function throwIfResNotOk(res: Response) {
     // Add status code for easier checking
     (error as any).status = res.status;
     
-    // Add flag for authentication errors
+    // Add flag for authentication errors with enhanced error details
     if (res.status === 401) {
       (error as any).isAuthError = true;
       (error as any).type = 'unauthorized';
@@ -34,7 +34,31 @@ async function throwIfResNotOk(res: Response) {
     } else if (res.status === 403) {
       (error as any).isAuthError = true;
       (error as any).type = 'forbidden';
-      (error as any).message = 'You do not have permission to access this resource.';
+      
+      // Try to get more specific error details from the response
+      try {
+        const responseText = await res.clone().text();
+        if (responseText) {
+          const errorJson = JSON.parse(responseText);
+          
+          // Check for detailed error information
+          if (errorJson.details) {
+            (error as any).message = `${errorJson.error || 'Access denied'}. ${errorJson.details}`;
+          } else if (errorJson.error) {
+            (error as any).message = errorJson.error;
+          } else {
+            (error as any).message = 'You do not have permission to access this resource.';
+          }
+          
+          // Store additional context for more specific UI handling
+          (error as any).errorDetails = errorJson;
+        } else {
+          (error as any).message = 'You do not have permission to access this resource.';
+        }
+      } catch (e) {
+        console.error("Failed to parse error details:", e);
+        (error as any).message = 'You do not have permission to access this resource.';
+      }
     }
     
     throw error;

@@ -30,6 +30,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { WorkItemAccessError } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -793,41 +794,8 @@ const ProcessForm = () => {
   if (workItem.userId !== user?.id && user?.role !== 'admin' && user?.role !== 'manager') {
     console.log(`Access denied: User ${user?.id} (${user?.username}) tried to access work item ${workItem.id} which is assigned to user ${workItem.userId}`);
     
-    return (
-      <div className="container mx-auto py-8 px-4">
-        <Card>
-          <CardContent className="pt-6">
-            <div className="text-center py-8">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
-                <AlertCircle className="h-8 w-8" />
-              </div>
-              <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
-              <p className="mb-3">You are not assigned to this work item.</p>
-              <p className="text-sm text-muted-foreground mb-3">
-                This work may be assigned to another team member or you might need specific permissions.
-              </p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please check your assignments list or contact your manager if you believe this is a mistake.
-              </p>
-              <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                <Button 
-                  variant="default" 
-                  onClick={() => navigate("/my-assignments")}
-                >
-                  View My Assignments
-                </Button>
-                <Button 
-                  variant="outline" 
-                  onClick={() => navigate("/")}
-                >
-                  Go to Dashboard
-                </Button>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    );
+    // Use specialized error component
+    return <WorkItemAccessError />;
   }
   
   return (

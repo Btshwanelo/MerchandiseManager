@@ -154,12 +154,27 @@ export function UnauthorizedError() {
   );
 }
 
-export function ForbiddenError() {
+export function ForbiddenError({ 
+  customTitle, 
+  customDescription, 
+  customAction 
+}: { 
+  customTitle?: string, 
+  customDescription?: string, 
+  customAction?: {
+    label: string;
+    onClick: () => void;
+  }
+}) {
   return (
     <ErrorState
       code="403"
-      title="Access forbidden"
-      description="You don't have permission to access this resource. Please contact your administrator if you believe this is an error."
+      title={customTitle || "Access forbidden"}
+      description={customDescription || "You don't have permission to access this resource. If you believe this is a mistake, please check your assignments or contact your manager."}
+      action={customAction || {
+        label: "View my assignments",
+        onClick: () => window.location.href = "/my-assignments",
+      }}
     />
   );
 }
@@ -194,6 +209,21 @@ export function DataLoadError({ entityName, retryAction }: { entityName: string,
       action={{
         label: "Try again",
         onClick: retryAction,
+      }}
+    />
+  );
+}
+
+// Specific error for work item access issues
+export function WorkItemAccessError() {
+  return (
+    <ErrorState
+      code="403"
+      title="Work Item Access Restricted"
+      description="You don't have permission to access this work item. It might be assigned to another merchandiser or you need specific store permissions."
+      action={{
+        label: "View My Assignments",
+        onClick: () => window.location.href = "/my-assignments",
       }}
     />
   );
