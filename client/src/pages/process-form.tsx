@@ -569,10 +569,14 @@ const ProcessForm = () => {
     setLocation(path);
   };
   
-  const [, params] = location.split("?");
+  // Extract URL parameters more safely
+  const params = location.includes("?") ? location.split("?")[1] : "";
   const searchParams = new URLSearchParams(params);
   const workItemId = parseInt(searchParams.get("workItemId") || "0");
   const storeId = parseInt(searchParams.get("storeId") || "0");
+  
+  // Log parameters for debugging
+  console.log("ProcessForm initialized with:", { workItemId, storeId, location });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();

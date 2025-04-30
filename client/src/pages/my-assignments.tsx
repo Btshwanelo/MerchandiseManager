@@ -134,8 +134,15 @@ const MyAssignmentsPage = () => {
         // Find the workItem using the id from variables
         const workItem = workItems?.find(item => item.id === variables.id);
         if (workItem) {
-          // All work items should navigate to the process form
-          navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
+          console.log("Navigating to process form with:", {
+            workItemId: workItem.id,
+            storeId: workItem.storeId
+          });
+          // Force a delay before navigation to ensure the status update is complete
+          setTimeout(() => {
+            // All work items should navigate to the process form
+            navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
+          }, 100);
         }
       }
       
