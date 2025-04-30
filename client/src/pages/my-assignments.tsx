@@ -475,7 +475,8 @@ const MyAssignmentsPage = () => {
                                 </Button>
                               )}
                               
-                              {workItem.status === WorkItemStatus.IN_PROGRESS && (
+                              {/* Only show the complete button for non-stock take work items */}
+                              {workItem.status === WorkItemStatus.IN_PROGRESS && workItem.type !== 'stock_take' && (
                                 <Button
                                   variant="default"
                                   onClick={() => handleOpenCompleteDialog(workItem)}
@@ -484,6 +485,13 @@ const MyAssignmentsPage = () => {
                                   <CheckCircle2 className="h-4 w-4 mr-2" />
                                   Complete
                                 </Button>
+                              )}
+                              
+                              {/* For stock_take work items, show a message about automatic completion */}
+                              {workItem.status === WorkItemStatus.IN_PROGRESS && workItem.type === 'stock_take' && (
+                                <div className="px-3 py-2 text-sm text-muted-foreground bg-muted rounded-md">
+                                  This task will be completed automatically when you submit a stock take
+                                </div>
                               )}
                             </div>
                           )}
