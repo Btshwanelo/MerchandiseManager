@@ -625,12 +625,30 @@ const ProcessForm = () => {
   });
   
   // Handle starting the work item
-  const handleStartWorkItem = () => {
+  const handleStartWorkItem = async () => {
     if (workItem && workItem.status === WorkItemStatus.PENDING) {
-      startWorkItemMutation.mutate({
-        id: workItemId,
-        status: WorkItemStatus.IN_PROGRESS
-      });
+      try {
+        // Use the dedicated endpoint for updating status
+        await apiRequest("PUT", `/api/work-items/${workItemId}/status`, {
+          status: WorkItemStatus.IN_PROGRESS
+        });
+        
+        // Manually invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+        
+        toast({
+          title: "Work item updated",
+          description: "Work item status has been updated to in progress",
+        });
+      } catch (error) {
+        console.error("Error updating work item:", error);
+        toast({
+          title: "Error",
+          description: "Failed to update work item status",
+          variant: "destructive",
+        });
+      }
     }
   };
   
@@ -849,7 +867,8 @@ const ProcessForm = () => {
               variant="destructive" 
               onClick={async () => {
                 try {
-                  await apiRequest("PATCH", `/api/work-items/${workItemId}`, { 
+                  // Use the dedicated endpoint for updating status
+                  await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
                     status: WorkItemStatus.CANCELLED 
                   });
                   
