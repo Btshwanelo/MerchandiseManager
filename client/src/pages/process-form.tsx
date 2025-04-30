@@ -37,14 +37,14 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkItemStatus, WorkItemType } from "@shared/schema";
 
 // Component for Stock Take section
-const StockTakeSection = ({ storeId, workItemId }: { storeId: number; workItemId: number }) => {
+const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
   const [comments, setComments] = useState("");
   const { toast } = useToast();
   
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
@@ -212,13 +212,13 @@ const StockTakeSection = ({ storeId, workItemId }: { storeId: number; workItemId
 };
 
 // Component for Merchandising section
-const MerchandisingSection = ({ storeId, workItemId }: { storeId: number; workItemId: number }) => {
+const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [promotionPictures, setPromotionPictures] = useState<string[]>([]);
   const [promotionItems, setPromotionItems] = useState<{productId: number, price: number}[]>([]);
   const { toast } = useToast();
   
-  const { data: products } = useQuery({
+  const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
@@ -337,7 +337,7 @@ const MerchandisingSection = ({ storeId, workItemId }: { storeId: number; workIt
 };
 
 // Component for Competitor Analysis section
-const CompetitorAnalysisSection = ({ storeId, workItemId }: { storeId: number; workItemId: number }) => {
+const CompetitorAnalysisSection = ({ storeId, workItemId }: CompetitorAnalysisSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [brand, setBrand] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -453,7 +453,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId }: { storeId: number; w
 };
 
 // Component for Order Placement section
-const OrderPlacementSection = ({ storeId, workItemId }: { storeId: number; workItemId: number }) => {
+const OrderPlacementSection = ({ storeId, workItemId }: OrderPlacementSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
