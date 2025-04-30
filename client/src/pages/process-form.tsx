@@ -569,14 +569,43 @@ const ProcessForm = () => {
     setLocation(path);
   };
   
-  // Extract URL parameters more safely
-  const params = location.includes("?") ? location.split("?")[1] : "";
-  const searchParams = new URLSearchParams(params);
-  const workItemId = parseInt(searchParams.get("workItemId") || "0");
-  const storeId = parseInt(searchParams.get("storeId") || "0");
+  // More reliable parameter parsing
+  let workItemId = 0;
+  let storeId = 0;
+
+  try {
+    // Handle different URL formats (hash, query params, etc.)
+    let queryString = "";
+    if (location.includes("?")) {
+      queryString = location.split("?")[1];
+    } else if (location.includes("#") && location.split("#")[1].includes("?")) {
+      queryString = location.split("#")[1].split("?")[1];
+    }
+    
+    const searchParams = new URLSearchParams(queryString);
+    
+    // Parse the workItemId and make sure it's a valid number
+    const rawWorkItemId = searchParams.get("workItemId");
+    if (rawWorkItemId && !isNaN(Number(rawWorkItemId))) {
+      workItemId = parseInt(rawWorkItemId);
+    }
+    
+    // Parse the storeId and make sure it's a valid number
+    const rawStoreId = searchParams.get("storeId");
+    if (rawStoreId && !isNaN(Number(rawStoreId))) {
+      storeId = parseInt(rawStoreId);
+    }
+  } catch (error) {
+    console.error("Error parsing URL parameters:", error);
+  }
   
   // Log parameters for debugging
-  console.log("ProcessForm initialized with:", { workItemId, storeId, location });
+  console.log("ProcessForm initialized with:", { 
+    workItemId, 
+    storeId, 
+    location,
+    validParams: workItemId > 0 && storeId > 0 
+  });
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();

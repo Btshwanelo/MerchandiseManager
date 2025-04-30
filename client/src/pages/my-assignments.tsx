@@ -207,8 +207,35 @@ const MyAssignmentsPage = () => {
   };
   
   const handleWorkItemClick = (workItem: WorkItemWithRelations) => {
-    // Direct all work items to the process form
-    navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
+    if (!workItem || !workItem.id || !workItem.storeId) {
+      console.error("Invalid work item data for navigation:", workItem);
+      toast({
+        title: "Navigation error",
+        description: "This work item has missing required information",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Make sure both parameters are valid numbers
+    const workItemId = parseInt(String(workItem.id));
+    const storeId = parseInt(String(workItem.storeId));
+    
+    if (isNaN(workItemId) || isNaN(storeId)) {
+      console.error("Invalid work item IDs:", { workItemId, storeId, workItem });
+      toast({
+        title: "Navigation error",
+        description: "This work item has invalid ID information",
+        variant: "destructive"
+      });
+      return;
+    }
+    
+    // Direct all work items to the process form with validated parameters
+    navigate(`/process-form?workItemId=${workItemId}&storeId=${storeId}`);
+    
+    // Log the navigation for debugging
+    console.log(`Navigating to process form with workItemId=${workItemId}, storeId=${storeId}`);
   };
   
   const filterWorkItems = (items: WorkItemWithRelations[] | undefined, status: string, search: string) => {
@@ -438,7 +465,7 @@ const MyAssignmentsPage = () => {
                                   <Button
                                     variant="secondary"
                                     size="sm"
-                                    onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
+                                    onClick={() => handleWorkItemClick(item)}
                                   >
                                     Open Task
                                   </Button>
@@ -634,7 +661,7 @@ const MyAssignmentsPage = () => {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
+                              onClick={() => handleWorkItemClick(item)}
                             >
                               Open Task
                             </Button>
@@ -709,7 +736,7 @@ const MyAssignmentsPage = () => {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
+                              onClick={() => handleWorkItemClick(item)}
                             >
                               View Details
                             </Button>
