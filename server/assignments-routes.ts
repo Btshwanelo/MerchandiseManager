@@ -317,7 +317,8 @@ export function registerAssignmentRoutes(app: express.Express) {
         const isAssignedToStore = userAssignments.some(a => a.storeId === workItem.storeId);
         
         if (!isAssignedToStore) {
-          return res.status(403).json({ error: "You don't have permission to access this work item" });
+          console.log(`Access denied: User ${req.user!.id} tried to access work item ${id} for store ${workItem.storeId} but is not assigned to that store`);
+          return res.status(403).json({ error: "You don't have permission to access this work item. Please contact your manager or admin if you believe this is a mistake." });
         }
       }
       

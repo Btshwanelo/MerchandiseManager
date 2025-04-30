@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -768,10 +768,15 @@ const ProcessForm = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+                <AlertCircle className="h-8 w-8" />
+              </div>
               <h2 className="text-xl font-semibold text-destructive mb-2">Error</h2>
-              <p>Unable to load work item or store information.</p>
+              <p className="mb-2">Unable to load work item or store information.</p>
+              {workItemError && <p className="text-sm text-muted-foreground mb-1">Work item error: {(workItemError as Error).message}</p>}
+              {storeError && <p className="text-sm text-muted-foreground mb-4">Store error: {(storeError as Error).message}</p>}
               <Button 
-                variant="outline" 
+                variant="default" 
                 className="mt-4"
                 onClick={() => navigate("/my-assignments")}
               >
