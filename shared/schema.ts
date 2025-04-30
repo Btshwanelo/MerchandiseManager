@@ -411,7 +411,8 @@ export enum WorkItemType {
   STOCK_TAKE = "stock_take",         // Regular stock taking task
   INVENTORY_COUNT = "inventory_count", // Full inventory count
   MERCHANDISING = "merchandising",    // Setting up merchandising/displays
-  ORDER_PLACEMENT = "order_placement"  // Placing orders for products
+  ORDER_PLACEMENT = "order_placement",  // Placing orders for products
+  PROCESS_FORM = "process_form"       // Combined process form with all functionalities
 }
 
 export const workItems = pgTable("work_items", {

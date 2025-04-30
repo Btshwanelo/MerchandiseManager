@@ -362,11 +362,20 @@ export function registerAssignmentRoutes(app: express.Express) {
       }
       
       // Check if user has permission to update this item
-      // Users can only update their own work items unless they are admin/manager
-      if (existing.userId !== req.user!.id && 
+      // For completed items: only admins and managers can edit
+      // For non-completed items: users can only update their own work items unless they are admin/manager
+      if (existing.status === 'completed' && 
           req.user!.role !== 'admin' && 
           req.user!.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
+        return res.status(403).json({ error: "Access denied. Only admins and managers can edit completed work items." });
+      }
+      
+      // For non-completed items, check user ownership
+      if (existing.status !== 'completed' && 
+          existing.userId !== req.user!.id && 
+          req.user!.role !== 'admin' && 
+          req.user!.role !== 'manager') {
+        return res.status(403).json({ error: "Access denied. You can only edit your own work items." });
       }
       
       // Allow partial updates
@@ -402,11 +411,19 @@ export function registerAssignmentRoutes(app: express.Express) {
       }
       
       // Check if user has permission to complete this item
-      // Users can only complete their own work items unless they are admin/manager
-      if (existing.userId !== req.user!.id && 
+      // If item is already completed, only admins and managers can modify it
+      if (existing.status === 'completed') {
+        if (req.user!.role !== 'admin' && req.user!.role !== 'manager') {
+          return res.status(403).json({ error: "Access denied. Item is already completed." });
+        }
+      }
+      
+      // For non-completed items, only assigned users or admins/managers can complete
+      if (existing.status !== 'completed' && 
+          existing.userId !== req.user!.id && 
           req.user!.role !== 'admin' && 
           req.user!.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied" });
+        return res.status(403).json({ error: "Access denied. You can only complete your own work items." });
       }
       
       const completed = await storage.completeWorkItem(id);
