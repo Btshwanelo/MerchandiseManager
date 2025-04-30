@@ -1,6 +1,13 @@
 import { describe, test, expect, vi, beforeEach } from 'vitest';
-import { WorkItemStatus } from '@shared/schema';
 import * as queryClient from '@/lib/queryClient';
+
+// Define the enum locally for testing purposes since we can't import directly from shared
+enum WorkItemStatus {
+  PENDING = "pending",
+  IN_PROGRESS = "in_progress",
+  COMPLETED = "completed",
+  CANCELLED = "cancelled"
+}
 
 // Mock the queryClient module
 vi.mock('@/lib/queryClient', async () => {

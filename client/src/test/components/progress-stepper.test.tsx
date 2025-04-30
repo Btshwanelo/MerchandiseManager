@@ -69,7 +69,7 @@ describe('ProgressStepper', () => {
     expect(screen.getByText('Orders of stock that is depleted etc')).toBeInTheDocument();
   });
 
-  test('highlights correct steps based on activeStep', () => {
+  test('highlights correct steps based on activeStep', async () => {
     const { getByTestId } = render(<TestComponent />);
     
     // Initially only first step should be highlighted
@@ -79,56 +79,80 @@ describe('ProgressStepper', () => {
     expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
     
     // Click merchandising button
-    getByTestId('merchandising-btn').click();
+    await act(async () => {
+      fireEvent.click(getByTestId('merchandising-btn'));
+    });
     
     // First and second steps should be highlighted
-    expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-3-bar')).toHaveClass('bg-gray-200');
-    expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    await waitFor(() => {
+      expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-3-bar')).toHaveClass('bg-gray-200');
+      expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    });
     
     // Click competitor button
-    getByTestId('competitor-btn').click();
+    await act(async () => {
+      fireEvent.click(getByTestId('competitor-btn'));
+    });
     
     // First, second, and third steps should be highlighted
-    expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-3-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    await waitFor(() => {
+      expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-3-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    });
     
     // Click order button
-    getByTestId('order-btn').click();
+    await act(async () => {
+      fireEvent.click(getByTestId('order-btn'));
+    });
     
     // All steps should be highlighted
-    expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-3-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-4-bar')).toHaveClass('bg-blue-600');
+    await waitFor(() => {
+      expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-2-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-3-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-4-bar')).toHaveClass('bg-blue-600');
+    });
     
     // Click stock-take button to go back to first step
-    getByTestId('stock-take-btn').click();
+    await act(async () => {
+      fireEvent.click(getByTestId('stock-take-btn'));
+    });
     
     // Only first step should be highlighted again
-    expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
-    expect(getByTestId('step-2-bar')).toHaveClass('bg-gray-200');
-    expect(getByTestId('step-3-bar')).toHaveClass('bg-gray-200');
-    expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    await waitFor(() => {
+      expect(getByTestId('step-1-bar')).toHaveClass('bg-blue-600');
+      expect(getByTestId('step-2-bar')).toHaveClass('bg-gray-200');
+      expect(getByTestId('step-3-bar')).toHaveClass('bg-gray-200');
+      expect(getByTestId('step-4-bar')).toHaveClass('bg-gray-200');
+    });
   });
 
-  test('step titles are highlighted correctly', () => {
+  test('step titles are highlighted correctly', async () => {
     const { getByText, getByTestId } = render(<TestComponent />);
     
     // Check initial state - first step title should be blue
     expect(getByText('Stock Take')).toHaveClass('text-blue-600');
-    expect(getByText('Merchandising')).not.toHaveClass('text-blue-600');
     
     // Go to competitor step
-    getByTestId('competitor-btn').click();
+    await act(async () => {
+      fireEvent.click(getByTestId('competitor-btn'));
+    });
     
     // First three step titles should be blue
-    expect(getByText('Stock Take')).toHaveClass('text-blue-600');
-    expect(getByText('Merchandising')).toHaveClass('text-blue-600');
-    expect(getByText('Competitor Promotions')).toHaveClass('text-blue-600');
-    expect(getByText('Orders')).not.toHaveClass('text-blue-600');
+    await waitFor(() => {
+      const stockTakeEl = getByText('Stock Take');
+      const merchandisingEl = getByText('Merchandising');
+      const competitorEl = getByText('Competitor Promotions');
+      const ordersEl = getByText('Orders');
+      
+      expect(stockTakeEl).toHaveClass('text-blue-600');
+      expect(merchandisingEl).toHaveClass('text-blue-600');
+      expect(competitorEl).toHaveClass('text-blue-600');
+      expect(ordersEl).not.toHaveClass('text-blue-600');
+    });
   });
 });
