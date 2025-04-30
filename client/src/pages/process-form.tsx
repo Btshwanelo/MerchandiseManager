@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -564,40 +564,65 @@ interface Store {
 
 // Main Process Form component
 const ProcessForm = () => {
-  const [location, setLocation] = useLocation();
-  const navigate = (path: string) => {
-    setLocation(path);
+  const [location, navigate] = useLocation();
+  
+  // Extract parameters from URL using a function for clarity
+  const extractParams = () => {
+    let extractedWorkItemId = 0;
+    let extractedStoreId = 0;
+
+    try {
+      // Try window.location.search first (best for direct navigation)
+      const windowParams = new URLSearchParams(window.location.search);
+      const windowWorkItemId = windowParams.get("workItemId");
+      const windowStoreId = windowParams.get("storeId");
+      
+      if (windowWorkItemId && !isNaN(Number(windowWorkItemId))) {
+        extractedWorkItemId = parseInt(windowWorkItemId);
+      }
+      
+      if (windowStoreId && !isNaN(Number(windowStoreId))) {
+        extractedStoreId = parseInt(windowStoreId);
+      }
+      
+      // If parameters are still missing, try the location from wouter
+      if (extractedWorkItemId === 0 || extractedStoreId === 0) {
+        let queryString = "";
+        if (location.includes("?")) {
+          queryString = location.split("?")[1];
+        } else if (location.includes("#") && location.split("#")[1]?.includes("?")) {
+          queryString = location.split("#")[1].split("?")[1];
+        }
+        
+        if (queryString) {
+          const routerParams = new URLSearchParams(queryString);
+          
+          // Get work item ID if still missing
+          if (extractedWorkItemId === 0) {
+            const paramWorkItemId = routerParams.get("workItemId");
+            if (paramWorkItemId && !isNaN(Number(paramWorkItemId))) {
+              extractedWorkItemId = parseInt(paramWorkItemId);
+            }
+          }
+          
+          // Get store ID if still missing
+          if (extractedStoreId === 0) {
+            const paramStoreId = routerParams.get("storeId");
+            if (paramStoreId && !isNaN(Number(paramStoreId))) {
+              extractedStoreId = parseInt(paramStoreId);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      console.error("Error parsing URL parameters:", error);
+    }
+    
+    return { extractedWorkItemId, extractedStoreId };
   };
   
-  // More reliable parameter parsing
-  let workItemId = 0;
-  let storeId = 0;
-
-  try {
-    // Handle different URL formats (hash, query params, etc.)
-    let queryString = "";
-    if (location.includes("?")) {
-      queryString = location.split("?")[1];
-    } else if (location.includes("#") && location.split("#")[1].includes("?")) {
-      queryString = location.split("#")[1].split("?")[1];
-    }
-    
-    const searchParams = new URLSearchParams(queryString);
-    
-    // Parse the workItemId and make sure it's a valid number
-    const rawWorkItemId = searchParams.get("workItemId");
-    if (rawWorkItemId && !isNaN(Number(rawWorkItemId))) {
-      workItemId = parseInt(rawWorkItemId);
-    }
-    
-    // Parse the storeId and make sure it's a valid number
-    const rawStoreId = searchParams.get("storeId");
-    if (rawStoreId && !isNaN(Number(rawStoreId))) {
-      storeId = parseInt(rawStoreId);
-    }
-  } catch (error) {
-    console.error("Error parsing URL parameters:", error);
-  }
+  // Get the parameters
+  const { extractedWorkItemId: workItemId, extractedStoreId: storeId } = extractParams();
   
   // Log parameters for debugging
   console.log("ProcessForm initialized with:", { 
@@ -864,9 +889,22 @@ const ProcessForm = () => {
 
           {/* Main form tabs */}
           {workItem.status === WorkItemStatus.COMPLETED ? (
-            <div className="text-center py-8">
-              <h2 className="text-xl font-semibold text-green-600 mb-2">Work Item Completed</h2>
-              <p>This work item has been marked as completed.</p>
+            <div className="text-center py-12">
+              <div className="mb-4">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
+                  <CheckCircle className="h-8 w-8" />
+                </div>
+                <h2 className="text-2xl font-semibold text-green-600 mb-2">Work Item Completed</h2>
+                <p className="text-muted-foreground mb-6">This work item has been successfully completed.</p>
+                <Button 
+                  variant="default"
+                  size="lg"
+                  onClick={() => navigate("/my-assignments")}
+                  className="mt-2"
+                >
+                  Return to My Assignments
+                </Button>
+              </div>
             </div>
           ) : (
             <Tabs defaultValue="stock-take" onValueChange={(value) => {
