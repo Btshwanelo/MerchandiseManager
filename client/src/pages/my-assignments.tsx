@@ -659,11 +659,13 @@ const MyAssignmentsPage = () => {
                           </div>
                           <div className="flex justify-end mt-2 space-x-2">
                             <Button
-                              variant="secondary"
+                              variant="default"
                               size="sm"
                               onClick={() => handleWorkItemClick(item)}
+                              className="flex items-center"
                             >
-                              Open Task
+                              <ClipboardList className="mr-1 h-4 w-4" />
+                              Process Task
                             </Button>
                             {item.status === WorkItemStatus.PENDING && (
                               <Button
