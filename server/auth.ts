@@ -58,6 +58,14 @@ async function comparePasswords(supplied: string, stored: string) {
   }
 }
 
+// Middleware to check if the user is authenticated
+export function isAuthenticated(req: Request, res: Response, next: NextFunction) {
+  if (!req.isAuthenticated()) {
+    return res.status(401).json({ error: "Authentication required" });
+  }
+  next();
+}
+
 // Middleware to check role-based access
 export function checkRole(...roles: UserRole[]) {
   return (req: Request, res: Response, next: NextFunction) => {

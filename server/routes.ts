@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, checkRole } from "./auth";
+import { setupAuth, checkRole, isAuthenticated } from "./auth";
 import { 
   UserRole, 
   StockLocation,
@@ -166,14 +166,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.get("/api/stores/:id", async (req, res) => {
+  app.get("/api/stores/:id", isAuthenticated, async (req, res) => {
     try {
-      const store = await storage.getStore(parseInt(req.params.id));
+      const storeId = parseInt(req.params.id);
+      if (isNaN(storeId)) {
+        return res.status(400).json({ error: "Invalid store ID" });
+      }
+      
+      const store = await storage.getStore(storeId);
       if (!store) {
         return res.status(404).json({ message: "Store not found" });
       }
+      
+      // If user is admin or manager, allow access to any store
+      if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+        return res.json(store);
+      }
+      
+      // For merchandisers, check if they're assigned to this store
+      const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+      const isAssignedToStore = userAssignments.some(a => a.storeId === storeId);
+      
+      if (!isAssignedToStore) {
+        return res.status(403).json({ error: "You don't have permission to view this store" });
+      }
+      
+      console.log(`Fetched store ${storeId} successfully for user ${req.user!.id}`);
       res.json(store);
     } catch (error) {
+      console.error("Error fetching store:", error);
       res.status(500).json({ message: "Failed to get store" });
     }
   });
