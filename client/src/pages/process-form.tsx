@@ -29,7 +29,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, AlertCircle } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { useAuth } from "@/hooks/use-auth";
@@ -796,11 +796,17 @@ const ProcessForm = () => {
         <Card>
           <CardContent className="pt-6">
             <div className="text-center py-8">
+              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-red-100 text-red-600 mb-4">
+                <AlertCircle className="h-8 w-8" />
+              </div>
               <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
-              <p>You are not assigned to this work item.</p>
+              <p className="mb-4">You are not assigned to this work item.</p>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please check with your manager or system administrator if you believe this is a mistake.
+              </p>
               <Button 
-                variant="outline" 
-                className="mt-4"
+                variant="default" 
+                className="mt-2"
                 onClick={() => navigate("/my-assignments")}
               >
                 Return to My Assignments
@@ -895,18 +901,21 @@ const ProcessForm = () => {
           {/* Main form tabs */}
           {workItem.status === WorkItemStatus.COMPLETED ? (
             <div className="text-center py-12">
-              <div className="mb-4">
-                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-green-100 text-green-600 mb-4">
-                  <CheckCircle className="h-8 w-8" />
+              <div className="mb-6">
+                <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6">
+                  <CheckCircle className="h-10 w-10" />
                 </div>
-                <h2 className="text-2xl font-semibold text-green-600 mb-2">Work Item Completed</h2>
-                <p className="text-muted-foreground mb-6">This work item has been successfully completed.</p>
+                <h2 className="text-2xl font-semibold text-green-600 mb-3">Task Completed Successfully!</h2>
+                <p className="text-muted-foreground mb-8 max-w-md mx-auto">
+                  Great job! This work item has been marked as complete and your inventory changes have been recorded.
+                </p>
                 <Button 
                   variant="default"
                   size="lg"
                   onClick={() => navigate("/my-assignments")}
                   className="mt-2"
                 >
+                  <ClipboardList className="mr-2 h-5 w-5" />
                   Return to My Assignments
                 </Button>
               </div>

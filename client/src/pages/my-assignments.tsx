@@ -739,7 +739,9 @@ const MyAssignmentsPage = () => {
                               variant="secondary"
                               size="sm"
                               onClick={() => handleWorkItemClick(item)}
+                              className="flex items-center"
                             >
+                              <CheckCircle2 className="mr-1 h-4 w-4" />
                               View Details
                             </Button>
                           </div>
