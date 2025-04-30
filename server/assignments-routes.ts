@@ -397,6 +397,53 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
+  // Update a work item's status
+  app.put("/api/work-items/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid work item ID" });
+      }
+      
+      const { status } = req.body;
+      if (!status || typeof status !== 'string') {
+        return res.status(400).json({ error: "Status is required" });
+      }
+      
+      const validStatuses = ['pending', 'in_progress', 'completed', 'cancelled'];
+      if (!validStatuses.includes(status)) {
+        return res.status(400).json({ error: "Invalid status value" });
+      }
+      
+      const existing = await storage.getWorkItem(id);
+      if (!existing) {
+        return res.status(404).json({ error: "Work item not found" });
+      }
+      
+      // Check if user has permission to update this item's status
+      if (existing.userId !== req.user!.id && 
+          req.user!.role !== 'admin' && 
+          req.user!.role !== 'manager') {
+        return res.status(403).json({ error: "Access denied. You can only update the status of your own work items." });
+      }
+      
+      const updateData: any = { status };
+      
+      // If status is completed, set completedAt
+      if (status === 'completed') {
+        updateData.completedAt = new Date();
+      }
+      
+      // Update the work item
+      const updatedItem = await storage.updateWorkItem(id, updateData);
+      
+      res.json(updatedItem);
+    } catch (error) {
+      console.error("Error updating work item status:", error);
+      res.status(500).json({ error: "Failed to update work item status" });
+    }
+  });
+  
   // Mark a work item as complete
   app.post("/api/work-items/:id/complete", isAuthenticated, async (req, res) => {
     try {
