@@ -169,6 +169,10 @@ const MyAssignmentsPage = () => {
     // For stock_take work items, navigate to the stock take page
     if (workItem.type === WorkItemType.STOCK_TAKE) {
       navigate(`/stock-take?storeId=${workItem.storeId}`);
+    } 
+    // For process form work items, navigate to the new unified process form
+    else if (workItem.type === WorkItemType.PROCESS_FORM) {
+      navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
     }
     // Add handling for other work item types as needed
   };
