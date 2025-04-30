@@ -21,17 +21,21 @@ export function ProtectedRoute({
   const { toast } = useToast();
   const [location, setLocation] = useLocation();
 
-  // Handle authentication errors
+  // Handle authentication errors with improved error detection
   useEffect(() => {
     if (error) {
-      if ((error as any).status === 401 || (error as any).status === 403) {
-        // Authentication error - redirect to login
+      if ((error as any).isAuthError) {
+        // Use our custom auth error message from queryClient
         toast({
-          title: "Authentication Error",
-          description: "Your session has expired. Please log in again.",
+          title: (error as any).type === 'unauthorized' ? "Authentication Error" : "Access Denied",
+          description: error.message || "Please log in again.",
           variant: "destructive",
         });
-        setLocation("/auth");
+        
+        // Redirect to login for unauthorized errors
+        if ((error as any).type === 'unauthorized') {
+          setLocation("/auth");
+        }
       } else {
         // Show generic error toast for other errors
         toast({

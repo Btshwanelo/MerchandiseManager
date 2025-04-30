@@ -20,8 +20,23 @@ async function throwIfResNotOk(res: Response) {
       console.error("Failed to read error response:", e);
     }
 
+    // Create error with additional properties
     const error = new Error(`${res.status}: ${errorMessage}`);
+    
+    // Add status code for easier checking
     (error as any).status = res.status;
+    
+    // Add flag for authentication errors
+    if (res.status === 401) {
+      (error as any).isAuthError = true;
+      (error as any).type = 'unauthorized';
+      (error as any).message = 'Your session has expired. Please log in again.';
+    } else if (res.status === 403) {
+      (error as any).isAuthError = true;
+      (error as any).type = 'forbidden';
+      (error as any).message = 'You do not have permission to access this resource.';
+    }
+    
     throw error;
   }
 }
@@ -76,22 +91,84 @@ export async function apiRequest(
   return res;
 }
 
+// Define error handling behavior types
 type UnauthorizedBehavior = "returnNull" | "throw";
-export const getQueryFn: <T>(options: {
+
+interface QueryFnOptions {
   on401: UnauthorizedBehavior;
-}) => QueryFunction<T> =
-  ({ on401: unauthorizedBehavior }) =>
-  async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+  fromCache?: boolean;
+}
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+// Global event for authentication state changes
+export const AUTH_EVENTS = {
+  SESSION_EXPIRED: "session_expired",
+  PERMISSION_DENIED: "permission_denied",
+};
+
+// Event emitter for auth events
+export const authEvents = {
+  listeners: new Map<string, Set<Function>>(),
+  
+  emit(event: string, ...args: any[]) {
+    const listeners = this.listeners.get(event);
+    if (listeners) {
+      listeners.forEach(listener => listener(...args));
     }
+  },
+  
+  on(event: string, callback: Function) {
+    if (!this.listeners.has(event)) {
+      this.listeners.set(event, new Set());
+    }
+    this.listeners.get(event)!.add(callback);
+    
+    // Return unsubscribe function
+    return () => {
+      const listeners = this.listeners.get(event);
+      if (listeners) {
+        listeners.delete(callback);
+      }
+    };
+  }
+};
 
-    await throwIfResNotOk(res);
-    return await res.json();
+// Enhanced query function factory
+export const getQueryFn: <T>(options: QueryFnOptions) => QueryFunction<T> =
+  ({ on401: unauthorizedBehavior, fromCache = false }) =>
+  async ({ queryKey }) => {
+    try {
+      // Make the request with credentials
+      const res = await fetch(queryKey[0] as string, {
+        credentials: "include",
+        cache: fromCache ? "default" : "no-cache",
+      });
+
+      // Handle 401 based on options
+      if (res.status === 401) {
+        // Emit event for session expiration
+        authEvents.emit(AUTH_EVENTS.SESSION_EXPIRED);
+        
+        // Return null or throw based on configuration
+        if (unauthorizedBehavior === "returnNull") {
+          return null;
+        }
+      }
+      
+      // Handle 403 errors
+      if (res.status === 403) {
+        // Emit event for permission issues
+        authEvents.emit(AUTH_EVENTS.PERMISSION_DENIED);
+      }
+
+      // Check for errors
+      await throwIfResNotOk(res);
+      
+      // Parse response
+      return await res.json();
+    } catch (error) {
+      console.error(`Query error for ${queryKey[0]}:`, error);
+      throw error;
+    }
   };
 
 export const queryClient = new QueryClient({

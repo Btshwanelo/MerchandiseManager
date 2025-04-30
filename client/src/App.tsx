@@ -1,5 +1,5 @@
 import { Switch, Route, useLocation } from "wouter";
-import { queryClient } from "./lib/queryClient";
+import { queryClient, AUTH_EVENTS, authEvents } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -21,7 +21,7 @@ import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 
 // New pages
@@ -297,23 +297,79 @@ function Router() {
   );
 }
 
-// Session check component to periodically verify authentication
+// Session check component to handle authentication events and session verification
 function SessionCheck() {
-  const { refetchUser } = useAuth();
+  const { refetchUser, logoutMutation } = useAuth();
   const { toast } = useToast();
+  const [, navigate] = useLocation();
   const [location] = useLocation();
   const isAuthPage = location === '/auth';
+  
+  // Track if we've already shown a toast for session expiration
+  const sessionToastShownRef = useRef(false);
+  
+  // Handle authentication events (session expired, permission denied)
+  useEffect(() => {
+    // Listen for session expired events
+    const unsubscribeExpired = authEvents.on(AUTH_EVENTS.SESSION_EXPIRED, () => {
+      if (!sessionToastShownRef.current && !isAuthPage) {
+        sessionToastShownRef.current = true;
+        
+        toast({
+          title: "Session Expired",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+        
+        // Redirect to login page
+        logoutMutation.mutate(undefined, {
+          onSuccess: () => {
+            navigate('/auth');
+            // Reset toast shown flag after redirect
+            setTimeout(() => {
+              sessionToastShownRef.current = false;
+            }, 1000);
+          }
+        });
+      }
+    });
+    
+    // Listen for permission denied events
+    const unsubscribePermission = authEvents.on(AUTH_EVENTS.PERMISSION_DENIED, () => {
+      if (!isAuthPage) {
+        toast({
+          title: "Access Denied",
+          description: "You don't have permission to access this resource.",
+          variant: "destructive",
+        });
+      }
+    });
+    
+    return () => {
+      unsubscribeExpired();
+      unsubscribePermission();
+    };
+  }, [toast, navigate, logoutMutation, isAuthPage]);
 
-  // Periodically check user session status (every 5 minutes)
+  // Periodically check user session status
   useEffect(() => {
     if (isAuthPage) return; // Don't check session on auth page
 
+    // Initial check after a short delay
+    const initialCheck = setTimeout(() => {
+      refetchUser();
+    }, 10000); // 10 seconds after page load
+    
+    // Regular interval check (every 5 minutes)
     const sessionCheckInterval = setInterval(() => {
       refetchUser();
     }, 5 * 60 * 1000); // 5 minutes
 
     // Clean up on unmount
-    return () => clearInterval(sessionCheckInterval);
+    return () => {
+      clearTimeout(initialCheck);
+      clearInterval(sessionCheckInterval);
+    };
   }, [refetchUser, isAuthPage]);
 
   return null;

@@ -18,8 +18,16 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
-import { insertUserSchema } from "@shared/schema";
+import { insertUserSchema, UserRole } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
+
+// Demo user accounts for quick testing
+const demoPredefinedUsers = [
+  { username: "admin", password: "admin123", role: UserRole.ADMIN },
+  { username: "manager", password: "manager123", role: UserRole.MANAGER },
+  { username: "test", password: "test123", role: UserRole.MERCHANDISER }
+];
+
 
 // Login schema
 const loginSchema = z.object({
@@ -39,11 +47,7 @@ const registerSchema = insertUserSchema.extend({
 
 type RegisterValues = z.infer<typeof registerSchema>;
 
-const demoPredefinedUsers = [
-  { username: "admin", password: "admin123", role: "Admin", description: "Admin access with full permissions" },
-  { username: "manager", password: "manager123", role: "Manager", description: "Manager with store oversight" },
-  { username: "test", password: "test123", role: "Merchandiser", description: "Merchandiser for store operations" }
-];
+
 
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -257,9 +261,9 @@ const AuthPage = () => {
                         onClick={() => handleLoginWithTestUser(demoUser)}
                       >
                         <div className="p-1.5 rounded-full bg-primary/10">
-                          {demoUser.role === "Admin" && <UserCog className="h-4 w-4 text-primary" />}
-                          {demoUser.role === "Manager" && <Users className="h-4 w-4 text-primary" />}
-                          {demoUser.role === "Merchandiser" && <Package className="h-4 w-4 text-primary" />}
+                          {demoUser.role === UserRole.ADMIN && <UserCog className="h-4 w-4 text-primary" />}
+                          {demoUser.role === UserRole.MANAGER && <Users className="h-4 w-4 text-primary" />}
+                          {demoUser.role === UserRole.MERCHANDISER && <Package className="h-4 w-4 text-primary" />}
                         </div>
                         <div className="flex-1">
                           <p className="font-medium">{demoUser.role} Account</p>
