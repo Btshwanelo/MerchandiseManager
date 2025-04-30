@@ -21,7 +21,8 @@ import AuthPage from "@/pages/auth-page";
 import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 // New pages
 import StockTake from "@/pages/stock-take";
@@ -296,6 +297,28 @@ function Router() {
   );
 }
 
+// Session check component to periodically verify authentication
+function SessionCheck() {
+  const { refetchUser } = useAuth();
+  const { toast } = useToast();
+  const [location] = useLocation();
+  const isAuthPage = location === '/auth';
+
+  // Periodically check user session status (every 5 minutes)
+  useEffect(() => {
+    if (isAuthPage) return; // Don't check session on auth page
+
+    const sessionCheckInterval = setInterval(() => {
+      refetchUser();
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Clean up on unmount
+    return () => clearInterval(sessionCheckInterval);
+  }, [refetchUser, isAuthPage]);
+
+  return null;
+}
+
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
@@ -303,6 +326,7 @@ function App() {
         <AuthProvider>
           <TooltipProvider>
             <Toaster />
+            <SessionCheck />
             <Router />
           </TooltipProvider>
         </AuthProvider>
