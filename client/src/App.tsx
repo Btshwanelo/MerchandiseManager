@@ -35,6 +35,7 @@ import Deals from "@/pages/deals";
 import Orders from "@/pages/orders";
 import Assignments from "@/pages/assignments";
 import MyAssignments from "@/pages/my-assignments";
+import ProcessForm from "@/pages/process-form";
 
 // Redirector component for different user roles
 function RoleBasedRedirect() {
@@ -277,6 +278,15 @@ function Router() {
         component={() => (
           <Layout>
             <MyAssignments />
+          </Layout>
+        )} 
+      />
+      
+      <ProtectedRoute 
+        path="/process-form" 
+        component={() => (
+          <Layout>
+            <ProcessForm />
           </Layout>
         )} 
       />
