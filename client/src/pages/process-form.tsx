@@ -789,8 +789,10 @@ const ProcessForm = () => {
     );
   }
   
-  // Check if the user is assigned to this work item
+  // Check if the user is assigned to this work item with improved user message and logging
   if (workItem.userId !== user?.id && user?.role !== 'admin' && user?.role !== 'manager') {
+    console.log(`Access denied: User ${user?.id} (${user?.username}) tried to access work item ${workItem.id} which is assigned to user ${workItem.userId}`);
+    
     return (
       <div className="container mx-auto py-8 px-4">
         <Card>
@@ -800,17 +802,27 @@ const ProcessForm = () => {
                 <AlertCircle className="h-8 w-8" />
               </div>
               <h2 className="text-xl font-semibold text-destructive mb-2">Access Denied</h2>
-              <p className="mb-4">You are not assigned to this work item.</p>
-              <p className="text-sm text-muted-foreground mb-4">
-                Please check with your manager or system administrator if you believe this is a mistake.
+              <p className="mb-3">You are not assigned to this work item.</p>
+              <p className="text-sm text-muted-foreground mb-3">
+                This work may be assigned to another team member or you might need specific permissions.
               </p>
-              <Button 
-                variant="default" 
-                className="mt-2"
-                onClick={() => navigate("/my-assignments")}
-              >
-                Return to My Assignments
-              </Button>
+              <p className="text-sm text-muted-foreground mb-4">
+                Please check your assignments list or contact your manager if you believe this is a mistake.
+              </p>
+              <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                <Button 
+                  variant="default" 
+                  onClick={() => navigate("/my-assignments")}
+                >
+                  View My Assignments
+                </Button>
+                <Button 
+                  variant="outline" 
+                  onClick={() => navigate("/")}
+                >
+                  Go to Dashboard
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>

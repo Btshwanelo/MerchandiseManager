@@ -350,17 +350,35 @@ export function registerAssignmentRoutes(app: express.Express) {
         }
       }
       
-      // Check if the user has access to this work item
+      // Check if the user has access to this work item with improved error handling
       const isAdminOrManager = req.user!.role === 'admin' || req.user!.role === 'manager';
-      if (!isAdminOrManager && workItem.userId !== req.user!.id) {
-        // For merchandisers, check if they're assigned to the store
+      
+      // Admin/Manager always has access
+      if (isAdminOrManager) {
+        console.log(`Admin/Manager access granted: User ${req.user!.id} (${req.user!.username}) accessed work item ${id}`);
+      }
+      // Check if the work item is specifically assigned to this user
+      else if (workItem.userId === req.user!.id) {
+        console.log(`Direct assignment access granted: User ${req.user!.id} (${req.user!.username}) accessed their work item ${id}`);
+      }
+      // For merchandisers, check if they're assigned to the store
+      else {
         const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
         const isAssignedToStore = userAssignments.some(a => a.storeId === workItem.storeId);
         
         if (!isAssignedToStore) {
-          console.log(`Access denied: User ${req.user!.id} tried to access work item ${id} for store ${workItem.storeId} but is not assigned to that store`);
-          return res.status(403).json({ error: "You don't have permission to access this work item. Please contact your manager or admin if you believe this is a mistake." });
+          // This user has no assignments to this store - deny access
+          console.log(`Access denied: User ${req.user!.id} (${req.user!.username}) tried to access work item ${id} for store ${workItem.storeId} but is not assigned to that store`);
+          console.log(`User assignments: ${JSON.stringify(userAssignments.map(a => a.storeId))}`);
+          
+          return res.status(403).json({ 
+            error: "You don't have permission to access this work item.",
+            details: "You are not assigned to this store. Please check your assignments list or contact your manager."
+          });
         }
+        
+        // User is assigned to the store but not to this specific work item
+        console.log(`Store-level access granted: User ${req.user!.id} is assigned to store ${workItem.storeId} and can access work item ${id}`);
       }
       
       console.log(`Fetched work item ${id} successfully for user ${req.user!.id}`);
