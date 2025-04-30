@@ -35,7 +35,6 @@ import {
   TabsTrigger,
 } from "@/components/ui/tabs";
 import { Textarea } from "@/components/ui/textarea";
-import { DataLoadError } from "@/components/ui/error-state";
 import { 
   Loader2, 
   Search, 
@@ -48,7 +47,8 @@ import {
   Info,
   ArrowUpDown,
   Building2,
-  Clock
+  Clock,
+  HelpCircle
 } from "lucide-react";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import dayjs from "dayjs";
@@ -196,7 +196,7 @@ const MyAssignmentsPage = () => {
         }
         
         // Sort by priority if no due date
-        const priorityOrder = { high: 1, medium: 2, low: 3 };
+        const priorityOrder: Record<string, number> = { high: 1, medium: 2, low: 3 };
         const priorityA = priorityOrder[a.priority.toLowerCase()] || 99;
         const priorityB = priorityOrder[b.priority.toLowerCase()] || 99;
         
@@ -240,10 +240,13 @@ const MyAssignmentsPage = () => {
   
   if (workItemsError) {
     return (
-      <DataLoadError 
-        title="Error loading work items" 
-        message="Failed to load your assigned tasks. Please try again later."
-      />
+      <div className="flex flex-col items-center justify-center min-h-[80vh] text-center">
+        <Info className="h-10 w-10 text-destructive mb-4" />
+        <h2 className="text-xl font-bold mb-2">Error loading work items</h2>
+        <p className="text-muted-foreground max-w-md">
+          Failed to load your assigned tasks. Please try again later.
+        </p>
+      </div>
     );
   }
   
@@ -254,8 +257,16 @@ const MyAssignmentsPage = () => {
     <div className="container py-6 max-w-screen-xl">
       <div className="flex flex-col mb-6">
         <div className="flex items-center justify-between mb-2">
-          <h1 className="text-3xl font-bold">Work Items</h1>
-          <div className="relative w-64">
+          <div className="flex items-center md:hidden mb-2">
+            <Button variant="ghost" size="sm" className="mr-2">
+              <ChevronLeft className="h-4 w-4" /> Back
+            </Button>
+          </div>
+          <div>
+            <h1 className="text-3xl font-bold">Work Items</h1>
+            <p className="text-muted-foreground">Work that has been assigned to you</p>
+          </div>
+          <div className="relative w-64 hidden md:block">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               placeholder="Search..."
@@ -265,236 +276,390 @@ const MyAssignmentsPage = () => {
             />
           </div>
         </div>
-        <p className="text-muted-foreground">Work that has been assigned to you</p>
+      </div>
+      
+      {/* Mobile My Details dropdown */}
+      <div className="block md:hidden mb-4">
+        <Card>
+          <CardContent className="p-0">
+            <Button
+              variant="ghost"
+              className="w-full flex items-center justify-between p-4"
+            >
+              <span className="font-medium">My details</span>
+              <ChevronRight className="h-4 w-4" />
+            </Button>
+          </CardContent>
+        </Card>
       </div>
       
       <Card className="mb-8">
-        <CardContent className="p-6">
+        <CardContent className="p-0 md:p-6">
+          <div className="flex items-center justify-between p-4 md:p-0 md:pb-4">
+            <h2 className="text-lg font-semibold flex items-center">
+              Work Items 
+              <Badge variant="outline" className="ml-2 bg-blue-50">
+                {activeItems.length + completedItems.length} items
+              </Badge>
+            </h2>
+            <Button variant="ghost" size="icon">
+              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-more-vertical"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+            </Button>
+          </div>
+          
           <Tabs defaultValue="active" className="w-full">
-            <TabsList className="mb-6">
-              <TabsTrigger value="active">Active</TabsTrigger>
-              <TabsTrigger value="completed">Completed</TabsTrigger>
-            </TabsList>
+            <div className="px-4 md:px-0">
+              <TabsList className="mb-4 w-full md:w-auto">
+                <TabsTrigger value="active" className="flex-1 md:flex-initial">Active</TabsTrigger>
+                <TabsTrigger value="completed" className="flex-1 md:flex-initial">Completed</TabsTrigger>
+              </TabsList>
+            </div>
             
-            <TabsContent value="active" className="space-y-4">
-              {activeItems.length > 0 ? (
-                <div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[300px]">
-                            <div className="flex items-center space-x-1">
-                              <span>Task</span>
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
-                          <TableHead>Store</TableHead>
-                          <TableHead>
-                            <div className="flex items-center space-x-1">
-                              <span>Status</span>
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
-                          <TableHead>
-                            <div className="flex items-center space-x-1">
-                              <span>Due date</span>
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
-                          <TableHead>Priority</TableHead>
-                          <TableHead className="text-right">Actions</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {activeItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">
-                              <div 
-                                className="cursor-pointer hover:text-primary"
-                                onClick={() => handleWorkItemClick(item)}
-                              >
-                                {item.title}
-                              </div>
-                              <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                                {item.description}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Building2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                {item.store?.name}
-                              </div>
-                            </TableCell>
-                            <TableCell>{getStatusBadge(item.status)}</TableCell>
-                            <TableCell>
-                              {item.dueDate ? (
-                                <div className="flex items-center space-x-1">
-                                  <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                                  <span>{dayjs(item.dueDate).format('DD/MM/YYYY')}</span>
-                                </div>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              )}
-                            </TableCell>
-                            <TableCell>
-                              <span className={`text-xs font-semibold ${getPriorityColor(item.priority)}`}>
-                                {item.priority}
-                              </span>
-                            </TableCell>
-                            <TableCell className="text-right">
-                              {item.status === WorkItemStatus.PENDING && (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  onClick={() => handleStartWorkItem(item)}
-                                  disabled={updateWorkItemStatusMutation.isPending}
-                                >
-                                  Start
-                                </Button>
-                              )}
-                              
-                              {item.status === WorkItemStatus.IN_PROGRESS && item.type !== 'stock_take' && (
-                                <Button
-                                  variant="default"
-                                  size="sm"
-                                  onClick={() => handleOpenCompleteDialog(item)}
-                                  disabled={updateWorkItemStatusMutation.isPending}
-                                >
-                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                  Complete
-                                </Button>
-                              )}
-                              
-                              {item.status === WorkItemStatus.IN_PROGRESS && item.type === 'stock_take' && (
-                                <div className="px-2 py-1 text-xs text-muted-foreground bg-muted rounded-md">
-                                  Auto-completed on submission
-                                </div>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Showing <strong>{activeItems.length}</strong> items
-                    </div>
-                    
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" disabled>
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
-                      </Button>
-                      <Button variant="outline" size="sm" disabled>
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
-                      </Button>
-                    </div>
-                  </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No active work items</h3>
-                  <p className="text-muted-foreground">You don't have any active work items assigned to you</p>
-                </div>
-              )}
-            </TabsContent>
-            
-            <TabsContent value="completed" className="space-y-4">
-              {completedItems.length > 0 ? (
-                <div>
-                  <div className="rounded-md border">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead className="w-[300px]">
-                            <div className="flex items-center space-x-1">
-                              <span>Task</span>
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
-                          <TableHead>Store</TableHead>
-                          <TableHead>
-                            <div className="flex items-center space-x-1">
-                              <span>Completed</span>
-                              <ArrowUpDown className="h-3 w-3" />
-                            </div>
-                          </TableHead>
-                          <TableHead>Notes</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {completedItems.map((item) => (
-                          <TableRow key={item.id}>
-                            <TableCell className="font-medium">
-                              <div>{item.title}</div>
-                              <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
-                                {item.description}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex items-center">
-                                <Building2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
-                                {item.store?.name}
-                              </div>
-                            </TableCell>
-                            <TableCell>
+            {/* Desktop View */}
+            <div className="hidden md:block">
+              <TabsContent value="active" className="space-y-4">
+                {activeItems.length > 0 ? (
+                  <div>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">
                               <div className="flex items-center space-x-1">
-                                <Clock className="h-3.5 w-3.5 text-muted-foreground" />
-                                <span>{item.completedAt ? dayjs(item.completedAt).format('DD/MM/YYYY') : '—'}</span>
+                                <span>Task</span>
+                                <ArrowUpDown className="h-3 w-3" />
                               </div>
-                            </TableCell>
-                            <TableCell>
-                              {item.notes ? (
-                                <TooltipProvider>
-                                  <Tooltip>
-                                    <TooltipTrigger className="text-left">
-                                      <div className="line-clamp-1 text-sm">{item.notes}</div>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                      <p className="max-w-md">{item.notes}</p>
-                                    </TooltipContent>
-                                  </Tooltip>
-                                </TooltipProvider>
-                              ) : (
-                                <span className="text-muted-foreground text-sm">—</span>
-                              )}
-                            </TableCell>
+                            </TableHead>
+                            <TableHead>Store</TableHead>
+                            <TableHead>
+                              <div className="flex items-center space-x-1">
+                                <span>Status</span>
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>
+                              <div className="flex items-center space-x-1">
+                                <span>Due date</span>
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>Priority</TableHead>
+                            <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                  
-                  <div className="flex items-center justify-between mt-4">
-                    <div className="text-sm text-muted-foreground">
-                      Showing <strong>{completedItems.length}</strong> items
+                        </TableHeader>
+                        <TableBody>
+                          {activeItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">
+                                <div 
+                                  className="cursor-pointer hover:text-primary"
+                                  onClick={() => handleWorkItemClick(item)}
+                                >
+                                  {item.title}
+                                </div>
+                                <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                  {item.description}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <Building2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                  {item.store?.name}
+                                </div>
+                              </TableCell>
+                              <TableCell>{getStatusBadge(item.status)}</TableCell>
+                              <TableCell>
+                                {item.dueDate ? (
+                                  <div className="flex items-center space-x-1">
+                                    <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
+                                    <span>{dayjs(item.dueDate).format('DD/MM/YYYY')}</span>
+                                  </div>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                )}
+                              </TableCell>
+                              <TableCell>
+                                <span className={`text-xs font-semibold ${getPriorityColor(item.priority)}`}>
+                                  {item.priority}
+                                </span>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {item.status === WorkItemStatus.PENDING && (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() => handleStartWorkItem(item)}
+                                    disabled={updateWorkItemStatusMutation.isPending}
+                                  >
+                                    Start
+                                  </Button>
+                                )}
+                                
+                                {item.status === WorkItemStatus.IN_PROGRESS && item.type !== 'stock_take' && (
+                                  <Button
+                                    variant="default"
+                                    size="sm"
+                                    onClick={() => handleOpenCompleteDialog(item)}
+                                    disabled={updateWorkItemStatusMutation.isPending}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                    Complete
+                                  </Button>
+                                )}
+                                
+                                {item.status === WorkItemStatus.IN_PROGRESS && item.type === 'stock_take' && (
+                                  <div className="px-2 py-1 text-xs text-muted-foreground bg-muted rounded-md">
+                                    Auto-completed on submission
+                                  </div>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                     
-                    <div className="flex items-center space-x-2">
-                      <Button variant="outline" size="sm" disabled>
-                        <ChevronLeft className="h-4 w-4 mr-1" />
-                        Previous
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing <strong>{activeItems.length}</strong> items
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm" disabled>
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        <Button variant="outline" size="sm" disabled>
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-lg font-medium">No active work items</h3>
+                    <p className="text-muted-foreground">You don't have any active work items assigned to you</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="completed" className="space-y-4">
+                {completedItems.length > 0 ? (
+                  <div>
+                    <div className="rounded-md border">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead className="w-[300px]">
+                              <div className="flex items-center space-x-1">
+                                <span>Task</span>
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>Store</TableHead>
+                            <TableHead>
+                              <div className="flex items-center space-x-1">
+                                <span>Completed</span>
+                                <ArrowUpDown className="h-3 w-3" />
+                              </div>
+                            </TableHead>
+                            <TableHead>Notes</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {completedItems.map((item) => (
+                            <TableRow key={item.id}>
+                              <TableCell className="font-medium">
+                                <div>{item.title}</div>
+                                <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
+                                  {item.description}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center">
+                                  <Building2 className="h-3.5 w-3.5 mr-1.5 text-muted-foreground" />
+                                  {item.store?.name}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center space-x-1">
+                                  <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                                  <span>{item.completedAt ? dayjs(item.completedAt).format('DD/MM/YYYY') : '—'}</span>
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                {item.notes ? (
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger className="text-left">
+                                        <div className="line-clamp-1 text-sm">{item.notes}</div>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p className="max-w-md">{item.notes}</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">—</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
+                    
+                    <div className="flex items-center justify-between mt-4">
+                      <div className="text-sm text-muted-foreground">
+                        Showing <strong>{completedItems.length}</strong> items
+                      </div>
+                      
+                      <div className="flex items-center space-x-2">
+                        <Button variant="outline" size="sm" disabled>
+                          <ChevronLeft className="h-4 w-4 mr-1" />
+                          Previous
+                        </Button>
+                        <Button variant="outline" size="sm" disabled>
+                          Next
+                          <ChevronRight className="h-4 w-4 ml-1" />
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-lg font-medium">No completed items</h3>
+                    <p className="text-muted-foreground">You haven't completed any work items yet</p>
+                  </div>
+                )}
+              </TabsContent>
+            </div>
+            
+            {/* Mobile View */}
+            <div className="block md:hidden">
+              <TabsContent value="active" className="space-y-0">
+                {activeItems.length > 0 ? (
+                  <div>
+                    <div className="border-t">
+                      <div className="flex items-center p-4 border-b text-sm font-medium text-muted-foreground">
+                        <div className="w-12">
+                          <input type="checkbox" className="rounded" />
+                        </div>
+                        <div className="flex-1">Task</div>
+                        <div className="flex items-center space-x-2">
+                          <span>Due date</span>
+                          <HelpCircle className="h-4 w-4" />
+                        </div>
+                        <div className="w-16 text-right">Priority</div>
+                      </div>
+                      
+                      {activeItems.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer"
+                          onClick={() => handleWorkItemClick(item)}
+                        >
+                          <div className="w-12">
+                            <input type="checkbox" className="rounded" />
+                          </div>
+                          <div className="flex-1 font-medium">
+                            {item.title}
+                          </div>
+                          <div>
+                            {item.dueDate ? (
+                              dayjs(item.dueDate).format('DD/MM/YYYY')
+                            ) : (
+                              "—"
+                            )}
+                          </div>
+                          <div className="w-16 text-right">
+                            <span className={`text-xs font-semibold ${getPriorityColor(item.priority)}`}>
+                              {item.priority}
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 text-sm">
+                      <Button variant="ghost" size="sm" disabled>
+                        <ChevronLeft className="h-4 w-4" />
                       </Button>
-                      <Button variant="outline" size="sm" disabled>
-                        Next
-                        <ChevronRight className="h-4 w-4 ml-1" />
+                      <div>
+                        Page 1 of {Math.ceil(activeItems.length / 10)}
+                      </div>
+                      <Button variant="ghost" size="sm" disabled={activeItems.length <= 10}>
+                        <ChevronRight className="h-4 w-4" />
                       </Button>
                     </div>
                   </div>
-                </div>
-              ) : (
-                <div className="text-center py-8">
-                  <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <h3 className="text-lg font-medium">No completed items</h3>
-                  <p className="text-muted-foreground">You haven't completed any work items yet</p>
-                </div>
-              )}
-            </TabsContent>
+                ) : (
+                  <div className="text-center py-8">
+                    <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-lg font-medium">No active work items</h3>
+                    <p className="text-muted-foreground">You don't have any active work items assigned to you</p>
+                  </div>
+                )}
+              </TabsContent>
+              
+              <TabsContent value="completed" className="space-y-0">
+                {completedItems.length > 0 ? (
+                  <div>
+                    <div className="border-t">
+                      <div className="flex items-center p-4 border-b text-sm font-medium text-muted-foreground">
+                        <div className="w-12">
+                          <input type="checkbox" className="rounded" />
+                        </div>
+                        <div className="flex-1">Task</div>
+                        <div>Completed</div>
+                      </div>
+                      
+                      {completedItems.map((item) => (
+                        <div 
+                          key={item.id} 
+                          className="flex items-center p-4 border-b hover:bg-gray-50"
+                        >
+                          <div className="w-12">
+                            <input type="checkbox" className="rounded" checked disabled />
+                          </div>
+                          <div className="flex-1 font-medium">
+                            {item.title}
+                          </div>
+                          <div>
+                            {item.completedAt ? (
+                              dayjs(item.completedAt).format('DD/MM/YYYY')
+                            ) : (
+                              "—"
+                            )}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                    
+                    <div className="flex items-center justify-between p-4 text-sm">
+                      <Button variant="ghost" size="sm" disabled>
+                        <ChevronLeft className="h-4 w-4" />
+                      </Button>
+                      <div>
+                        Page 1 of {Math.ceil(completedItems.length / 10)}
+                      </div>
+                      <Button variant="ghost" size="sm" disabled={completedItems.length <= 10}>
+                        <ChevronRight className="h-4 w-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Info className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
+                    <h3 className="text-lg font-medium">No completed items</h3>
+                    <p className="text-muted-foreground">You haven't completed any work items yet</p>
+                  </div>
+                )}
+              </TabsContent>
+            </div>
           </Tabs>
         </CardContent>
       </Card>
