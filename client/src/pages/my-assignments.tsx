@@ -124,10 +124,24 @@ const MyAssignmentsPage = () => {
       const res = await apiRequest("PUT", `/api/work-items/${id}/status`, { status, notes });
       return await res.json();
     },
-    onSuccess: () => {
+    onSuccess: (data, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       setIsWorkItemDialogOpen(false);
       setCompletionNotes("");
+      
+      // If status was updated to in_progress, navigate to the process form
+      if (variables.status === WorkItemStatus.IN_PROGRESS) {
+        // Find the workItem using the id from variables
+        const workItem = workItems?.find(item => item.id === variables.id);
+        if (workItem) {
+          // Determine where to navigate based on the work item type
+          if (workItem.type === WorkItemType.STOCK_TAKE) {
+            navigate(`/stock-take?storeId=${workItem.storeId}`);
+          } else if (workItem.type === WorkItemType.PROCESS_FORM) {
+            navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
+          }
+        }
+      }
       
       toast({
         title: "Work item updated",
