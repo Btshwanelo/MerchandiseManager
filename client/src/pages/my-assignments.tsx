@@ -134,12 +134,8 @@ const MyAssignmentsPage = () => {
         // Find the workItem using the id from variables
         const workItem = workItems?.find(item => item.id === variables.id);
         if (workItem) {
-          // Determine where to navigate based on the work item type
-          if (workItem.type === WorkItemType.STOCK_TAKE) {
-            navigate(`/stock-take?storeId=${workItem.storeId}`);
-          } else if (workItem.type === WorkItemType.PROCESS_FORM) {
-            navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
-          }
+          // All work items should navigate to the process form
+          navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
         }
       }
       
@@ -180,15 +176,8 @@ const MyAssignmentsPage = () => {
   };
   
   const handleWorkItemClick = (workItem: WorkItemWithRelations) => {
-    // For stock_take work items, navigate to the stock take page
-    if (workItem.type === WorkItemType.STOCK_TAKE) {
-      navigate(`/stock-take?storeId=${workItem.storeId}`);
-    } 
-    // For process form work items, navigate to the new unified process form
-    else if (workItem.type === WorkItemType.PROCESS_FORM) {
-      navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
-    }
-    // Add handling for other work item types as needed
+    // Direct all work items to the process form
+    navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
   };
   
   const filterWorkItems = (items: WorkItemWithRelations[] | undefined, status: string, search: string) => {
