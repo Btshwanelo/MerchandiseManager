@@ -658,14 +658,40 @@ const ProcessForm = () => {
   
   // Navigate back to assignments if no valid work item or store id
   useEffect(() => {
-    if (!workItemId || !storeId) {
-      toast({
-        title: "Invalid parameters",
-        description: "Missing required work item or store information",
-        variant: "destructive",
-      });
-      navigate("/my-assignments");
-    }
+    const checkAndFixParams = async () => {
+      console.log(`Checking parameters: workItemId=${workItemId}, storeId=${storeId}`);
+      
+      // Check if we have workItemId but not storeId
+      if (workItemId && !storeId) {
+        try {
+          // Try to fetch the work item to get its storeId
+          const response = await fetch(`/api/work-items/${workItemId}`);
+          if (response.ok) {
+            const workItemData = await response.json();
+            if (workItemData && workItemData.storeId) {
+              console.log(`Found storeId ${workItemData.storeId} for workItemId ${workItemId}`);
+              // Redirect with both parameters
+              navigate(`/process-form?workItemId=${workItemId}&storeId=${workItemData.storeId}`);
+              return;
+            }
+          }
+        } catch (err) {
+          console.error("Error fetching work item:", err);
+        }
+      }
+      
+      // If we still don't have valid parameters, go back to assignments
+      if (!workItemId || !storeId) {
+        toast({
+          title: "Invalid parameters",
+          description: "Missing required work item or store information",
+          variant: "destructive",
+        });
+        navigate("/my-assignments");
+      }
+    };
+    
+    checkAndFixParams();
   }, [workItemId, storeId, navigate, toast]);
   
   // Loading state

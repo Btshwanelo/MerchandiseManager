@@ -160,11 +160,35 @@ const MyAssignmentsPage = () => {
     },
   });
   
-  const handleStartWorkItem = (workItem: WorkItemWithRelations) => {
-    updateWorkItemStatusMutation.mutate({
-      id: workItem.id,
-      status: WorkItemStatus.IN_PROGRESS
-    });
+  const handleStartWorkItem = async (workItem: WorkItemWithRelations) => {
+    try {
+      // Make the API call directly instead of using the mutation
+      const res = await apiRequest("PUT", `/api/work-items/${workItem.id}/status`, { 
+        status: WorkItemStatus.IN_PROGRESS 
+      });
+      await res.json();
+      
+      // Manually invalidate the cache
+      queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+      
+      // Show success toast
+      toast({
+        title: "Work item updated",
+        description: "The work item status has been updated successfully.",
+      });
+      
+      // Navigate to process form directly after API call finishes
+      console.log("Navigating to process form with workItemId:", workItem.id, "storeId:", workItem.storeId);
+      navigate(`/process-form?workItemId=${workItem.id}&storeId=${workItem.storeId}`);
+      
+    } catch (error) {
+      console.error("Error updating work item:", error);
+      toast({
+        title: "Error",
+        description: `Failed to update work item: ${error instanceof Error ? error.message : "Unknown error"}`,
+        variant: "destructive"
+      });
+    }
   };
   
   const handleOpenCompleteDialog = (workItem: WorkItemWithRelations) => {

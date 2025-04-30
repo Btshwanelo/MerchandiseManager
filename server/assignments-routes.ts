@@ -287,6 +287,32 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
+  // Get a single work item by ID
+  app.get("/api/work-items/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ error: "Invalid work item ID" });
+      }
+      
+      const workItem = await storage.getWorkItem(id);
+      if (!workItem) {
+        return res.status(404).json({ error: "Work item not found" });
+      }
+      
+      // Check if the user has access to this work item
+      const isAdminOrManager = req.user!.role === 'admin' || req.user!.role === 'manager';
+      if (!isAdminOrManager && workItem.userId !== req.user!.id) {
+        return res.status(403).json({ error: "You don't have permission to access this work item" });
+      }
+      
+      res.json(workItem);
+    } catch (error) {
+      console.error("Error fetching work item:", error);
+      res.status(500).json({ error: "Failed to fetch work item" });
+    }
+  });
+
   // Get work items for current user
   app.get("/api/my-work-items", isAuthenticated, async (req, res) => {
     try {
