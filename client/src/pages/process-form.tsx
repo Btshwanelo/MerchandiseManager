@@ -576,6 +576,7 @@ const ProcessForm = () => {
   const [showConfirmDialog, setShowConfirmDialog] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
+  const [activeStep, setActiveStep] = useState<string>("stock-take");
   
   // Fetch work item data
   const { 
@@ -751,6 +752,39 @@ const ProcessForm = () => {
             )}
           </div>
           
+          {/* Progress stepper */}
+          <div className="mb-8">
+            <div className="grid grid-cols-4 gap-4">
+              {/* Step 1: Stock Take */}
+              <div className="flex flex-col">
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Stock Take</h3>
+                <p className="text-sm text-muted-foreground">Stock taking at shelf or Store</p>
+              </div>
+              
+              {/* Step 2: Merchandising */}
+              <div className="flex flex-col">
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Merchandising</h3>
+                <p className="text-sm text-muted-foreground">Promotions for any of our products</p>
+              </div>
+              
+              {/* Step 3: Competitor Promotions */}
+              <div className="flex flex-col">
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Competitor Promotions</h3>
+                <p className="text-sm text-muted-foreground">Any promotions from competitors</p>
+              </div>
+              
+              {/* Step 4: Orders */}
+              <div className="flex flex-col">
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'order' ? 'text-blue-600' : ''}`}>Orders</h3>
+                <p className="text-sm text-muted-foreground">Orders of stock that is depleted etc</p>
+              </div>
+            </div>
+          </div>
+
           {/* Main form tabs */}
           {workItem.status === WorkItemStatus.COMPLETED ? (
             <div className="text-center py-8">
@@ -758,7 +792,10 @@ const ProcessForm = () => {
               <p>This work item has been marked as completed.</p>
             </div>
           ) : (
-            <Tabs defaultValue="stock-take">
+            <Tabs defaultValue="stock-take" onValueChange={(value) => {
+              // Update active step in state
+              setActiveStep(value);
+            }}>
               <TabsList className="grid grid-cols-4 mb-6">
                 <TabsTrigger value="stock-take">Stock Take</TabsTrigger>
                 <TabsTrigger value="merchandising">Merchandising</TabsTrigger>
