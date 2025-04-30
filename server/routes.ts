@@ -2,9 +2,18 @@ import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth, checkRole } from "./auth";
-import { UserRole, StockLocation } from "@shared/schema";
+import { 
+  UserRole, 
+  StockLocation,
+  StockTake,
+  InsertStockTakeItem
+} from "@shared/schema";
 import { z } from "zod";
-import { insertProductSchema, insertStoreSchema, insertShelfSchema } from "@shared/schema";
+import { 
+  insertProductSchema, 
+  insertStoreSchema, 
+  insertShelfSchema 
+} from "@shared/schema";
 import multer from "multer";
 import path from "path";
 import { registerUserRoutes } from "./user-routes";
