@@ -1,8 +1,10 @@
 import { useAuth } from "@/hooks/use-auth";
-import { Loader2 } from "lucide-react";
-import { Redirect, Route } from "wouter";
+import { Loader2, AlertCircle } from "lucide-react";
+import { Redirect, Route, useLocation } from "wouter";
 import { UserRole } from "@shared/schema";
 import { ForbiddenError } from "@/components/ui/error-state";
+import { useEffect } from "react";
+import { useToast } from "@/hooks/use-toast";
 
 interface ProtectedRouteProps {
   path: string;
@@ -15,7 +17,31 @@ export function ProtectedRoute({
   component: Component,
   roles,
 }: ProtectedRouteProps) {
-  const { user, isLoading } = useAuth();
+  const { user, isLoading, error, refetchUser } = useAuth();
+  const { toast } = useToast();
+  const [location, setLocation] = useLocation();
+
+  // Handle authentication errors
+  useEffect(() => {
+    if (error) {
+      if ((error as any).status === 401 || (error as any).status === 403) {
+        // Authentication error - redirect to login
+        toast({
+          title: "Authentication Error",
+          description: "Your session has expired. Please log in again.",
+          variant: "destructive",
+        });
+        setLocation("/auth");
+      } else {
+        // Show generic error toast for other errors
+        toast({
+          title: "Error",
+          description: error.message || "An unexpected error occurred",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [error, toast, setLocation]);
 
   if (isLoading) {
     return (

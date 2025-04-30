@@ -1,4 +1,4 @@
-import { createContext, ReactNode, useContext } from "react";
+import { createContext, ReactNode, useContext, useState, useEffect } from "react";
 import {
   useQuery,
   useMutation,
@@ -15,6 +15,7 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
+  refetchUser: () => Promise<void>;
 };
 
 type LoginData = Pick<InsertUser, "username" | "password">;
@@ -22,14 +23,38 @@ type LoginData = Pick<InsertUser, "username" | "password">;
 export const AuthContext = createContext<AuthContextType | null>(null);
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [wasLoggedIn, setWasLoggedIn] = useState(false);
+
   const {
     data: user,
     error,
     isLoading,
+    isError,
+    refetch
   } = useQuery<SelectUser | undefined, Error>({
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
+    retry: 1,
+    retryDelay: 1000,
+    refetchOnWindowFocus: true,
+    refetchOnMount: true
   });
+
+  // Track when user was previously logged in but now isn't
+  useEffect(() => {
+    if (user) {
+      setWasLoggedIn(true);
+    } else if (wasLoggedIn && !user && !isLoading) {
+      // User was logged in previously but isn't anymore (session expired)
+      toast({
+        title: "Session expired",
+        description: "Your session has expired. Please log in again.",
+        variant: "destructive",
+      });
+      // Reset the flag after showing the message
+      setWasLoggedIn(false);
+    }
+  }, [user, isLoading, wasLoggedIn, toast]);
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -93,6 +118,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Function to refetch user data and handle errors
+  const refetchUser = async () => {
+    try {
+      await refetch();
+    } catch (error) {
+      console.error("Failed to refetch user data:", error);
+      toast({
+        title: "Authentication Error",
+        description: "Failed to verify your session. Please log in again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <AuthContext.Provider
       value={{
@@ -102,6 +141,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         loginMutation,
         logoutMutation,
         registerMutation,
+        refetchUser,
       }}
     >
       {children}
