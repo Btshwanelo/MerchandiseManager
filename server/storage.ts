@@ -1138,6 +1138,21 @@ export class DatabaseStorage implements IStorage {
     }));
   }
   
+  async getAssignmentsByUserId(userId: number): Promise<StoreAssignment[]> {
+    return db.select().from(storeAssignments).where(eq(storeAssignments.userId, userId));
+  }
+  
+  async getAssignmentByWorkItemId(workItemId: number): Promise<StoreAssignment | undefined> {
+    const result = await db.select({
+      assignment: storeAssignments
+    })
+      .from(storeAssignments)
+      .innerJoin(workItems, eq(workItems.storeAssignmentId, storeAssignments.id))
+      .where(eq(workItems.id, workItemId));
+    
+    return result.length > 0 ? result[0].assignment : undefined;
+  }
+  
   async getStoreAssignmentsByStoreId(storeId: number): Promise<(StoreAssignment & { user: User })[]> {
     const result = await db.select({
       assignment: storeAssignments,

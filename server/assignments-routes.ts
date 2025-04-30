@@ -300,12 +300,28 @@ export function registerAssignmentRoutes(app: express.Express) {
         return res.status(404).json({ error: "Work item not found" });
       }
       
+      // Always include the storeId for the Process Form
+      if (!workItem.storeId) {
+        // Try to find assignment to get storeId
+        const assignment = await storage.getAssignmentByWorkItemId(id);
+        if (assignment) {
+          workItem.storeId = assignment.storeId;
+        }
+      }
+      
       // Check if the user has access to this work item
       const isAdminOrManager = req.user!.role === 'admin' || req.user!.role === 'manager';
       if (!isAdminOrManager && workItem.userId !== req.user!.id) {
-        return res.status(403).json({ error: "You don't have permission to access this work item" });
+        // For merchandisers, check if they're assigned to the store
+        const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+        const isAssignedToStore = userAssignments.some(a => a.storeId === workItem.storeId);
+        
+        if (!isAssignedToStore) {
+          return res.status(403).json({ error: "You don't have permission to access this work item" });
+        }
       }
       
+      console.log(`Fetched work item ${id} successfully for user ${req.user!.id}`);
       res.json(workItem);
     } catch (error) {
       console.error("Error fetching work item:", error);
