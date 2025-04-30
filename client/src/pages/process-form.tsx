@@ -2,6 +2,27 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Product, WorkItemStatus as WorkItemStatusEnum } from "@shared/schema";
+
+// Type declarations for component props
+type StockTakeSectionProps = {
+  storeId: number;
+  workItemId: number;
+};
+
+type MerchandisingSectionProps = {
+  storeId: number;
+  workItemId: number;
+};
+
+type CompetitorAnalysisSectionProps = {
+  storeId: number;
+  workItemId: number;
+};
+
+type OrderPlacementSectionProps = {
+  storeId: number;
+  workItemId: number;
+};
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
@@ -561,7 +582,7 @@ const ProcessForm = () => {
     data: workItem, 
     isLoading: isLoadingWorkItem,
     error: workItemError 
-  } = useQuery({
+  } = useQuery<WorkItem>({
     queryKey: ['/api/work-items', workItemId],
     enabled: !!workItemId,
   });
@@ -571,7 +592,7 @@ const ProcessForm = () => {
     data: store,
     isLoading: isLoadingStore,
     error: storeError
-  } = useQuery({
+  } = useQuery<Store>({
     queryKey: ['/api/stores', storeId],
     enabled: !!storeId,
   });
