@@ -260,27 +260,68 @@ export function registerAssignmentRoutes(app: express.Express) {
   
   // ===== Work Item Routes =====
   
-  // Get all work items (admin/manager only)
-  app.get("/api/work-items", isAdminOrManager, async (req, res) => {
+  // Get all work items (different behavior based on role)
+  app.get("/api/work-items", isAuthenticated, async (req, res) => {
     try {
-      const workItems = await storage.getActiveWorkItems();
-      res.json(workItems);
+      // If user is admin or manager, return all work items
+      if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+        const workItems = await storage.getActiveWorkItems();
+        return res.json(workItems);
+      } 
+      
+      // If user is merchandiser, return only their assigned work items
+      if (req.user!.role === 'merchandiser') {
+        const workItems = await storage.getWorkItemsByUserId(req.user!.id);
+        return res.json(workItems);
+      }
+      
+      // Default case: access denied
+      return res.status(403).json({ error: "Access denied. Invalid role." });
     } catch (error) {
       console.error("Error fetching work items:", error);
       res.status(500).json({ error: "Failed to fetch work items" });
     }
   });
   
-  // Get work items for a specific store (admin/manager only)
-  app.get("/api/stores/:storeId/work-items", isAdminOrManager, async (req, res) => {
+  // Get work items for a specific store (with role-specific access)
+  app.get("/api/stores/:storeId/work-items", isAuthenticated, async (req, res) => {
     try {
       const storeId = parseInt(req.params.storeId);
       if (isNaN(storeId)) {
         return res.status(400).json({ error: "Invalid store ID" });
       }
       
-      const workItems = await storage.getWorkItemsByStoreId(storeId);
-      res.json(workItems);
+      // Check if store exists
+      const store = await storage.getStore(storeId);
+      if (!store) {
+        return res.status(404).json({ error: "Store not found" });
+      }
+      
+      // Admin/Manager can access all work items for any store
+      if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+        const workItems = await storage.getWorkItemsByStoreId(storeId);
+        return res.json(workItems);
+      }
+      
+      // For merchandisers, check if they're assigned to the store
+      if (req.user!.role === 'merchandiser') {
+        const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+        const isAssignedToStore = userAssignments.some(a => a.storeId === storeId);
+        
+        if (!isAssignedToStore) {
+          return res.status(403).json({ 
+            error: "Access denied. You are not assigned to this store." 
+          });
+        }
+        
+        // Get only this user's work items for this store
+        const allStoreItems = await storage.getWorkItemsByStoreId(storeId);
+        const userWorkItems = allStoreItems.filter(item => item.userId === req.user!.id);
+        return res.json(userWorkItems);
+      }
+      
+      // Default case
+      return res.status(403).json({ error: "Access denied. Invalid role." });
     } catch (error) {
       console.error("Error fetching store work items:", error);
       res.status(500).json({ error: "Failed to fetch store work items" });
