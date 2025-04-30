@@ -2,6 +2,7 @@ import React, { ReactElement } from 'react';
 import { render, RenderOptions } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider } from '@/hooks/use-auth';
+import { vi } from 'vitest';
 
 // Create a custom render method that includes necessary providers
 const customRender = (
@@ -30,9 +31,9 @@ const customRender = (
 
 // Mock for the useLocation hook from wouter
 const mockUseLocation = (location = "/") => {
-  jest.mock("wouter", () => ({
-    ...jest.requireActual("wouter"),
-    useLocation: jest.fn(() => [location, jest.fn()]),
+  vi.mock("wouter", () => ({
+    ...vi.importActual("wouter"),
+    useLocation: vi.fn(() => [location, vi.fn()]),
   }));
 };
 
