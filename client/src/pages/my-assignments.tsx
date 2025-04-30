@@ -457,7 +457,7 @@ const MyAssignmentsPage = () => {
                                       onClick={() => handleStartWorkItem(item)}
                                       disabled={updateWorkItemStatusMutation.isPending}
                                     >
-                                      Start
+                                      Start Work
                                     </Button>
                                   )}
                                   
@@ -673,7 +673,7 @@ const MyAssignmentsPage = () => {
                                 size="sm"
                                 onClick={() => handleStartWorkItem(item)}
                               >
-                                Start
+                                Start Work
                               </Button>
                             )}
                           </div>
