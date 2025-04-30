@@ -422,16 +422,27 @@ const MyAssignmentsPage = () => {
                                 </span>
                               </TableCell>
                               <TableCell className="text-right">
-                                {item.status === WorkItemStatus.PENDING && (
+                                <div className="flex space-x-2">
+                                  {item.status === WorkItemStatus.PENDING && (
+                                    <Button
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => handleStartWorkItem(item)}
+                                      disabled={updateWorkItemStatusMutation.isPending}
+                                    >
+                                      Start
+                                    </Button>
+                                  )}
+                                  
+                                  {/* Direct Process Form Link - for all work items regardless of status */}
                                   <Button
-                                    variant="outline"
+                                    variant="secondary"
                                     size="sm"
-                                    onClick={() => handleStartWorkItem(item)}
-                                    disabled={updateWorkItemStatusMutation.isPending}
+                                    onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
                                   >
-                                    Start
+                                    Open Task
                                   </Button>
-                                )}
+                                </div>
                                 
                                 {item.status === WorkItemStatus.IN_PROGRESS && item.type !== 'stock_take' && (
                                   <Button
@@ -597,26 +608,45 @@ const MyAssignmentsPage = () => {
                       {activeItems.map((item) => (
                         <div 
                           key={item.id} 
-                          className="flex items-center p-4 border-b hover:bg-gray-50 cursor-pointer"
-                          onClick={() => handleWorkItemClick(item)}
+                          className="flex flex-col p-4 border-b hover:bg-gray-50"
                         >
-                          <div className="w-12">
-                            <input type="checkbox" className="rounded" />
+                          <div className="flex items-center mb-2">
+                            <div className="w-12">
+                              <input type="checkbox" className="rounded" />
+                            </div>
+                            <div className="flex-1 font-medium">
+                              {item.title}
+                            </div>
+                            <div>
+                              {item.dueDate ? (
+                                dayjs(item.dueDate).format('DD/MM/YYYY')
+                              ) : (
+                                "—"
+                              )}
+                            </div>
+                            <div className="w-16 text-right">
+                              <span className={`text-xs font-semibold ${getPriorityColor(item.priority)}`}>
+                                {item.priority}
+                              </span>
+                            </div>
                           </div>
-                          <div className="flex-1 font-medium">
-                            {item.title}
-                          </div>
-                          <div>
-                            {item.dueDate ? (
-                              dayjs(item.dueDate).format('DD/MM/YYYY')
-                            ) : (
-                              "—"
+                          <div className="flex justify-end mt-2 space-x-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
+                            >
+                              Open Task
+                            </Button>
+                            {item.status === WorkItemStatus.PENDING && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleStartWorkItem(item)}
+                              >
+                                Start
+                              </Button>
                             )}
-                          </div>
-                          <div className="w-16 text-right">
-                            <span className={`text-xs font-semibold ${getPriorityColor(item.priority)}`}>
-                              {item.priority}
-                            </span>
                           </div>
                         </div>
                       ))}
@@ -658,20 +688,31 @@ const MyAssignmentsPage = () => {
                       {completedItems.map((item) => (
                         <div 
                           key={item.id} 
-                          className="flex items-center p-4 border-b hover:bg-gray-50"
+                          className="flex flex-col p-4 border-b hover:bg-gray-50"
                         >
-                          <div className="w-12">
-                            <input type="checkbox" className="rounded" checked disabled />
+                          <div className="flex items-center mb-2">
+                            <div className="w-12">
+                              <input type="checkbox" className="rounded" checked disabled />
+                            </div>
+                            <div className="flex-1 font-medium">
+                              {item.title}
+                            </div>
+                            <div>
+                              {item.completedAt ? (
+                                dayjs(item.completedAt).format('DD/MM/YYYY')
+                              ) : (
+                                "—"
+                              )}
+                            </div>
                           </div>
-                          <div className="flex-1 font-medium">
-                            {item.title}
-                          </div>
-                          <div>
-                            {item.completedAt ? (
-                              dayjs(item.completedAt).format('DD/MM/YYYY')
-                            ) : (
-                              "—"
-                            )}
+                          <div className="flex justify-end mt-2">
+                            <Button
+                              variant="secondary"
+                              size="sm"
+                              onClick={() => navigate(`/process-form?workItemId=${item.id}&storeId=${item.storeId}`)}
+                            >
+                              View Details
+                            </Button>
                           </div>
                         </div>
                       ))}
