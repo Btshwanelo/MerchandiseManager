@@ -790,13 +790,9 @@ const ProcessForm = () => {
     );
   }
   
-  // Check if the user is assigned to this work item with improved user message and logging
-  if (workItem.userId !== user?.id && user?.role !== 'admin' && user?.role !== 'manager') {
-    console.log(`Access denied: User ${user?.id} (${user?.username}) tried to access work item ${workItem.id} which is assigned to user ${workItem.userId}`);
-    
-    // Use specialized error component
-    return <WorkItemAccessError />;
-  }
+  // Since the server now handles the permission checks and updates workItem.userId if needed,
+  // we don't need to block access here - the server will have already returned a 403 error
+  // if the user doesn't have access to this work item
   
   return (
     <div className="container mx-auto py-8 px-4">
