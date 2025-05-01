@@ -378,6 +378,13 @@ export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 
+// Enum for stock take type options
+export enum StockTakeType {
+  SHELF = "shelf",
+  STORE = "store",
+  BOTH = "both" // Default - check both shelf and back store
+}
+
 // Store Assignments table to connect merchandisers to stores
 export const storeAssignments = pgTable("store_assignments", {
   id: serial("id").primaryKey(),
@@ -387,6 +394,7 @@ export const storeAssignments = pgTable("store_assignments", {
   startDate: timestamp("start_date").notNull(), // When assignment becomes active
   endDate: timestamp("end_date"), // Optional end date (can be null for ongoing assignments)
   status: text("status").notNull().default("active"), // active, completed, cancelled 
+  stockTakeType: text("stock_take_type").notNull().default(StockTakeType.BOTH), // Type of stock take: shelf, store, or both
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {

@@ -107,6 +107,7 @@ const AssignmentsPage = () => {
   const assignmentFormSchema = insertStoreAssignmentSchema.extend({
     startDate: z.coerce.date(),
     endDate: z.coerce.date().nullable().optional(),
+    stockTakeType: z.enum(['shelf', 'store', 'both']),
     workItems: z.array(
       z.object({
         title: z.string().min(1, "Title is required"),
@@ -129,6 +130,7 @@ const AssignmentsPage = () => {
       startDate: new Date(),
       endDate: null,
       status: "active",
+      stockTakeType: "both", // Default to checking both shelf and store
       workItems: [] // No pre-filled work items
     }
   });
