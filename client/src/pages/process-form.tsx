@@ -7,21 +7,25 @@ import { Product, WorkItemStatus as WorkItemStatusEnum, StockTakeType } from "@s
 type StockTakeSectionProps = {
   storeId: number;
   workItemId: number;
+  navigate: (to: string) => void;
 };
 
 type MerchandisingSectionProps = {
   storeId: number;
   workItemId: number;
+  navigate: (to: string) => void;
 };
 
 type CompetitorAnalysisSectionProps = {
   storeId: number;
   workItemId: number;
+  navigate: (to: string) => void;
 };
 
 type OrderPlacementSectionProps = {
   storeId: number;
   workItemId: number;
+  navigate: (to: string) => void;
 };
 
 // Interfaces matching schema.ts
@@ -73,7 +77,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkItemStatus, WorkItemType } from "@shared/schema";
 
 // Component for Stock Take section
-const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
+const StockTakeSection = ({ storeId, workItemId, navigate }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
@@ -112,13 +116,12 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
         comment: comments,
         pictures,
         status: "submitted", // Submit immediately
-        items: JSON.stringify(stockData) // Convert to string as expected by server
+        items: JSON.stringify(stockData), // Convert to string as expected by server
+        workItemId // Include workItemId so server can mark it as completed
       };
       
-      await apiRequest("POST", "/api/stock-takes", stockTakeData);
-      
-      // Mark work item as completed
-      await apiRequest("POST", `/api/work-items/${workItemId}/complete`);
+      const response = await apiRequest("POST", "/api/stock-takes", stockTakeData);
+      const result = await response.json();
       
       toast({
         title: "Stock take submitted",
@@ -128,6 +131,11 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stores', storeId, 'stock-takes'] });
+      
+      // After a successful submission, navigate back to assignments
+      setTimeout(() => {
+        navigate("/my-assignments");
+      }, 1500);
     } catch (error) {
       console.error("Error submitting stock take:", error);
       toast({
@@ -385,7 +393,7 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
 };
 
 // Component for Merchandising section
-const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps) => {
+const MerchandisingSection = ({ storeId, workItemId, navigate }: MerchandisingSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [promotionPictures, setPromotionPictures] = useState<string[]>([]);
   const [promotionItems, setPromotionItems] = useState<{productId: number, price: number}[]>([]);
@@ -405,13 +413,12 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
       const merchandisingData = {
         storeId,
         promotionPictures,
-        items: JSON.stringify(promotionItems) // Convert to string as expected by server
+        items: JSON.stringify(promotionItems), // Convert to string as expected by server
+        workItemId // Include workItemId so server can mark it as completed
       };
       
-      await apiRequest("POST", "/api/merchandising", merchandisingData);
-      
-      // Mark work item as completed
-      await apiRequest("POST", `/api/work-items/${workItemId}/complete`);
+      const response = await apiRequest("POST", "/api/merchandising", merchandisingData);
+      const result = await response.json();
       
       toast({
         title: "Merchandising data submitted",
@@ -420,6 +427,11 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+      
+      // After a successful submission, navigate back to assignments
+      setTimeout(() => {
+        navigate("/my-assignments");
+      }, 1500);
     } catch (error) {
       console.error("Error submitting merchandising data:", error);
       toast({
@@ -619,7 +631,7 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
 };
 
 // Component for Competitor Analysis section
-const CompetitorAnalysisSection = ({ storeId, workItemId }: CompetitorAnalysisSectionProps) => {
+const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: CompetitorAnalysisSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [brand, setBrand] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -735,7 +747,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId }: CompetitorAnalysisSe
 };
 
 // Component for Order Placement section
-const OrderPlacementSection = ({ storeId, workItemId }: OrderPlacementSectionProps) => {
+const OrderPlacementSection = ({ storeId, workItemId, navigate }: OrderPlacementSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
@@ -1224,19 +1236,19 @@ const ProcessForm = () => {
               </div>
               
               <TabsContent value="stock-take">
-                <StockTakeSection storeId={storeId} workItemId={workItemId} />
+                <StockTakeSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
               </TabsContent>
               
               <TabsContent value="merchandising">
-                <MerchandisingSection storeId={storeId} workItemId={workItemId} />
+                <MerchandisingSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
               </TabsContent>
               
               <TabsContent value="competitor">
-                <CompetitorAnalysisSection storeId={storeId} workItemId={workItemId} />
+                <CompetitorAnalysisSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
               </TabsContent>
               
               <TabsContent value="order">
-                <OrderPlacementSection storeId={storeId} workItemId={workItemId} />
+                <OrderPlacementSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
               </TabsContent>
             </Tabs>
           )}
