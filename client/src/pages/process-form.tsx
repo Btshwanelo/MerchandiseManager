@@ -168,69 +168,86 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
         
         <div className="space-y-2">
           {products?.map((product) => (
-            <div key={product.id} className="grid grid-cols-6 gap-2 items-center border p-2 rounded">
-              <div className="col-span-3">
-                <p className="font-medium">{product.name}</p>
-                <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
-              </div>
-              <div className="col-span-2">
-                <div className="flex space-x-2">
+            <div key={product.id} className="border p-4 rounded-lg mb-2 bg-white">
+              <div className="flex flex-col gap-4">
+                {/* Product information */}
+                <div>
+                  <h3 className="text-lg font-semibold">{product.name}</h3>
+                  <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+                </div>
+                
+                {/* Quantity inputs - render based on stockTakeType */}
+                <div className="grid gap-4">
+                  {/* Shelf Quantity - Only show if type is 'shelf' or 'both' */}
                   {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
-                    <Input 
-                      type="number" 
-                      placeholder="Shelf Qty" 
-                      min="0"
-                      onChange={(e) => {
-                        const newStockData = [...stockData];
-                        const existingIndex = newStockData.findIndex(
-                          item => item.productId === product.id && item.location === "shelf"
-                        );
-                        
-                        if (existingIndex >= 0) {
-                          newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                        } else {
-                          newStockData.push({
-                            productId: product.id,
-                            quantity: parseInt(e.target.value) || 0,
-                            location: "shelf"
-                          });
-                        }
-                        
-                        setStockData(newStockData);
-                      }}
-                    />
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm font-medium">Shelf qty</div>
+                      <div className="w-full max-w-[140px]">
+                        <Input 
+                          type="number" 
+                          min="0"
+                          className="h-12"
+                          onChange={(e) => {
+                            const newStockData = [...stockData];
+                            const existingIndex = newStockData.findIndex(
+                              item => item.productId === product.id && item.location === "shelf"
+                            );
+                            
+                            if (existingIndex >= 0) {
+                              newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
+                            } else {
+                              newStockData.push({
+                                productId: product.id,
+                                quantity: parseInt(e.target.value) || 0,
+                                location: "shelf"
+                              });
+                            }
+                            
+                            setStockData(newStockData);
+                          }}
+                        />
+                      </div>
+                    </div>
                   )}
                   
+                  {/* Back Store Quantity - Only show if type is 'store' or 'both' */}
                   {(stockTakeType === 'store' || stockTakeType === 'both') && (
-                    <Input 
-                      type="number" 
-                      placeholder="Back Store Qty" 
-                      min="0"
-                      onChange={(e) => {
-                        const newStockData = [...stockData];
-                        const existingIndex = newStockData.findIndex(
-                          item => item.productId === product.id && item.location === "back_store"
-                        );
-                        
-                        if (existingIndex >= 0) {
-                          newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                        } else {
-                          newStockData.push({
-                            productId: product.id,
-                            quantity: parseInt(e.target.value) || 0,
-                            location: "back_store"
-                          });
-                        }
-                        
-                        setStockData(newStockData);
-                      }}
-                    />
+                    <div className="flex justify-between items-center">
+                      <div className="text-sm font-medium">Back store qty</div>
+                      <div className="w-full max-w-[140px]">
+                        <Input 
+                          type="number" 
+                          min="0"
+                          className="h-12"
+                          onChange={(e) => {
+                            const newStockData = [...stockData];
+                            const existingIndex = newStockData.findIndex(
+                              item => item.productId === product.id && item.location === "back_store"
+                            );
+                            
+                            if (existingIndex >= 0) {
+                              newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
+                            } else {
+                              newStockData.push({
+                                productId: product.id,
+                                quantity: parseInt(e.target.value) || 0,
+                                location: "back_store"
+                              });
+                            }
+                            
+                            setStockData(newStockData);
+                          }}
+                        />
+                      </div>
+                    </div>
                   )}
                 </div>
-              </div>
-              <div className="col-span-1">
+                
+                {/* Minimum stock level indicator */}
                 {product.minStockLevel > 0 && (
-                  <p className="text-xs text-gray-500">Min: {product.minStockLevel}</p>
+                  <div className="mt-2">
+                    <p className="text-xs text-gray-500">Minimum stock level: {product.minStockLevel}</p>
+                  </div>
                 )}
               </div>
             </div>
@@ -847,7 +864,7 @@ const ProcessForm = () => {
   // if the user doesn't have access to this work item
   
   return (
-    <div className="container mx-auto py-8 px-4">
+    <div className="container mx-auto py-2 px-2 sm:py-4 sm:px-4">
       <Card>
         <CardHeader>
           <div className="flex justify-between items-start">
@@ -895,8 +912,8 @@ const ProcessForm = () => {
             )}
           </div>
           
-          {/* Progress stepper */}
-          <div className="mb-8">
+          {/* Progress stepper - Desktop view (hidden on mobile) */}
+          <div className="mb-8 hidden md:block">
             <div className="grid grid-cols-4 gap-4">
               {/* Step 1: Stock Take */}
               <div className="flex flex-col">
@@ -927,6 +944,43 @@ const ProcessForm = () => {
               </div>
             </div>
           </div>
+          
+          {/* Mobile only stepper - Shows only current step */}
+          <div className="mb-6 md:hidden">
+            <div className="flex flex-col items-center">
+              {activeStep === 'stock-take' && (
+                <>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
+                  <h3 className="font-medium text-blue-600">Stock Take</h3>
+                  <p className="text-sm text-muted-foreground text-center">Step 1 of 4: Stock taking at shelf or Store</p>
+                </>
+              )}
+              
+              {activeStep === 'merchandising' && (
+                <>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
+                  <h3 className="font-medium text-blue-600">Merchandising</h3>
+                  <p className="text-sm text-muted-foreground text-center">Step 2 of 4: Promotions for any of our products</p>
+                </>
+              )}
+              
+              {activeStep === 'competitor' && (
+                <>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
+                  <h3 className="font-medium text-blue-600">Competitor Promotions</h3>
+                  <p className="text-sm text-muted-foreground text-center">Step 3 of 4: Any promotions from competitors</p>
+                </>
+              )}
+              
+              {activeStep === 'order' && (
+                <>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
+                  <h3 className="font-medium text-blue-600">Orders</h3>
+                  <p className="text-sm text-muted-foreground text-center">Step 4 of 4: Orders of stock that is depleted</p>
+                </>
+              )}
+            </div>
+          </div>
 
           {/* Main form tabs */}
           {workItem.status === WorkItemStatus.COMPLETED ? (
@@ -955,12 +1009,14 @@ const ProcessForm = () => {
               // Update active step in state
               setActiveStep(value);
             }}>
-              <TabsList className="grid grid-cols-4 mb-6">
-                <TabsTrigger value="stock-take">Stock Take</TabsTrigger>
-                <TabsTrigger value="merchandising">Merchandising</TabsTrigger>
-                <TabsTrigger value="competitor">Competitor</TabsTrigger>
-                <TabsTrigger value="order">Order</TabsTrigger>
-              </TabsList>
+              <div className="overflow-x-auto pb-2 mb-2 md:pb-0">
+                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 md:min-w-0 mb-4">
+                  <TabsTrigger value="stock-take" className="whitespace-nowrap">Stock Take</TabsTrigger>
+                  <TabsTrigger value="merchandising" className="whitespace-nowrap">Merchandising</TabsTrigger>
+                  <TabsTrigger value="competitor" className="whitespace-nowrap">Competitor</TabsTrigger>
+                  <TabsTrigger value="order" className="whitespace-nowrap">Order</TabsTrigger>
+                </TabsList>
+              </div>
               
               <TabsContent value="stock-take">
                 <StockTakeSection storeId={storeId} workItemId={workItemId} />
