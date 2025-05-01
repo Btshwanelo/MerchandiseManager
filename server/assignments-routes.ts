@@ -422,7 +422,7 @@ export function registerAssignmentRoutes(app: express.Express) {
         const assignedStoreIds = userAssignments.map(a => a.storeId);
         
         // Get all work items for all assigned stores
-        let allWorkItems = [];
+        let allWorkItems: any[] = [];
         for (const storeId of assignedStoreIds) {
           const storeItems = await storage.getWorkItemsByStoreId(storeId);
           allWorkItems = [...allWorkItems, ...storeItems];
@@ -511,12 +511,31 @@ export function registerAssignmentRoutes(app: express.Express) {
         return res.status(403).json({ error: "Access denied. Only admins and managers can edit completed work items." });
       }
       
-      // For non-completed items, check user ownership
-      if (existing.status !== 'completed' && 
-          existing.userId !== req.user!.id && 
-          req.user!.role !== 'admin' && 
-          req.user!.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied. You can only edit your own work items." });
+      // For non-completed items, check permissions
+      if (existing.status !== 'completed') {
+        if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+          // Admins and managers can edit any work item
+          console.log(`Admin/Manager editing work item ${id}`);
+        } else if (existing.userId === req.user!.id) {
+          // Users can always edit their directly assigned work items
+          console.log(`User editing their own work item ${id}`);
+        } else if (req.user!.role === 'merchandiser') {
+          // Merchandisers can edit work items for stores they're assigned to
+          const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+          const isAssignedToStore = userAssignments.some(a => a.storeId === existing.storeId);
+          
+          if (isAssignedToStore) {
+            console.log(`Merchandiser assigned to store ${existing.storeId} is editing work item ${id}`);
+          } else {
+            return res.status(403).json({ 
+              error: "Access denied. You can only edit work items for stores you're assigned to." 
+            });
+          }
+        } else {
+          return res.status(403).json({ 
+            error: "Access denied. You don't have permission to edit this work item." 
+          });
+        }
       }
       
       // Allow partial updates
@@ -624,12 +643,31 @@ export function registerAssignmentRoutes(app: express.Express) {
         }
       }
       
-      // For non-completed items, only assigned users or admins/managers can complete
-      if (existing.status !== 'completed' && 
-          existing.userId !== req.user!.id && 
-          req.user!.role !== 'admin' && 
-          req.user!.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied. You can only complete your own work items." });
+      // For non-completed items, check permissions
+      if (existing.status !== 'completed') {
+        if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+          // Admins and managers can complete any work item
+          console.log(`Admin/Manager completing work item ${id}`);
+        } else if (existing.userId === req.user!.id) {
+          // Users can always complete their directly assigned work items
+          console.log(`User completing their own work item ${id}`);
+        } else if (req.user!.role === 'merchandiser') {
+          // Merchandisers can complete work items for stores they're assigned to
+          const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+          const isAssignedToStore = userAssignments.some(a => a.storeId === existing.storeId);
+          
+          if (isAssignedToStore) {
+            console.log(`Merchandiser assigned to store ${existing.storeId} is completing work item ${id}`);
+          } else {
+            return res.status(403).json({ 
+              error: "Access denied. You can only complete work items for stores you're assigned to." 
+            });
+          }
+        } else {
+          return res.status(403).json({ 
+            error: "Access denied. You don't have permission to complete this work item." 
+          });
+        }
       }
       
       const completed = await storage.completeWorkItem(id);
