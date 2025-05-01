@@ -314,10 +314,10 @@ export function registerAssignmentRoutes(app: express.Express) {
           });
         }
         
-        // Get only this user's work items for this store
+        // Get all work items for this store since the merchandiser is assigned to it
+        // This allows merchandisers to see all work items for their assigned stores
         const allStoreItems = await storage.getWorkItemsByStoreId(storeId);
-        const userWorkItems = allStoreItems.filter(item => item.userId === req.user!.id);
-        return res.json(userWorkItems);
+        return res.json(allStoreItems);
       }
       
       // Default case
@@ -405,8 +405,34 @@ export function registerAssignmentRoutes(app: express.Express) {
   // Get work items for current user
   app.get("/api/my-work-items", isAuthenticated, async (req, res) => {
     try {
-      const workItems = await storage.getWorkItemsByUserId(req.user!.id);
-      res.json(workItems);
+      if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+        // Admins and managers only see items specifically assigned to them
+        const workItems = await storage.getWorkItemsByUserId(req.user!.id);
+        res.json(workItems);
+      } else if (req.user!.role === 'merchandiser') {
+        // Merchandisers should see all work items for stores they're assigned to
+        // First get all stores this merchandiser is assigned to
+        const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+        
+        if (userAssignments.length === 0) {
+          return res.json([]);
+        }
+        
+        // Then get all work items for these stores
+        const assignedStoreIds = userAssignments.map(a => a.storeId);
+        
+        // Get all work items for all assigned stores
+        let allWorkItems = [];
+        for (const storeId of assignedStoreIds) {
+          const storeItems = await storage.getWorkItemsByStoreId(storeId);
+          allWorkItems = [...allWorkItems, ...storeItems];
+        }
+        
+        console.log(`Found ${allWorkItems.length} work items for merchandiser across ${assignedStoreIds.length} assigned stores`);
+        res.json(allWorkItems);
+      } else {
+        res.json([]);
+      }
     } catch (error) {
       console.error("Error fetching user work items:", error);
       res.status(500).json({ error: "Failed to fetch user work items" });
@@ -536,10 +562,28 @@ export function registerAssignmentRoutes(app: express.Express) {
       }
       
       // Check if user has permission to update this item's status
-      if (existing.userId !== req.user!.id && 
-          req.user!.role !== 'admin' && 
-          req.user!.role !== 'manager') {
-        return res.status(403).json({ error: "Access denied. You can only update the status of your own work items." });
+      if (req.user!.role === 'admin' || req.user!.role === 'manager') {
+        // Admins and managers can update any work item status
+        console.log(`Admin/Manager updating status of work item ${id}`);
+      } else if (existing.userId === req.user!.id) {
+        // Users can always update their directly assigned work items
+        console.log(`User updating status of their own work item ${id}`);
+      } else if (req.user!.role === 'merchandiser') {
+        // Merchandisers can update work items for stores they're assigned to
+        const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+        const isAssignedToStore = userAssignments.some(a => a.storeId === existing.storeId);
+        
+        if (isAssignedToStore) {
+          console.log(`Merchandiser assigned to store ${existing.storeId} is updating status of work item ${id}`);
+        } else {
+          return res.status(403).json({ 
+            error: "Access denied. You can only update work items for stores you're assigned to." 
+          });
+        }
+      } else {
+        return res.status(403).json({ 
+          error: "Access denied. You don't have permission to update this work item." 
+        });
       }
       
       const updateData: any = { status };

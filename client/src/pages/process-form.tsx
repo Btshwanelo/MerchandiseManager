@@ -824,7 +824,9 @@ const ProcessForm = () => {
                   workItem.status === WorkItemStatus.IN_PROGRESS ? "text-blue-600" : 
                   "text-amber-600"
                 }`}>
-                  {workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ')}
+                  {workItem.status ? 
+                    workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ') 
+                    : 'Unknown'}
                 </span>
               </p>
               {workItem.dueDate && (
