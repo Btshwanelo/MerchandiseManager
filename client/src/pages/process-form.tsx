@@ -112,7 +112,7 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
         comment: comments,
         pictures,
         status: "submitted", // Submit immediately
-        items: stockData
+        items: JSON.stringify(stockData) // Convert to string as expected by server
       };
       
       await apiRequest("POST", "/api/stock-takes", stockTakeData);
@@ -405,7 +405,7 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
       const merchandisingData = {
         storeId,
         promotionPictures,
-        items: promotionItems
+        items: JSON.stringify(promotionItems) // Convert to string as expected by server
       };
       
       await apiRequest("POST", "/api/merchandising", merchandisingData);
@@ -636,7 +636,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId }: CompetitorAnalysisSe
         brand,
         productDescription,
         promotionalPrice: promotionalPrice || 0,
-        promotionPictures: pictures
+        promotionPictures: JSON.stringify(pictures) // Convert to string as expected by server
       };
       
       await apiRequest("POST", "/api/competitor-merchandising", competitorData);
@@ -748,7 +748,7 @@ const OrderPlacementSection = ({ storeId, workItemId }: OrderPlacementSectionPro
       const orderData = {
         storeId,
         notes,
-        pictures,
+        pictures: JSON.stringify(pictures), // Convert to string as expected by server
         status: "submitted"
       };
       
