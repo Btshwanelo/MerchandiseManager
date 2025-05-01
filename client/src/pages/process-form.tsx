@@ -648,13 +648,12 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: Competitor
         brand,
         productDescription,
         promotionalPrice: promotionalPrice || 0,
-        promotionPictures: JSON.stringify(pictures) // Convert to string as expected by server
+        promotionPictures: JSON.stringify(pictures), // Convert to string as expected by server
+        workItemId // Include workItemId so server can mark it as completed
       };
       
-      await apiRequest("POST", "/api/competitor-merchandising", competitorData);
-      
-      // Mark work item as completed
-      await apiRequest("POST", `/api/work-items/${workItemId}/complete`);
+      const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
+      const result = await response.json();
       
       toast({
         title: "Competitor analysis submitted",
@@ -663,6 +662,11 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: Competitor
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+      
+      // After a successful submission, navigate back to assignments
+      setTimeout(() => {
+        navigate("/my-assignments");
+      }, 1500);
     } catch (error) {
       console.error("Error submitting competitor analysis:", error);
       toast({
@@ -761,13 +765,12 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate }: OrderPlacement
         storeId,
         notes,
         pictures: JSON.stringify(pictures), // Convert to string as expected by server
-        status: "submitted"
+        status: "submitted",
+        workItemId // Include workItemId so server can mark it as completed
       };
       
-      await apiRequest("POST", "/api/orders", orderData);
-      
-      // Mark work item as completed
-      await apiRequest("POST", `/api/work-items/${workItemId}/complete`);
+      const response = await apiRequest("POST", "/api/orders", orderData);
+      const result = await response.json();
       
       toast({
         title: "Order submitted",
@@ -777,6 +780,11 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate }: OrderPlacement
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
+      
+      // After a successful submission, navigate back to assignments
+      setTimeout(() => {
+        navigate("/my-assignments");
+      }, 1500);
     } catch (error) {
       console.error("Error submitting order:", error);
       toast({
