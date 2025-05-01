@@ -62,7 +62,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { QrCode } from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
@@ -76,19 +78,17 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
   const [comments, setComments] = useState("");
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState<string>("0");
   const { toast } = useToast();
   
+  // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
   
-  const { data: stockTake } = useQuery({
-    queryKey: ['/api/stores', storeId, 'stock-takes', 'active'],
-    enabled: !!storeId,
-  });
-  
-  // Fetch work item to get store assignment ID
+  // Fetch store assignment to get stockTakeType
   const { data: workItem } = useQuery<WorkItem>({
     queryKey: ['/api/work-items', workItemId],
     enabled: !!workItemId,
@@ -152,132 +152,224 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
     }
   };
   
+  const handleAddProduct = () => {
+    if (!selectedProduct) return;
+    
+    const numQuantity = parseInt(quantity) || 0;
+    
+    // Determine if we're adding shelf, back store, or both based on stockTakeType
+    if (stockTakeType === 'shelf' || stockTakeType === 'both') {
+      const newStockData = [...stockData];
+      const existingIndex = newStockData.findIndex(
+        item => item.productId === selectedProduct.id && item.location === "shelf"
+      );
+      
+      if (existingIndex >= 0) {
+        newStockData[existingIndex].quantity = numQuantity;
+      } else {
+        newStockData.push({
+          productId: selectedProduct.id,
+          quantity: numQuantity,
+          location: "shelf"
+        });
+      }
+      
+      setStockData(newStockData);
+    }
+    
+    if (stockTakeType === 'store' || stockTakeType === 'both') {
+      // For back store, we only add if it's a store or both type
+      const newStockData = [...stockData];
+      const existingIndex = newStockData.findIndex(
+        item => item.productId === selectedProduct.id && item.location === "back_store"
+      );
+      
+      if (existingIndex >= 0) {
+        newStockData[existingIndex].quantity = numQuantity;
+      } else {
+        newStockData.push({
+          productId: selectedProduct.id,
+          quantity: numQuantity,
+          location: "back_store"
+        });
+      }
+      
+      setStockData(newStockData);
+    }
+    
+    // Reset form
+    setSelectedProduct(null);
+    setQuantity("0");
+    
+    toast({
+      title: "Product added",
+      description: `Added ${selectedProduct.name} with quantity ${numQuantity}`,
+    });
+  };
+  
+  // Function to get all unique products that have been added
+  const getAddedProducts = () => {
+    const productIds = new Set<number>();
+    stockData.forEach(item => productIds.add(item.productId));
+    
+    return Array.from(productIds).map(id => {
+      const product = products.find(p => p.id === id);
+      if (!product) return null;
+      
+      const shelfItem = stockData.find(item => item.productId === id && item.location === "shelf");
+      const backStoreItem = stockData.find(item => item.productId === id && item.location === "back_store");
+      
+      return {
+        product,
+        shelfQuantity: shelfItem?.quantity || 0,
+        backStoreQuantity: backStoreItem?.quantity || 0
+      };
+    }).filter(Boolean);
+  };
+  
+  // Get products that have been added to the stock take
+  const addedProducts = getAddedProducts();
+  
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        <div className="flex justify-between items-center">
-          <Label htmlFor="products">Product Inventory</Label>
-          <Badge variant="outline" className="ml-2">
-            {stockTakeType === 'shelf' 
-              ? 'Shelf Only' 
-              : stockTakeType === 'store' 
-                ? 'Back Store Only' 
-                : 'Shelf & Back Store'}
-          </Badge>
+    <div className="space-y-6">
+      {/* Stock Take Type Badge */}
+      <div className="flex justify-end">
+        <Badge variant="outline" className="ml-2">
+          {stockTakeType === 'shelf' 
+            ? 'Shelf Only' 
+            : stockTakeType === 'store' 
+              ? 'Back Store Only' 
+              : 'Shelf & Back Store'}
+        </Badge>
+      </div>
+    
+      {/* Product Availability Section */}
+      <div className="bg-card border rounded-lg p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-2xl font-bold">Product Availability</h2>
+          <Button variant="outline" className="flex items-center gap-2">
+            <QrCode className="h-5 w-5" />
+            Scan Barcode
+          </Button>
         </div>
         
-        <div className="space-y-2">
-          {products?.map((product) => (
-            <div key={product.id} className="border p-4 rounded-lg mb-2 bg-white">
-              <div className="flex flex-col gap-4">
-                {/* Product information */}
-                <div>
-                  <h3 className="text-lg font-semibold">{product.name}</h3>
-                  <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
+        <div className="grid md:grid-cols-12 gap-4 mb-6">
+          <div className="md:col-span-8">
+            <label className="text-base font-medium mb-2 block">Product</label>
+            <Select 
+              value={selectedProduct?.id?.toString() || ""} 
+              onValueChange={(value) => {
+                const product = products.find(p => p.id === parseInt(value));
+                if (product) {
+                  setSelectedProduct(product);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a product..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} ({product.sku})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="md:col-span-2">
+            <label className="text-base font-medium mb-2 block">Quantity</label>
+            <Input
+              type="number"
+              min="0"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              className="h-10"
+            />
+          </div>
+          
+          <div className="md:col-span-2 flex items-end">
+            <Button 
+              className="w-full h-10"
+              disabled={!selectedProduct} 
+              onClick={handleAddProduct}
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add
+            </Button>
+          </div>
+        </div>
+        
+        {/* No Products State */}
+        {addedProducts.length === 0 ? (
+          <div className="bg-muted/50 rounded-lg p-8 text-center">
+            <div className="flex justify-center mb-4">
+              <ShoppingCart className="h-16 w-16 text-muted-foreground" />
+            </div>
+            <h3 className="text-xl font-medium text-muted-foreground mb-2">No Products Added</h3>
+            <p className="text-muted-foreground">Add products to your stock take using the form above.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {addedProducts.map(item => (
+              <div key={item?.product.id} className="bg-card border rounded-lg p-4">
+                <div className="mb-2">
+                  <h3 className="font-semibold">{item?.product.name}</h3>
+                  <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
                 </div>
                 
-                {/* Quantity inputs - render based on stockTakeType */}
-                <div className="grid gap-4">
-                  {/* Shelf Quantity - Only show if type is 'shelf' or 'both' */}
+                <div className="grid gap-3">
+                  {/* Show shelf quantity if applicable */}
                   {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
                     <div className="flex justify-between items-center">
-                      <div className="text-sm font-medium">Shelf qty</div>
-                      <div className="w-full max-w-[140px]">
-                        <Input 
-                          type="number" 
-                          min="0"
-                          className="h-12"
-                          onChange={(e) => {
-                            const newStockData = [...stockData];
-                            const existingIndex = newStockData.findIndex(
-                              item => item.productId === product.id && item.location === "shelf"
-                            );
-                            
-                            if (existingIndex >= 0) {
-                              newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                            } else {
-                              newStockData.push({
-                                productId: product.id,
-                                quantity: parseInt(e.target.value) || 0,
-                                location: "shelf"
-                              });
-                            }
-                            
-                            setStockData(newStockData);
-                          }}
-                        />
-                      </div>
+                      <span className="text-sm font-medium">Shelf quantity:</span>
+                      <span className="font-medium">{item?.shelfQuantity}</span>
                     </div>
                   )}
                   
-                  {/* Back Store Quantity - Only show if type is 'store' or 'both' */}
+                  {/* Show back store quantity if applicable */}
                   {(stockTakeType === 'store' || stockTakeType === 'both') && (
                     <div className="flex justify-between items-center">
-                      <div className="text-sm font-medium">Back store qty</div>
-                      <div className="w-full max-w-[140px]">
-                        <Input 
-                          type="number" 
-                          min="0"
-                          className="h-12"
-                          onChange={(e) => {
-                            const newStockData = [...stockData];
-                            const existingIndex = newStockData.findIndex(
-                              item => item.productId === product.id && item.location === "back_store"
-                            );
-                            
-                            if (existingIndex >= 0) {
-                              newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                            } else {
-                              newStockData.push({
-                                productId: product.id,
-                                quantity: parseInt(e.target.value) || 0,
-                                location: "back_store"
-                              });
-                            }
-                            
-                            setStockData(newStockData);
-                          }}
-                        />
-                      </div>
+                      <span className="text-sm font-medium">Back store quantity:</span>
+                      <span className="font-medium">{item?.backStoreQuantity}</span>
                     </div>
                   )}
                 </div>
-                
-                {/* Minimum stock level indicator */}
-                {product.minStockLevel > 0 && (
-                  <div className="mt-2">
-                    <p className="text-xs text-gray-500">Minimum stock level: {product.minStockLevel}</p>
-                  </div>
-                )}
               </div>
-            </div>
-          ))}
-        </div>
-      </div>
-      
-      <div className="space-y-2">
-        <Label htmlFor="pictures">Upload Pictures</Label>
-        <Input id="pictures" type="file" multiple onChange={handleFileUpload} />
-        {pictures.length > 0 && (
-          <div className="mt-2">
-            <p className="text-sm font-medium">Selected files:</p>
-            <ul className="list-disc pl-5 text-sm">
-              {pictures.map((pic, index) => (
-                <li key={index}>{pic}</li>
-              ))}
-            </ul>
+            ))}
           </div>
         )}
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="comments">Comments</Label>
-        <Textarea 
-          id="comments" 
-          placeholder="Add any additional notes..." 
-          value={comments}
-          onChange={(e) => setComments(e.target.value)}
-        />
+      {/* Comments and Pictures Section */}
+      <div className="space-y-4">
+        <div className="space-y-2">
+          <Label htmlFor="pictures">Upload Pictures</Label>
+          <Input id="pictures" type="file" multiple onChange={handleFileUpload} />
+          {pictures.length > 0 && (
+            <div className="mt-2">
+              <p className="text-sm font-medium">Selected files:</p>
+              <ul className="list-disc pl-5 text-sm">
+                {pictures.map((pic, index) => (
+                  <li key={index}>{pic}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="comments">Comments</Label>
+          <Textarea 
+            id="comments" 
+            placeholder="Add any additional notes..." 
+            value={comments}
+            onChange={(e) => setComments(e.target.value)}
+          />
+        </div>
       </div>
       
       <Button 
