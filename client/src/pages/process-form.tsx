@@ -55,6 +55,21 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
     enabled: !!storeId,
   });
   
+  // Fetch work item to get store assignment ID
+  const { data: workItem } = useQuery<WorkItem>({
+    queryKey: ['/api/work-items', workItemId],
+    enabled: !!workItemId,
+  });
+  
+  // Fetch store assignment to get stockTakeType
+  const { data: storeAssignment } = useQuery({
+    queryKey: ['/api/assignments', workItem?.storeAssignmentId],
+    enabled: !!workItem?.storeAssignmentId,
+  });
+  
+  // Determine stock take type from store assignment
+  const stockTakeType = storeAssignment?.stockTakeType || 'both';
+  
   const submitStockTake = async () => {
     setLoading(true);
     try {
@@ -107,7 +122,17 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
   return (
     <div className="space-y-4">
       <div className="grid gap-4">
-        <Label htmlFor="products">Product Inventory</Label>
+        <div className="flex justify-between items-center">
+          <Label htmlFor="products">Product Inventory</Label>
+          <Badge variant="outline" className="ml-2">
+            {stockTakeType === 'shelf' 
+              ? 'Shelf Only' 
+              : stockTakeType === 'store' 
+                ? 'Back Store Only' 
+                : 'Shelf & Back Store'}
+          </Badge>
+        </div>
+        
         <div className="space-y-2">
           {products?.map((product) => (
             <div key={product.id} className="grid grid-cols-6 gap-2 items-center border p-2 rounded">
@@ -117,52 +142,57 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
               </div>
               <div className="col-span-2">
                 <div className="flex space-x-2">
-                  <Input 
-                    type="number" 
-                    placeholder="Shelf Qty" 
-                    min="0"
-                    onChange={(e) => {
-                      const newStockData = [...stockData];
-                      const existingIndex = newStockData.findIndex(
-                        item => item.productId === product.id && item.location === "shelf"
-                      );
-                      
-                      if (existingIndex >= 0) {
-                        newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                      } else {
-                        newStockData.push({
-                          productId: product.id,
-                          quantity: parseInt(e.target.value) || 0,
-                          location: "shelf"
-                        });
-                      }
-                      
-                      setStockData(newStockData);
-                    }}
-                  />
-                  <Input 
-                    type="number" 
-                    placeholder="Back Qty" 
-                    min="0"
-                    onChange={(e) => {
-                      const newStockData = [...stockData];
-                      const existingIndex = newStockData.findIndex(
-                        item => item.productId === product.id && item.location === "back_store"
-                      );
-                      
-                      if (existingIndex >= 0) {
-                        newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
-                      } else {
-                        newStockData.push({
-                          productId: product.id,
-                          quantity: parseInt(e.target.value) || 0,
-                          location: "back_store"
-                        });
-                      }
-                      
-                      setStockData(newStockData);
-                    }}
-                  />
+                  {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
+                    <Input 
+                      type="number" 
+                      placeholder="Shelf Qty" 
+                      min="0"
+                      onChange={(e) => {
+                        const newStockData = [...stockData];
+                        const existingIndex = newStockData.findIndex(
+                          item => item.productId === product.id && item.location === "shelf"
+                        );
+                        
+                        if (existingIndex >= 0) {
+                          newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
+                        } else {
+                          newStockData.push({
+                            productId: product.id,
+                            quantity: parseInt(e.target.value) || 0,
+                            location: "shelf"
+                          });
+                        }
+                        
+                        setStockData(newStockData);
+                      }}
+                    />
+                  )}
+                  
+                  {(stockTakeType === 'store' || stockTakeType === 'both') && (
+                    <Input 
+                      type="number" 
+                      placeholder="Back Store Qty" 
+                      min="0"
+                      onChange={(e) => {
+                        const newStockData = [...stockData];
+                        const existingIndex = newStockData.findIndex(
+                          item => item.productId === product.id && item.location === "back_store"
+                        );
+                        
+                        if (existingIndex >= 0) {
+                          newStockData[existingIndex].quantity = parseInt(e.target.value) || 0;
+                        } else {
+                          newStockData.push({
+                            productId: product.id,
+                            quantity: parseInt(e.target.value) || 0,
+                            location: "back_store"
+                          });
+                        }
+                        
+                        setStockData(newStockData);
+                      }}
+                    />
+                  )}
                 </div>
               </div>
               <div className="col-span-1">

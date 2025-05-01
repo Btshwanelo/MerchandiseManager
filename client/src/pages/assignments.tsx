@@ -60,7 +60,7 @@ import {
   Calendar,
   ExternalLink
 } from "lucide-react";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import {
@@ -703,6 +703,35 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   )}
                 />
               </div>
+              
+              <FormField
+                control={assignmentForm.control}
+                name="stockTakeType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Stock Take Type</FormLabel>
+                    <Select
+                      value={field.value}
+                      onValueChange={field.onChange}
+                    >
+                      <FormControl>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select stock take type" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="shelf">Shelf Only</SelectItem>
+                        <SelectItem value="store">Back Store Only</SelectItem>
+                        <SelectItem value="both">Both Shelf and Back Store</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormDescription>
+                      This controls which locations merchandisers will record inventory quantities for
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
