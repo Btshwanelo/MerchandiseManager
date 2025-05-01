@@ -716,15 +716,19 @@ const ProcessForm = () => {
     enabled: !!workItemId,
   });
   
-  // Fetch store data
+  // Fetch store data using all stores and filtering for the right store ID
+  // This approach works around the authentication issue for single store endpoint
   const {
-    data: store,
+    data: storeList,
     isLoading: isLoadingStore,
     error: storeError
-  } = useQuery({
-    queryKey: ['/api/stores', storeId],
+  } = useQuery<Store[]>({
+    queryKey: ['/api/stores'],
     enabled: !!storeId,
   });
+  
+  // Find the specific store from the list
+  const store = storeList?.find(s => s.id === storeId);
   
   // Update work item status mutation
   const startWorkItemMutation = useMutation({
