@@ -8,24 +8,28 @@ type StockTakeSectionProps = {
   storeId: number;
   workItemId: number;
   navigate: (to: string) => void;
+  setActiveStep: (step: string) => void;
 };
 
 type MerchandisingSectionProps = {
   storeId: number;
   workItemId: number;
   navigate: (to: string) => void;
+  setActiveStep: (step: string) => void;
 };
 
 type CompetitorAnalysisSectionProps = {
   storeId: number;
   workItemId: number;
   navigate: (to: string) => void;
+  setActiveStep: (step: string) => void;
 };
 
 type OrderPlacementSectionProps = {
   storeId: number;
   workItemId: number;
   navigate: (to: string) => void;
+  setActiveStep: (step: string) => void;
 };
 
 // Interfaces matching schema.ts
@@ -77,7 +81,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { WorkItemStatus, WorkItemType } from "@shared/schema";
 
 // Component for Stock Take section
-const StockTakeSection = ({ storeId, workItemId, navigate }: StockTakeSectionProps) => {
+const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
@@ -132,10 +136,11 @@ const StockTakeSection = ({ storeId, workItemId, navigate }: StockTakeSectionPro
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stores', storeId, 'stock-takes'] });
       
-      // After a successful submission, navigate back to assignments
+      // Move to the next step in the process form instead of navigating away
       setTimeout(() => {
-        navigate("/my-assignments");
-      }, 1500);
+        // Signal to parent component that this step is complete
+        setActiveStep("merchandising");
+      }, 1000);
     } catch (error) {
       console.error("Error submitting stock take:", error);
       toast({
@@ -393,7 +398,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate }: StockTakeSectionPro
 };
 
 // Component for Merchandising section
-const MerchandisingSection = ({ storeId, workItemId, navigate }: MerchandisingSectionProps) => {
+const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: MerchandisingSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [promotionPictures, setPromotionPictures] = useState<string[]>([]);
   const [promotionItems, setPromotionItems] = useState<{productId: number, price: number}[]>([]);
@@ -428,10 +433,10 @@ const MerchandisingSection = ({ storeId, workItemId, navigate }: MerchandisingSe
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       
-      // After a successful submission, navigate back to assignments
+      // Move to the next step in the process
       setTimeout(() => {
-        navigate("/my-assignments");
-      }, 1500);
+        setActiveStep("competitor-analysis");
+      }, 1000);
     } catch (error) {
       console.error("Error submitting merchandising data:", error);
       toast({
@@ -631,7 +636,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate }: MerchandisingSe
 };
 
 // Component for Competitor Analysis section
-const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: CompetitorAnalysisSectionProps) => {
+const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveStep }: CompetitorAnalysisSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [brand, setBrand] = useState("");
   const [productDescription, setProductDescription] = useState("");
@@ -663,10 +668,10 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: Competitor
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       
-      // After a successful submission, navigate back to assignments
+      // Move to the next step in the process
       setTimeout(() => {
-        navigate("/my-assignments");
-      }, 1500);
+        setActiveStep("order-placement");
+      }, 1000);
     } catch (error) {
       console.error("Error submitting competitor analysis:", error);
       toast({
@@ -751,7 +756,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate }: Competitor
 };
 
 // Component for Order Placement section
-const OrderPlacementSection = ({ storeId, workItemId, navigate }: OrderPlacementSectionProps) => {
+const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }: OrderPlacementSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
@@ -781,10 +786,10 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate }: OrderPlacement
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       
-      // After a successful submission, navigate back to assignments
+      // Move to the final success step
       setTimeout(() => {
-        navigate("/my-assignments");
-      }, 1500);
+        setActiveStep("completed");
+      }, 1000);
     } catch (error) {
       console.error("Error submitting order:", error);
       toast({
