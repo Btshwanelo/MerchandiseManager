@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Product, WorkItemStatus as WorkItemStatusEnum } from "@shared/schema";
+import { Product, WorkItemStatus as WorkItemStatusEnum, StockTakeType } from "@shared/schema";
 
 // Type declarations for component props
 type StockTakeSectionProps = {
@@ -23,12 +23,45 @@ type OrderPlacementSectionProps = {
   storeId: number;
   workItemId: number;
 };
+
+// Interfaces matching schema.ts
+interface WorkItem {
+  id: number;
+  title: string;
+  description?: string;
+  type: string;
+  userId: number;
+  storeId: number;
+  storeAssignmentId: number;
+  dueDate: string;
+  priority: string;
+  status: string;
+  completedAt?: string;
+  notes?: string;
+  attachments?: string[];
+  createdBy: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+interface StoreAssignment {
+  id: number;
+  userId: number;
+  storeId: number;
+  assignedBy: number;
+  startDate: string;
+  endDate?: string;
+  status: string;
+  stockTakeType: string;
+  createdAt: string;
+}
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
 import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle } from "lucide-react";
 import { WorkItemAccessError } from "@/components/ui/error-state";
 import { useToast } from "@/hooks/use-toast";
@@ -576,22 +609,7 @@ const OrderPlacementSection = ({ storeId, workItemId }: OrderPlacementSectionPro
   );
 };
 
-// Define types for our work items and stores
-interface WorkItem {
-  id: number;
-  userId: number;
-  title: string;
-  status: string;
-  dueDate?: string;
-  storeId: number;
-  type: string;
-}
-
-interface Store {
-  id: number;
-  name: string;
-  location: string;
-}
+// Interface has been moved to the top of the file
 
 // Main Process Form component
 const ProcessForm = () => {
