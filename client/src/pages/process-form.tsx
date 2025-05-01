@@ -62,7 +62,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, Plus } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, Plus, Camera } from "lucide-react";
 import { QrCode } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -389,6 +389,8 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
   const [loading, setLoading] = useState(false);
   const [promotionPictures, setPromotionPictures] = useState<string[]>([]);
   const [promotionItems, setPromotionItems] = useState<{productId: number, price: number}[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [price, setPrice] = useState<string>("0.00");
   const { toast } = useToast();
   
   const { data: products = [] } = useQuery<Product[]>({
@@ -441,61 +443,168 @@ const MerchandisingSection = ({ storeId, workItemId }: MerchandisingSectionProps
     }
   };
   
+  const handleAddPromotionItem = () => {
+    if (!selectedProduct) return;
+    
+    const numPrice = parseFloat(price) || 0;
+    
+    const newItems = [...promotionItems];
+    const existingIndex = newItems.findIndex(item => item.productId === selectedProduct.id);
+    
+    if (existingIndex >= 0) {
+      newItems[existingIndex].price = Math.round(numPrice * 100); // Convert to cents
+    } else {
+      newItems.push({
+        productId: selectedProduct.id,
+        price: Math.round(numPrice * 100) // Convert to cents
+      });
+    }
+    
+    setPromotionItems(newItems);
+    
+    // Reset form
+    setSelectedProduct(null);
+    setPrice("0.00");
+    
+    toast({
+      title: "Promotion product added",
+      description: `Added ${selectedProduct.name} with price $${numPrice.toFixed(2)}`,
+    });
+  };
+  
+  // Function to get added promotion products
+  const getAddedProducts = () => {
+    return promotionItems.map(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) return null;
+      
+      return {
+        product,
+        price: item.price
+      };
+    }).filter(Boolean);
+  };
+  
+  // Get products added to the promotion
+  const addedPromotionProducts = getAddedProducts();
+  
   return (
-    <div className="space-y-4">
-      <div className="grid gap-4">
-        <Label htmlFor="promotion-products">Promotion Products</Label>
-        <div className="space-y-2">
-          {products?.map((product) => (
-            <div key={product.id} className="grid grid-cols-6 gap-2 items-center border p-2 rounded">
-              <div className="col-span-3">
-                <p className="font-medium">{product.name}</p>
-                <p className="text-sm text-muted-foreground">SKU: {product.sku}</p>
-              </div>
-              <div className="col-span-2">
-                <Input 
-                  type="number" 
-                  placeholder="Promotion Price (cents)" 
-                  min="0"
-                  onChange={(e) => {
-                    const newItems = [...promotionItems];
-                    const existingIndex = newItems.findIndex(item => item.productId === product.id);
-                    
-                    if (existingIndex >= 0) {
-                      newItems[existingIndex].price = parseInt(e.target.value) || 0;
-                    } else {
-                      newItems.push({
-                        productId: product.id,
-                        price: parseInt(e.target.value) || 0
-                      });
-                    }
-                    
-                    setPromotionItems(newItems);
-                  }}
-                />
-              </div>
-              <div className="col-span-1">
-                <p className="text-xs text-gray-500">Regular: {product.price}¢</p>
-              </div>
+    <div className="space-y-6">
+      {/* Promotion Products & Pricing Section */}
+      <div className="bg-card border rounded-lg p-6">
+        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+          <h2 className="text-2xl font-bold">Promotion Products & Pricing</h2>
+          <Button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => document.getElementById('promotion-pictures')?.click()}>
+            <Camera className="h-5 w-5" />
+            Upload Promotion Photos
+          </Button>
+          <Input 
+            id="promotion-pictures" 
+            type="file" 
+            multiple 
+            onChange={handleFileUpload} 
+            className="hidden"
+          />
+        </div>
+        
+        <div className="grid md:grid-cols-12 gap-4 mb-6">
+          <div className="md:col-span-7">
+            <label className="text-base font-medium mb-2 block">Product</label>
+            <Select 
+              value={selectedProduct?.id?.toString() || ""} 
+              onValueChange={(value) => {
+                const product = products.find(p => p.id === parseInt(value));
+                if (product) {
+                  setSelectedProduct(product);
+                }
+              }}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select a product..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectGroup>
+                  {products.map((product) => (
+                    <SelectItem key={product.id} value={product.id.toString()}>
+                      {product.name} ({product.sku})
+                    </SelectItem>
+                  ))}
+                </SelectGroup>
+              </SelectContent>
+            </Select>
+          </div>
+          
+          <div className="md:col-span-3">
+            <label className="text-base font-medium mb-2 block">Price ($)</label>
+            <div className="relative">
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                className="h-10 pl-7"
+              />
             </div>
-          ))}
+          </div>
+          
+          <div className="md:col-span-2 flex items-end">
+            <Button 
+              className="w-full h-10"
+              disabled={!selectedProduct} 
+              onClick={handleAddPromotionItem}
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Add Item
+            </Button>
+          </div>
+        </div>
+        
+        <div>
+          <h3 className="text-lg font-medium mb-4">Promotion Products</h3>
+          
+          {/* No Products State */}
+          {addedPromotionProducts.length === 0 ? (
+            <div className="bg-muted/50 rounded-lg p-8 text-center">
+              <div className="flex justify-center mb-4">
+                <Tag className="h-16 w-16 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-medium text-muted-foreground mb-2">No products added yet.</h3>
+              <p className="text-muted-foreground">Select a product and price to add it to the promotion.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {addedPromotionProducts.map(item => (
+                <div key={item?.product?.id || 'unknown'} className="bg-card border rounded-lg p-4">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <h4 className="font-semibold">{item?.product?.name || 'Unknown Product'}</h4>
+                      <p className="text-sm text-muted-foreground">SKU: {item?.product?.sku || 'N/A'}</p>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-medium text-lg">${((item?.price || 0) / 100).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">Regular: ${((item?.product?.price || 0) / 100).toFixed(2)}</p>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
       
-      <div className="space-y-2">
-        <Label htmlFor="promotion-pictures">Upload Promotion Pictures</Label>
-        <Input id="promotion-pictures" type="file" multiple onChange={handleFileUpload} />
-        {promotionPictures.length > 0 && (
-          <div className="mt-2">
-            <p className="text-sm font-medium">Selected files:</p>
-            <ul className="list-disc pl-5 text-sm">
-              {promotionPictures.map((pic, index) => (
-                <li key={index}>{pic}</li>
-              ))}
-            </ul>
-          </div>
-        )}
-      </div>
+      {/* Show selected promotion pictures */}
+      {promotionPictures.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="text-lg font-medium">Uploaded Promotion Photos</h3>
+          <ul className="list-disc pl-5 text-sm">
+            {promotionPictures.map((pic, index) => (
+              <li key={index}>{pic}</li>
+            ))}
+          </ul>
+        </div>
+      )}
       
       <Button 
         onClick={submitMerchandising} 
