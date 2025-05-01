@@ -101,6 +101,7 @@ export function registerAssignmentRoutes(app: express.Express) {
       const assignmentSchema = insertStoreAssignmentSchema.extend({
         startDate: z.coerce.date(),
         endDate: z.coerce.date().nullable().optional(),
+        stockTakeType: z.enum(['shelf', 'store', 'both']).default('both'),
       });
       
       // Add assignedBy to request body using current user
@@ -208,8 +209,10 @@ export function registerAssignmentRoutes(app: express.Express) {
         return res.status(404).json({ error: "Assignment not found" });
       }
       
-      // Allow partial updates
-      const updateSchema = insertStoreAssignmentSchema.partial();
+      // Allow partial updates with type validation
+      const updateSchema = insertStoreAssignmentSchema.extend({
+        stockTakeType: z.enum(['shelf', 'store', 'both']).optional(),
+      }).partial();
       const parseResult = updateSchema.safeParse(req.body);
       
       if (!parseResult.success) {

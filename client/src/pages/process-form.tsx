@@ -95,7 +95,7 @@ const StockTakeSection = ({ storeId, workItemId }: StockTakeSectionProps) => {
   });
   
   // Fetch store assignment to get stockTakeType
-  const { data: storeAssignment } = useQuery({
+  const { data: storeAssignment } = useQuery<StoreAssignment>({
     queryKey: ['/api/assignments', workItem?.storeAssignmentId],
     enabled: !!workItem?.storeAssignmentId,
   });
@@ -609,7 +609,11 @@ const OrderPlacementSection = ({ storeId, workItemId }: OrderPlacementSectionPro
   );
 };
 
-// Interface has been moved to the top of the file
+interface Store {
+  id: number;
+  name: string;
+  location: string;
+}
 
 // Main Process Form component
 const ProcessForm = () => {
@@ -700,7 +704,7 @@ const ProcessForm = () => {
     data: store,
     isLoading: isLoadingStore,
     error: storeError
-  } = useQuery<Store>({
+  } = useQuery({
     queryKey: ['/api/stores', storeId],
     enabled: !!storeId,
   });
