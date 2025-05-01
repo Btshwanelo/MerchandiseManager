@@ -1147,29 +1147,29 @@ const ProcessForm = () => {
             <div className="grid grid-cols-4 gap-4">
               {/* Step 1: Stock Take */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Stock Take</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Stock Take</h3>
                 <p className="text-sm text-muted-foreground">Stock taking at shelf or Store</p>
               </div>
               
               {/* Step 2: Merchandising */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Merchandising</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Merchandising</h3>
                 <p className="text-sm text-muted-foreground">Promotions for any of our products</p>
               </div>
               
               {/* Step 3: Competitor Promotions */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor' || activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'competitor' || activeStep === 'order' ? 'text-blue-600' : ''}`}>Competitor Promotions</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Competitor Promotions</h3>
                 <p className="text-sm text-muted-foreground">Any promotions from competitors</p>
               </div>
               
               {/* Step 4: Orders */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'order' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'order' ? 'text-blue-600' : ''}`}>Orders</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Orders</h3>
                 <p className="text-sm text-muted-foreground">Orders of stock that is depleted etc</p>
               </div>
             </div>
@@ -1194,7 +1194,7 @@ const ProcessForm = () => {
                 </>
               )}
               
-              {activeStep === 'competitor' && (
+              {activeStep === 'competitor-analysis' && (
                 <>
                   <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
                   <h3 className="font-medium text-blue-600">Competitor Promotions</h3>
@@ -1202,11 +1202,19 @@ const ProcessForm = () => {
                 </>
               )}
               
-              {activeStep === 'order' && (
+              {activeStep === 'order-placement' && (
                 <>
                   <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
                   <h3 className="font-medium text-blue-600">Orders</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 4 of 4: Orders of stock that is depleted</p>
+                </>
+              )}
+              
+              {activeStep === 'completed' && (
+                <>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-green-600"></div>
+                  <h3 className="font-medium text-green-600">All Tasks Completed</h3>
+                  <p className="text-sm text-muted-foreground text-center">You've successfully completed all required steps!</p>
                 </>
               )}
             </div>
@@ -1243,25 +1251,63 @@ const ProcessForm = () => {
                 <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 md:min-w-0 mb-4">
                   <TabsTrigger value="stock-take" className="whitespace-nowrap">Stock Take</TabsTrigger>
                   <TabsTrigger value="merchandising" className="whitespace-nowrap">Merchandising</TabsTrigger>
-                  <TabsTrigger value="competitor" className="whitespace-nowrap">Competitor</TabsTrigger>
-                  <TabsTrigger value="order" className="whitespace-nowrap">Order</TabsTrigger>
+                  <TabsTrigger value="competitor-analysis" className="whitespace-nowrap">Competitor</TabsTrigger>
+                  <TabsTrigger value="order-placement" className="whitespace-nowrap">Order</TabsTrigger>
                 </TabsList>
               </div>
               
               <TabsContent value="stock-take">
-                <StockTakeSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
+                <StockTakeSection 
+                  storeId={storeId} 
+                  workItemId={workItemId} 
+                  navigate={navigate} 
+                  setActiveStep={setActiveStep} 
+                />
               </TabsContent>
               
               <TabsContent value="merchandising">
-                <MerchandisingSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
+                <MerchandisingSection 
+                  storeId={storeId} 
+                  workItemId={workItemId} 
+                  navigate={navigate} 
+                  setActiveStep={setActiveStep}
+                />
               </TabsContent>
               
-              <TabsContent value="competitor">
-                <CompetitorAnalysisSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
+              <TabsContent value="competitor-analysis">
+                <CompetitorAnalysisSection 
+                  storeId={storeId} 
+                  workItemId={workItemId} 
+                  navigate={navigate} 
+                  setActiveStep={setActiveStep}
+                />
               </TabsContent>
               
-              <TabsContent value="order">
-                <OrderPlacementSection storeId={storeId} workItemId={workItemId} navigate={navigate} />
+              <TabsContent value="order-placement">
+                <OrderPlacementSection 
+                  storeId={storeId} 
+                  workItemId={workItemId} 
+                  navigate={navigate} 
+                  setActiveStep={setActiveStep}
+                />
+              </TabsContent>
+              
+              <TabsContent value="completed">
+                <div className="text-center py-10">
+                  <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6">
+                    <CheckCircle2 className="h-10 w-10" />
+                  </div>
+                  <h2 className="text-2xl font-bold mb-4">All Tasks Completed!</h2>
+                  <p className="text-lg mb-6 max-w-md mx-auto">
+                    You've successfully completed all the required steps for this work item at {store.name}.
+                  </p>
+                  <Button 
+                    size="lg" 
+                    onClick={() => navigate("/my-assignments")}
+                  >
+                    Return to My Assignments
+                  </Button>
+                </div>
               </TabsContent>
             </Tabs>
           )}
