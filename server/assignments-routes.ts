@@ -92,6 +92,38 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
+  // Get work items for a specific assignment
+  app.get("/api/assignments/:assignmentId/work-items", isAuthenticated, async (req, res) => {
+    try {
+      const assignmentId = parseInt(req.params.assignmentId);
+      if (isNaN(assignmentId)) {
+        return res.status(400).json({ error: "Invalid assignment ID" });
+      }
+      
+      // Check if assignment exists
+      const assignment = await storage.getStoreAssignment(assignmentId);
+      if (!assignment) {
+        return res.status(404).json({ error: "Assignment not found" });
+      }
+      
+      // Check permissions
+      const isAdminOrManager = req.user!.role === 'admin' || req.user!.role === 'manager';
+      const isAssignedUser = req.user!.id === assignment.userId;
+      
+      // Only admin, manager, or the assigned user can access work items
+      if (!isAdminOrManager && !isAssignedUser) {
+        return res.status(403).json({ error: "Access denied. You do not have permission to view these work items." });
+      }
+      
+      // Get work items for this assignment
+      const workItems = await storage.getWorkItemsByAssignmentId(assignmentId);
+      res.json(workItems);
+    } catch (error) {
+      console.error("Error fetching assignment work items:", error);
+      res.status(500).json({ error: "Failed to fetch work items for this assignment" });
+    }
+  });
+  
   // Create a new store assignment (admin/manager only)
   app.post("/api/assignments", isAdminOrManager, async (req, res) => {
     try {
