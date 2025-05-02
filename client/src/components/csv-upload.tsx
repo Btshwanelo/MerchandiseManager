@@ -65,12 +65,44 @@ export function CSVUpload<T>({
 
     try {
       setError(null);
-      // Pass the file directly to parseCSV
-      const parsedData = await parseCSV<T>(file, headerMapping);
-      onDataParsed(parsedData);
+      // Pass the file directly to parseCSV with required fields
+      const requiredFields = Object.keys(headerMapping).filter(key => 
+        // For product uploads, these fields are required
+        ["name", "sku", "category", "price", "minStockLevel"].includes(key)
+      );
+      
+      // Use as any to bypass TypeScript strict checking on the required fields
+      // This is safe because we handle proper validation after parsing
+      const parsedData = await parseCSV<T>(file, headerMapping, { 
+        required: requiredFields as any
+      });
+      
+      // Basic validation to ensure no empty strings for required fields
+      let validationError = false;
+      const validatedData = parsedData.filter(item => {
+        const record = item as Record<string, any>;
+        for (const field of requiredFields) {
+          const mappedField = headerMapping[field] || field;
+          if (!record[mappedField] || record[mappedField] === "") {
+            validationError = true;
+            return false;
+          }
+        }
+        return true;
+      });
+      
+      if (validationError) {
+        throw new Error("Some records have missing required fields. Please ensure all required fields have values.");
+      }
+      
+      if (validatedData.length === 0) {
+        throw new Error("No valid data found in CSV file. Please check your file format and required fields.");
+      }
+      
+      onDataParsed(validatedData as T[]);
       toast({
         title: "File processed successfully",
-        description: `${parsedData.length} records ready to be imported.`,
+        description: `${validatedData.length} records ready to be imported.`,
       });
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Failed to parse CSV file";

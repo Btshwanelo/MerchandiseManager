@@ -274,17 +274,60 @@ const ProductsPage = () => {
   
   // Handle CSV data after parsing
   const handleCsvData = (data: any[]) => {
-    // Convert the data to the ProductCSVItem type
-    const productData = data.map(item => ({
-      name: String(item.name || ""),
-      sku: String(item.sku || ""),
-      description: item.description ? String(item.description) : undefined,
-      category: String(item.category || ""),
-      price: Number(item.price || 0),
-      minStockLevel: Number(item.minStockLevel || 10),
-      image: item.image ? String(item.image) : undefined,
-    }));
-    setCsvData(productData);
+    // Convert the data to the ProductCSVItem type with validation
+    const productData = data.map(item => {
+      // Ensure we have valid values for all required fields
+      if (!item.name || !item.sku || !item.category || !item.price) {
+        console.warn("Invalid product data detected", item);
+      }
+      
+      return {
+        name: String(item.name || "").trim(),
+        sku: String(item.sku || "").trim(),
+        description: item.description && String(item.description).trim() !== "" 
+          ? String(item.description).trim() 
+          : undefined,
+        category: String(item.category || "").trim(),
+        // Make sure price is at least 1 cent if provided
+        price: Number(item.price) > 0 ? Number(item.price) : 1,
+        // Make sure minStockLevel is at least 1 if provided
+        minStockLevel: Number(item.minStockLevel) > 0 ? Number(item.minStockLevel) : 1,
+        image: item.image && String(item.image).trim() !== "" 
+          ? String(item.image).trim() 
+          : undefined,
+      };
+    });
+    
+    // Log the product data for debugging
+    console.log("Processed CSV data:", productData);
+    
+    // Only set valid products
+    const validProducts = productData.filter(
+      product => product.name !== "" && 
+                product.sku !== "" && 
+                product.category !== "" && 
+                product.price >= 1
+    );
+    
+    if (validProducts.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "Invalid Data",
+        description: "No valid products found in the CSV file. Please ensure all required fields have values.",
+      });
+      return;
+    }
+    
+    if (validProducts.length < productData.length) {
+      toast({
+        // Use "destructive" instead of "warning" as it's a supported variant
+        variant: "destructive",
+        title: "Some Data Skipped",
+        description: `${productData.length - validProducts.length} products were skipped due to missing required fields.`,
+      });
+    }
+    
+    setCsvData(validProducts);
   };
   
   // Handle upload of CSV data
