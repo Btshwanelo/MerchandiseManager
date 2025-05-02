@@ -1243,56 +1243,46 @@ const ProcessForm = () => {
               </div>
             </div>
           ) : (
-            <Tabs defaultValue="stock-take" onValueChange={(value) => {
-              // Update active step in state
-              setActiveStep(value);
-            }}>
-              <div className="overflow-x-auto pb-2 mb-2 md:pb-0">
-                <TabsList className="inline-flex min-w-full md:grid md:grid-cols-4 md:min-w-0 mb-4">
-                  <TabsTrigger value="stock-take" className="whitespace-nowrap">Stock Take</TabsTrigger>
-                  <TabsTrigger value="merchandising" className="whitespace-nowrap">Merchandising</TabsTrigger>
-                  <TabsTrigger value="competitor-analysis" className="whitespace-nowrap">Competitor</TabsTrigger>
-                  <TabsTrigger value="order-placement" className="whitespace-nowrap">Order</TabsTrigger>
-                </TabsList>
-              </div>
+            <div className="mt-4">
+              {/* Just show the current step content based on activeStep */}
               
-              <TabsContent value="stock-take">
+              {activeStep === "stock-take" && (
                 <StockTakeSection 
                   storeId={storeId} 
                   workItemId={workItemId} 
                   navigate={navigate} 
                   setActiveStep={setActiveStep} 
                 />
-              </TabsContent>
+              )}
               
-              <TabsContent value="merchandising">
+              {activeStep === "merchandising" && (
                 <MerchandisingSection 
                   storeId={storeId} 
                   workItemId={workItemId} 
                   navigate={navigate} 
                   setActiveStep={setActiveStep}
                 />
-              </TabsContent>
+              )}
               
-              <TabsContent value="competitor-analysis">
+              {activeStep === "competitor-analysis" && (
                 <CompetitorAnalysisSection 
                   storeId={storeId} 
                   workItemId={workItemId} 
                   navigate={navigate} 
                   setActiveStep={setActiveStep}
                 />
-              </TabsContent>
+              )}
               
-              <TabsContent value="order-placement">
+              {activeStep === "order-placement" && (
                 <OrderPlacementSection 
                   storeId={storeId} 
                   workItemId={workItemId} 
                   navigate={navigate} 
                   setActiveStep={setActiveStep}
                 />
-              </TabsContent>
+              )}
               
-              <TabsContent value="completed">
+              {activeStep === "completed" && (
                 <div className="text-center py-10">
                   <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6">
                     <CheckCircle2 className="h-10 w-10" />
@@ -1308,8 +1298,8 @@ const ProcessForm = () => {
                     Return to My Assignments
                   </Button>
                 </div>
-              </TabsContent>
-            </Tabs>
+              )}
+            </div>
           )}
         </CardContent>
         <CardFooter className="flex justify-between">
