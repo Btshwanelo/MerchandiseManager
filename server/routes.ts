@@ -21,7 +21,7 @@ import { registerAssignmentRoutes } from "./assignments-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Endpoint for bulk deleting items
-  app.delete("/api/bulk-delete/:resource", isAuthenticated, checkRole(UserRole.ADMIN), async (req, res) => {
+  app.delete("/api/bulk-delete/:resource", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
       const { resource } = req.params;
       const { ids } = req.body as { ids: number[] };
