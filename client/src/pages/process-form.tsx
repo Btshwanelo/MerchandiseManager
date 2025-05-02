@@ -510,8 +510,11 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       {/* Promotion Products & Pricing Section */}
       <div className="bg-card border rounded-lg p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
-          <h2 className="text-2xl font-bold">Promotion Products & Pricing</h2>
-          <Button className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white" onClick={() => document.getElementById('promotion-pictures')?.click()}>
+          <h2 className="text-2xl font-bold w-full">Promotion Products & Pricing</h2>
+          <Button 
+            className="flex items-center gap-2 bg-blue-500 hover:bg-blue-600 text-white w-full sm:w-auto" 
+            onClick={() => document.getElementById('promotion-pictures')?.click()}
+          >
             <Camera className="h-5 w-5" />
             Upload Promotion Photos
           </Button>
