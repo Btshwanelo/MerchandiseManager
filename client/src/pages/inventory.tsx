@@ -531,22 +531,7 @@ const InventoryPage = () => {
         </DialogContent>
       </Dialog>
 
-      {/* Barcode Scanner Dialog */}
-      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Scan Product Barcode</DialogTitle>
-            <DialogDescription>
-              Scan a product barcode to search or add inventory
-            </DialogDescription>
-          </DialogHeader>
-          <BarcodeScanner 
-            onScanSuccess={handleBarcodeScan}
-            onScanError={handleBarcodeScanError}
-            onClose={() => setIsScannerOpen(false)}
-          />
-        </DialogContent>
-      </Dialog>
+      {/* Barcode scanner has been removed */}
       
       {/* Add Inventory Dialog */}
       <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
@@ -599,15 +584,7 @@ const InventoryPage = () => {
                             </SelectContent>
                           </Select>
                         </div>
-                        <Button 
-                          type="button" 
-                          variant="outline" 
-                          size="icon"
-                          onClick={() => setIsScannerOpen(true)}
-                          title="Scan product barcode"
-                        >
-                          <ScanLine className="h-4 w-4" />
-                        </Button>
+                        {/* Barcode scanner button removed */}
                       </div>
                     </div>
 
