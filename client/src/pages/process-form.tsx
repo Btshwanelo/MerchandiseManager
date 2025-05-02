@@ -70,7 +70,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, Plus, Camera } from "lucide-react";
+import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera } from "lucide-react";
 import { QrCode } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -1055,6 +1055,13 @@ const ProcessForm = () => {
   const { toast } = useToast();
   const [activeStep, setActiveStep] = useState<string>("stock-take");
   
+  // Set activeStep to "completed" if work item is already completed
+  useEffect(() => {
+    if (workItem && workItem.status === WorkItemStatus.COMPLETED) {
+      setActiveStep("completed");
+    }
+  }, [workItem]);
+  
   // Fetch work item data
   const { 
     data: workItem, 
@@ -1431,12 +1438,35 @@ const ProcessForm = () => {
                 />
               )}
               
-              {activeStep === "completed" && (
+              {/* Show completed screen if activeStep is "completed" or if work item is already in completed status */}
+              {(activeStep === "completed" || (workItem && workItem.status === WorkItemStatus.COMPLETED)) && (
                 <div className="text-center py-10">
                   <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6">
                     <CheckCircle2 className="h-10 w-10" />
                   </div>
-                  <h2 className="text-2xl font-bold mb-4">All Tasks Completed!</h2>
+                  
+                  {/* Different display for already-completed work items vs just completed ones */}
+                  {workItem && workItem.status === WorkItemStatus.COMPLETED && activeStep !== "completed" ? (
+                    <>
+                      <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4 mb-6 mx-auto max-w-lg text-left">
+                        <div className="flex">
+                          <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
+                          <div>
+                            <h3 className="font-medium text-yellow-800">View Only Mode</h3>
+                            <p className="text-sm text-yellow-700">
+                              This work item has already been completed and is in read-only mode.
+                              {workItem.completedAt && (
+                                <> It was completed on {new Date(workItem.completedAt).toLocaleString()}.</>
+                              )}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                      <h2 className="text-2xl font-bold mb-4">Work Item Completed</h2>
+                    </>
+                  ) : (
+                    <h2 className="text-2xl font-bold mb-4">All Tasks Completed!</h2>
+                  )}
                   <p className="text-lg mb-6 max-w-md mx-auto">
                     You've successfully completed all the required steps for this work item at {store.name}.
                   </p>
