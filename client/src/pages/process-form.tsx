@@ -800,10 +800,51 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
   const submitOrder = async () => {
     setLoading(true);
     try {
-      // Create order
+      // If no notes are provided, we're skipping the order step
+      if (!notes && pictures.length === 0) {
+        toast({
+          title: "Step skipped",
+          description: "Order step was skipped, completing work item",
+        });
+        
+        // Skip order creation, but still mark the work item as completed
+        try {
+          // Call the API to mark the work item as completed
+          await apiRequest("PATCH", `/api/work-items/${workItemId}`, { 
+            status: WorkItemStatus.COMPLETED 
+          });
+          
+          // Invalidate queries to refresh data
+          queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+          queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+          
+          toast({
+            title: "Work item completed",
+            description: "Your work item has been marked as completed",
+          });
+          
+          // Move to the final success step
+          setTimeout(() => {
+            setActiveStep("completed");
+          }, 1000);
+          setLoading(false);
+          return;
+        } catch (error) {
+          console.error("Error completing work item:", error);
+          toast({
+            title: "Error",
+            description: "Failed to mark work item as completed",
+            variant: "destructive",
+          });
+          setLoading(false);
+          return;
+        }
+      }
+      
+      // Create order if we have notes or pictures
       const orderData = {
         storeId,
-        notes,
+        notes: notes || "No notes provided",
         pictures: JSON.stringify(pictures), // Convert to string as expected by server
         status: "submitted",
         workItemId // Include workItemId so server can mark it as completed
