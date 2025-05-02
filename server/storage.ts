@@ -2175,6 +2175,45 @@ export class DatabaseStorage implements IStorage {
       priority: data.priority || 'medium'
     };
   }
+  
+  // Settings methods - Database implementation
+  async getSetting(key: string): Promise<Setting | undefined> {
+    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
+    return setting;
+  }
+
+  async getAllSettings(): Promise<Setting[]> {
+    return db.select().from(settings);
+  }
+
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    const [newSetting] = await db.insert(settings).values(setting).returning();
+    return newSetting;
+  }
+
+  async updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined> {
+    const updateData: any = {
+      value,
+      updatedAt: new Date()
+    };
+    
+    if (userId) {
+      updateData.updatedBy = userId;
+    }
+    
+    const [updatedSetting] = await db
+      .update(settings)
+      .set(updateData)
+      .where(eq(settings.key, key))
+      .returning();
+      
+    return updatedSetting;
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    const result = await db.delete(settings).where(eq(settings.key, key));
+    return result.rowCount > 0;
+  }
 }
 
 // Create a seed function to initialize database
