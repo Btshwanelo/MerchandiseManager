@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useLocation } from "wouter";
+import { useLocation, Link } from "wouter";
 import { 
   Card, 
   CardContent, 
@@ -390,12 +390,12 @@ const AuthPage = () => {
         <div className="container max-w-7xl mx-auto flex justify-between items-center">
           <div>&copy; {new Date().getFullYear()} InvenTrack. All rights reserved.</div>
           <div className="flex items-center gap-4">
-            <a 
+            <Link 
               href="/changelog" 
               className="hover:text-primary hover:underline transition-colors flex items-center gap-1"
             >
               <span>Changelog</span>
-            </a>
+            </Link>
           </div>
         </div>
       </div>
