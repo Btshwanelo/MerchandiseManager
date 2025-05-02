@@ -413,26 +413,11 @@ export function registerAssignmentRoutes(app: express.Express) {
         const workItems = await storage.getWorkItemsByUserId(req.user!.id);
         res.json(workItems);
       } else if (req.user!.role === 'merchandiser') {
-        // Merchandisers should see all work items for stores they're assigned to
-        // First get all stores this merchandiser is assigned to
-        const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+        // Merchandisers should ONLY see work items specifically assigned to them
+        const workItems = await storage.getWorkItemsByUserId(req.user!.id);
         
-        if (userAssignments.length === 0) {
-          return res.json([]);
-        }
-        
-        // Then get all work items for these stores
-        const assignedStoreIds = userAssignments.map(a => a.storeId);
-        
-        // Get all work items for all assigned stores
-        let allWorkItems: any[] = [];
-        for (const storeId of assignedStoreIds) {
-          const storeItems = await storage.getWorkItemsByStoreId(storeId);
-          allWorkItems = [...allWorkItems, ...storeItems];
-        }
-        
-        console.log(`Found ${allWorkItems.length} work items for merchandiser across ${assignedStoreIds.length} assigned stores`);
-        res.json(allWorkItems);
+        console.log(`Found ${workItems.length} work items directly assigned to merchandiser with ID ${req.user!.id}`);
+        res.json(workItems);
       } else {
         res.json([]);
       }
