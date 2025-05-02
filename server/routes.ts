@@ -84,6 +84,101 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up store assignment and work item routes
   registerAssignmentRoutes(app);
   
+  // Process Form Routes for Merchandising, Competitors, and Orders
+  
+  // Merchandising Information
+  app.post("/api/merchandising", isAuthenticated, async (req, res) => {
+    try {
+      const merchandisingSchema = z.object({
+        storeId: z.number(),
+        workItemId: z.number(),
+        merchandisingItems: z.array(z.object({
+          productId: z.number(),
+          price: z.number(),
+          notes: z.string().optional(),
+        }))
+      });
+      
+      const validatedData = merchandisingSchema.parse(req.body);
+      const result = await storage.createMerchandisingData({
+        ...validatedData,
+        userId: req.user!.id,
+        date: new Date()
+      });
+      
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid merchandising data", errors: error.errors });
+      }
+      console.error("Error creating merchandising data:", error);
+      res.status(500).json({ message: "Failed to create merchandising data" });
+    }
+  });
+  
+  // Competitor Merchandising Information
+  app.post("/api/competitor-merchandising", isAuthenticated, async (req, res) => {
+    try {
+      const competitorSchema = z.object({
+        storeId: z.number(),
+        workItemId: z.number(),
+        brand: z.string(),
+        productDescription: z.string(),
+        promoType: z.string().optional(),
+        promoDetails: z.string().optional(),
+        price: z.number().optional(),
+        pictureUrl: z.string().optional(),
+      });
+      
+      const validatedData = competitorSchema.parse(req.body);
+      const result = await storage.createCompetitorMerchandising({
+        ...validatedData,
+        userId: req.user!.id,
+        date: new Date()
+      });
+      
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid competitor data", errors: error.errors });
+      }
+      console.error("Error creating competitor data:", error);
+      res.status(500).json({ message: "Failed to create competitor merchandising data" });
+    }
+  });
+  
+  // Orders Information
+  app.post("/api/orders", isAuthenticated, async (req, res) => {
+    try {
+      const orderSchema = z.object({
+        storeId: z.number(),
+        workItemId: z.number(),
+        products: z.array(z.object({
+          productId: z.number(),
+          quantity: z.number(),
+        })).optional(),
+        notes: z.string(),
+        priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
+      });
+      
+      const validatedData = orderSchema.parse(req.body);
+      const result = await storage.createOrder({
+        ...validatedData,
+        userId: req.user!.id,
+        status: "pending",
+        date: new Date()
+      });
+      
+      res.status(201).json(result);
+    } catch (error) {
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ message: "Invalid order data", errors: error.errors });
+      }
+      console.error("Error creating order:", error);
+      res.status(500).json({ message: "Failed to create order" });
+    }
+  });
+  
   // Dashboard routes
   app.get("/api/dashboard", async (req, res) => {
     try {
