@@ -1,6 +1,8 @@
 import { useLocation } from "wouter";
 import { Link } from "wouter";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/hooks/use-auth";
+import { UserRole } from "@shared/schema";
 import {
   LayoutDashboard,
   Package,
@@ -19,6 +21,7 @@ const mobileNavItems = [
     href: "/inventory",
     label: "Inventory",
     icon: <Package className="h-5 w-5" />,
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER] // Exclude ADMIN
   },
   {
     href: "/products",
@@ -44,10 +47,14 @@ const mobileNavItems = [
 
 export const MobileNav = () => {
   const [location] = useLocation();
+  const { user } = useAuth();
+  const userRole = user?.role as UserRole;
 
   return (
     <nav className="md:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-neutral-200 p-2 flex justify-around z-10">
-      {mobileNavItems.map((item) => {
+      {mobileNavItems
+        .filter(item => !item.roles || (userRole && item.roles.includes(userRole)))
+        .map((item) => {
         const isActive = item.href === location;
         
         return (

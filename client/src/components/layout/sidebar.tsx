@@ -46,7 +46,7 @@ const navigationItems: NavItem[] = [
     label: "Inventory",
     icon: <Package className="h-5 w-5" />,
     section: "core",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER] // Exclude ADMIN
   },
   {
     href: "/products",

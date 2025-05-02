@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { 
   Table, 
   TableBody, 
@@ -9,7 +9,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { 
@@ -21,7 +21,7 @@ import {
   DialogClose,
   DialogTrigger
 } from "@/components/ui/dialog";
-import { Loader2, Plus, Search, Filter, Pencil, Trash2, RefreshCw } from "lucide-react";
+import { Loader2, Plus, Search, Filter, Pencil, Trash2, RefreshCw, Upload } from "lucide-react";
 import { DataLoadError, EmptyDataState } from "@/components/ui/error-state";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -40,10 +40,21 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
 import { BulkActions } from "@/components/bulk-actions";
+import { CSVUpload } from "@/components/csv-upload";
+
+// Type for CSV upload product item
+type ProductCSVItem = {
+  name: string;
+  sku: string;
+  description?: string;
+  category: string;
+  price: number;
+  minStockLevel: number;
+  image?: string;
+};
 
 const ProductsPage = () => {
   const { toast } = useToast();
@@ -54,6 +65,8 @@ const ProductsPage = () => {
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [selectedProducts, setSelectedProducts] = useState<Product[]>([]);
+  const [bulkUploadOpen, setBulkUploadOpen] = useState(false);
+  const [csvData, setCsvData] = useState<ProductCSVItem[]>([]);
 
   // Check if user can edit/add products
   const canManageProducts = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
@@ -234,6 +247,50 @@ const ProductsPage = () => {
     await bulkDeleteMutation.mutateAsync(numericIds);
   };
   
+  // Bulk product upload mutation
+  const bulkProductUploadMutation = useMutation({
+    mutationFn: async (data: ProductCSVItem[]) => {
+      const response = await apiRequest("POST", "/api/products/bulk-upload", data);
+      return await response.json();
+    },
+    onSuccess: (data) => {
+      toast({
+        title: "Products uploaded",
+        description: `${data.count || "Multiple"} products have been successfully uploaded.`,
+      });
+      // Invalidate products query to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/products"] });
+      setBulkUploadOpen(false);
+      setCsvData([]);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Upload failed",
+        description: error instanceof Error ? error.message : "An error occurred during upload",
+      });
+    }
+  });
+  
+  // Handle CSV data after parsing
+  const handleCsvData = (data: ProductCSVItem[]) => {
+    setCsvData(data);
+  };
+  
+  // Handle upload of CSV data
+  const handleUploadCsv = () => {
+    if (csvData.length === 0) {
+      toast({
+        variant: "destructive",
+        title: "No data to upload",
+        description: "Please upload a CSV file first",
+      });
+      return;
+    }
+    
+    bulkProductUploadMutation.mutate(csvData);
+  };
+  
   // Check if a product is selected
   const isProductSelected = (product: Product) => 
     selectedProducts.some(p => p.id === product.id);
@@ -259,9 +316,14 @@ const ProductsPage = () => {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Product Catalog</h1>
         {canManageProducts && (
-          <Button onClick={handleAddNewProduct}>
-            <Plus className="h-4 w-4 mr-2" /> Add Product
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={() => setBulkUploadOpen(true)}>
+              <Upload className="h-4 w-4 mr-2" /> Bulk Upload
+            </Button>
+            <Button onClick={handleAddNewProduct}>
+              <Plus className="h-4 w-4 mr-2" /> Add Product
+            </Button>
+          </div>
         )}
       </div>
 
