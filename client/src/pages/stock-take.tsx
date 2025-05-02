@@ -54,7 +54,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Product, Store as StoreType, StockLocation, UserRole, StockTake as DbStockTake } from "@shared/schema";
-import { BarcodeScanner } from "@/components/barcode-scanner";
+// Removed barcode scanner import
 
 // Define a type for StockTake that includes properties we know will be in our response
 type StockTake = DbStockTake & {
@@ -90,8 +90,6 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedQuantity, setSelectedQuantity] = useState<string>("0");
   const [selectedLocation, setSelectedLocation] = useState<StockLocation>(StockLocation.SHELF);
-  const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [scannerError, setScannerError] = useState<string | null>(null);
   const [stockTakeSummary, setStockTakeSummary] = useState({
     totalProducts: 0,
     inStock: 0,
@@ -712,14 +710,8 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
             </Card>
 
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between">
+              <CardHeader>
                 <CardTitle>Product Availability</CardTitle>
-                <div className="flex space-x-2">
-                  <Button variant="outline" size="sm" onClick={() => setIsScannerOpen(true)}>
-                    <QrCode className="h-4 w-4 mr-2" />
-                    Scan Barcode
-                  </Button>
-                </div>
               </CardHeader>
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -1101,32 +1093,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
         </DialogContent>
       </Dialog>
 
-      {/* Barcode Scanner Dialog */}
-      <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Scan Product Barcode</DialogTitle>
-          </DialogHeader>
-          <BarcodeScanner
-            onScanSuccess={(result: string) => {
-              console.log("Scanned barcode:", result);
-              // Here you would lookup the product by barcode and add it to the list
-              toast({
-                title: "Barcode Scanned",
-                description: `Scanned barcode: ${result}`,
-              });
-              setIsScannerOpen(false);
-            }}
-            onScanError={(error: string) => {
-              setScannerError(error);
-            }}
-            onClose={() => setIsScannerOpen(false)}
-          />
-          {scannerError && (
-            <p className="text-destructive text-sm mt-2">{scannerError}</p>
-          )}
-        </DialogContent>
-      </Dialog>
+      {/* Barcode scanner has been removed */}
 
       {/* Low Stock Dialog */}
       <Dialog open={showLowStockDialog} onOpenChange={setShowLowStockDialog}>
