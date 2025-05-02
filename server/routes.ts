@@ -20,6 +20,9 @@ import { registerUserRoutes } from "./user-routes";
 import { registerAssignmentRoutes } from "./assignments-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
+  // Set up authentication routes first
+  setupAuth(app);
+  
   // Endpoint for bulk deleting items
   app.delete("/api/bulk-delete/:resource", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
@@ -74,8 +77,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to perform bulk deletion" });
     }
   });
-  // Set up authentication routes
-  setupAuth(app);
   
   // Set up user management routes
   registerUserRoutes(app);
