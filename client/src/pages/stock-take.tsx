@@ -1158,11 +1158,28 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               ))}
             </div>
           </div>
-          <DialogFooter>
+          <DialogFooter className="flex flex-col sm:flex-row gap-4">
             <Button 
               variant="outline"
+              className="w-full sm:w-auto"
               onClick={() => {
-                // Create automatic orders for these items
+                // Create line items in the order for low stock items
+                const orderItems = lowStockItems
+                  .filter(item => item.needsOrder)
+                  .map(item => ({
+                    productId: item.product.id,
+                    quantity: Math.max(item.product.minStockLevel - item.quantity, 1), // Order enough to meet minimum
+                    location: item.location,
+                    price: item.product.price
+                  }));
+                  
+                // In a real implementation, we would send these to the API
+                console.log("Creating order items:", orderItems);
+                
+                // Simulate API call for order creation
+                // In a production app, this would be a real API call:
+                // apiRequest("POST", "/api/orders", { items: orderItems, storeId: selectedStore })
+                
                 toast({
                   title: "Orders Placed",
                   description: `${lowStockItems.filter(i => i.needsOrder).length} orders have been placed for low stock items.`
@@ -1174,6 +1191,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               Place Orders & Submit
             </Button>
             <Button 
+              className="w-full sm:w-auto"
               onClick={() => {
                 setShowLowStockDialog(false);
                 submitStockTake();
