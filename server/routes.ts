@@ -910,6 +910,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           shelfName: z.string().optional(),
           section: z.string().optional(),
           quantity: z.coerce.number().positive(),
+          category: z.string().default("Other"), // Added category field
           notes: z.string().optional(),
         })
       );
@@ -930,7 +931,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
                 name: `Product ${item.productSku}`,
                 sku: item.productSku,
                 description: `Auto-created from inventory upload`,
-                category: 'Other',
+                category: item.category || 'Other', // Use provided category or default to 'Other'
                 price: 0, // Default price, can be updated later
                 minStockLevel: 5
               });

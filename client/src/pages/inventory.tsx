@@ -76,6 +76,7 @@ type InventoryCSVItem = {
   shelfName?: string;
   section?: string;
   quantity: number;
+  category?: string;
   notes?: string;
 };
 
@@ -690,6 +691,7 @@ const InventoryPage = () => {
                     "shelf_name": "shelfName",
                     "section": "section",
                     "quantity": "quantity",
+                    "category": "category",
                     "notes": "notes"
                   }}
                   isUploading={bulkUploadMutation.isPending}
@@ -699,11 +701,12 @@ const InventoryPage = () => {
                     "shelf_name", 
                     "section", 
                     "quantity", 
+                    "category", 
                     "notes"
                   ]}
                   templateFilename="inventory_template.csv"
                   instructions="Upload a CSV file with product SKUs, store names, and quantities to add inventory in bulk. 
-                    Required columns: product_sku, store_name, quantity. Optional: shelf_name, section, notes."
+                    Required columns: product_sku, store_name, quantity, category. Optional: shelf_name, section, notes."
                 />
 
                 {csvData.length > 0 && (
@@ -722,6 +725,7 @@ const InventoryPage = () => {
                             <TableHead>Shelf</TableHead>
                             <TableHead>Section</TableHead>
                             <TableHead>Quantity</TableHead>
+                            <TableHead>Category</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -732,6 +736,7 @@ const InventoryPage = () => {
                               <TableCell>{item.shelfName || "-"}</TableCell>
                               <TableCell>{item.section || "-"}</TableCell>
                               <TableCell>{item.quantity}</TableCell>
+                              <TableCell>{item.category || "-"}</TableCell>
                             </TableRow>
                           ))}
                         </TableBody>
