@@ -62,7 +62,6 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
-import { BarcodeScanner } from "@/components/barcode-scanner";
 import { BarcodeGenerator } from "@/components/barcode-generator";
 
 type InventoryWithDetails = Inventory & { 
@@ -350,14 +349,7 @@ const InventoryPage = () => {
                   onChange={(e) => setSearchQuery(e.target.value)}
                 />
                 <div className="absolute right-2 top-2">
-                  <Button 
-                    variant="ghost" 
-                    size="icon" 
-                    onClick={() => setIsScannerOpen(true)}
-                    title="Scan barcode"
-                  >
-                    <ScanLine className="h-4 w-4" />
-                  </Button>
+                  {/* Barcode scanner button removed */}
                 </div>
               </div>
             </div>

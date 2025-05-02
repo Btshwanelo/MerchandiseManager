@@ -1382,8 +1382,26 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteProduct(id: number): Promise<boolean> {
-    const result = await db.delete(products).where(eq(products.id, id));
-    return !!result;
+    try {
+      // First delete related activities
+      await db.delete(activities).where(eq(activities.productId, id));
+      
+      // Then delete related inventory records
+      await db.delete(inventory).where(eq(inventory.productId, id));
+      
+      // Then delete related alerts
+      await db.delete(alerts).where(eq(alerts.productId, id));
+      
+      // Then delete related stock take items
+      await db.delete(stockTakeItems).where(eq(stockTakeItems.productId, id));
+      
+      // Finally delete the product
+      const result = await db.delete(products).where(eq(products.id, id));
+      return !!result;
+    } catch (error) {
+      console.error("Error deleting product:", error);
+      return false;
+    }
   }
 
   // Shelf methods
