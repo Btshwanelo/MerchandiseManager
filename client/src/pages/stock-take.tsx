@@ -1108,7 +1108,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
             <DialogTitle>Scan Product Barcode</DialogTitle>
           </DialogHeader>
           <BarcodeScanner
-            onScan={(result) => {
+            onScanSuccess={(result: string) => {
               console.log("Scanned barcode:", result);
               // Here you would lookup the product by barcode and add it to the list
               toast({
@@ -1117,8 +1117,8 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               });
               setIsScannerOpen(false);
             }}
-            onError={(error) => {
-              setScannerError(error.message);
+            onScanError={(error: string) => {
+              setScannerError(error);
             }}
             onClose={() => setIsScannerOpen(false)}
           />
