@@ -407,7 +407,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
 const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: MerchandisingSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [promotionPictures, setPromotionPictures] = useState<string[]>([]);
-  const [promotionItems, setPromotionItems] = useState<{productId: number, price: number}[]>([]);
+  const [promotionItems, setPromotionItems] = useState<PromotionItem[]>([]);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [price, setPrice] = useState<string>("0.00");
   const { toast } = useToast();
@@ -1062,13 +1062,6 @@ const ProcessForm = () => {
   const { toast } = useToast();
   const [activeStep, setActiveStep] = useState<string>("stock-take");
   
-  // Set activeStep to "completed" if work item is already completed
-  useEffect(() => {
-    if (workItem && workItem.status === WorkItemStatus.COMPLETED) {
-      setActiveStep("completed");
-    }
-  }, [workItem]);
-  
   // Fetch work item data
   const { 
     data: workItem, 
@@ -1078,6 +1071,13 @@ const ProcessForm = () => {
     queryKey: ['/api/work-items', workItemId],
     enabled: !!workItemId,
   });
+  
+  // Set activeStep to "completed" if work item is already completed
+  useEffect(() => {
+    if (workItem && workItem.status === WorkItemStatus.COMPLETED) {
+      setActiveStep("completed");
+    }
+  }, [workItem]);
   
   // Fetch store data using all stores and filtering for the right store ID
   // This approach works around the authentication issue for single store endpoint
