@@ -71,6 +71,25 @@ const navigationItems: NavItem[] = [
     section: "merchandising"
   },
   {
+    href: "/merchandising",
+    label: "Merchandising",
+    icon: <Tag className="h-5 w-5" />,
+    section: "merchandising"
+  },
+  {
+    href: "/competitor-merchandising",
+    label: "Competitor",
+    icon: <Laptop className="h-5 w-5" />,
+    section: "merchandising"
+  },
+  {
+    href: "/flows",
+    label: "Flows",
+    icon: <FileText className="h-5 w-5" />,
+    section: "merchandising",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
+  {
     href: "/assignments",
     label: "Store Assignments",
     icon: <Calendar className="h-5 w-5" />,
@@ -86,6 +105,20 @@ const navigationItems: NavItem[] = [
   },
 
   // Documents & Orders
+  {
+    href: "/product-sheets",
+    label: "Product Sheets",
+    icon: <FileText className="h-5 w-5" />,
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
+  {
+    href: "/list-prices",
+    label: "List Prices",
+    icon: <FileSpreadsheet className="h-5 w-5" />,
+    section: "documents",
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
   {
     href: "/deals",
     label: "Deals",

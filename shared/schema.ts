@@ -378,24 +378,6 @@ export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 
-// System Settings table
-export const settings = pgTable("settings", {
-  id: serial("id").primaryKey(),
-  key: text("key").notNull().unique(),
-  value: jsonb("value").notNull(),
-  description: text("description"),
-  updatedAt: timestamp("updated_at").defaultNow(),
-  updatedBy: integer("updated_by").references(() => users.id)
-});
-
-export const insertSettingsSchema = createInsertSchema(settings).omit({
-  id: true,
-  updatedAt: true,
-});
-
-export type Setting = typeof settings.$inferSelect;
-export type InsertSetting = z.infer<typeof insertSettingsSchema>;
-
 // Enum for stock take type options
 export enum StockTakeType {
   SHELF = "shelf",

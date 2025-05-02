@@ -1,11 +1,11 @@
 import {
-  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, settings,
+  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
   type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
   type StockTakeItem, type InsertStockTakeItem, type StoreAssignment, type InsertStoreAssignment,
-  type WorkItem, type InsertWorkItem, type Setting, type InsertSetting, WorkItemStatus
+  type WorkItem, type InsertWorkItem, WorkItemStatus
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -126,13 +126,6 @@ export interface IStorage {
     inventoryValue: number
   }>;
   
-  // Settings methods
-  getSetting(key: string): Promise<Setting | undefined>;
-  getAllSettings(): Promise<Setting[]>;
-  createSetting(setting: InsertSetting): Promise<Setting>;
-  updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined>;
-  deleteSetting(key: string): Promise<boolean>;
-  
   // Process Form methods
   createMerchandisingData(data: {
     storeId: number;
@@ -173,13 +166,6 @@ export interface IStorage {
     date: Date;
   }): Promise<any>;
   
-  // Settings methods
-  getSetting(key: string): Promise<Setting | undefined>;
-  getAllSettings(): Promise<Setting[]>;
-  createSetting(setting: InsertSetting): Promise<Setting>;
-  updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined>;
-  deleteSetting(key: string): Promise<boolean>;
-  
   // Session store for authentication
   sessionStore: any; // Express session store
 }
@@ -198,7 +184,6 @@ export class MemStorage implements IStorage {
   private merchandisingData: Map<number, any>;
   private competitorData: Map<number, any>;
   private orders: Map<number, any>;
-  private settingsMap: Map<string, Setting>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -228,7 +213,6 @@ export class MemStorage implements IStorage {
     this.merchandisingData = new Map();
     this.competitorData = new Map();
     this.orders = new Map();
-    this.settingsMap = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -1124,48 +1108,6 @@ export class MemStorage implements IStorage {
     });
     
     return orderData;
-  }
-  
-  // Settings methods implementation
-  async getSetting(key: string): Promise<Setting | undefined> {
-    return this.settingsMap.get(key);
-  }
-
-  async getAllSettings(): Promise<Setting[]> {
-    return Array.from(this.settingsMap.values());
-  }
-
-  async createSetting(setting: InsertSetting): Promise<Setting> {
-    const id = 1; // In memory settings uses the key as primary identifier
-    const newSetting: Setting = {
-      id,
-      key: setting.key,
-      value: setting.value,
-      description: setting.description || null,
-      updatedAt: new Date(),
-      updatedBy: setting.updatedBy || null
-    };
-    this.settingsMap.set(setting.key, newSetting);
-    return newSetting;
-  }
-
-  async updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined> {
-    const existingSetting = await this.getSetting(key);
-    if (!existingSetting) return undefined;
-    
-    const updatedSetting: Setting = {
-      ...existingSetting,
-      value,
-      updatedAt: new Date(),
-      updatedBy: userId || existingSetting.updatedBy
-    };
-    
-    this.settingsMap.set(key, updatedSetting);
-    return updatedSetting;
-  }
-
-  async deleteSetting(key: string): Promise<boolean> {
-    return this.settingsMap.delete(key);
   }
 }
 
@@ -2174,45 +2116,6 @@ export class DatabaseStorage implements IStorage {
       createdAt: new Date(),
       priority: data.priority || 'medium'
     };
-  }
-  
-  // Settings methods - Database implementation
-  async getSetting(key: string): Promise<Setting | undefined> {
-    const [setting] = await db.select().from(settings).where(eq(settings.key, key));
-    return setting;
-  }
-
-  async getAllSettings(): Promise<Setting[]> {
-    return db.select().from(settings);
-  }
-
-  async createSetting(setting: InsertSetting): Promise<Setting> {
-    const [newSetting] = await db.insert(settings).values(setting).returning();
-    return newSetting;
-  }
-
-  async updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined> {
-    const updateData: any = {
-      value,
-      updatedAt: new Date()
-    };
-    
-    if (userId) {
-      updateData.updatedBy = userId;
-    }
-    
-    const [updatedSetting] = await db
-      .update(settings)
-      .set(updateData)
-      .where(eq(settings.key, key))
-      .returning();
-      
-    return updatedSetting;
-  }
-
-  async deleteSetting(key: string): Promise<boolean> {
-    const result = await db.delete(settings).where(eq(settings.key, key));
-    return result.rowCount > 0;
   }
 }
 
