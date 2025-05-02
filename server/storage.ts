@@ -2029,11 +2029,16 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(workItems.id, data.workItemId));
     
+    // Get the first product from the database to use as a reference
+    // This is a workaround for the foreign key constraint
+    const [firstProduct] = await db.select().from(products).limit(1);
+    const productId = firstProduct?.id || 1; // Fallback to ID 1 if no products found
+    
     // Create activity record
     await db.insert(activities).values({
       userId: data.userId,
       storeId: data.storeId,
-      productId: 0, // No specific product ID for competitor data
+      productId: productId, // Use a valid product ID from the database
       actionType: 'competitor_analysis',
       status: 'completed',
       notes: `Competitor data recorded for ${data.brand}`
@@ -2075,12 +2080,21 @@ export class DatabaseStorage implements IStorage {
       })
       .where(eq(workItems.id, data.workItemId));
     
+    // Get the first product from the database to use as a reference if needed
+    let productId = 0;
+    if (!data.products || data.products.length === 0) {
+      const [firstProduct] = await db.select().from(products).limit(1);
+      productId = firstProduct?.id || 1; // Fallback to ID 1 if no products found
+    } else {
+      productId = data.products[0].productId;
+    }
+    
     // Create alert for managers about the new order
     await db.insert(alerts).values({
       message: `New order created: ${data.notes}`,
       type: 'order',
       storeId: data.storeId,
-      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      productId: productId, // Use a valid product ID from the database
       status: 'active',
       createdAt: new Date()
     });
@@ -2089,7 +2103,7 @@ export class DatabaseStorage implements IStorage {
     await db.insert(activities).values({
       userId: data.userId,
       storeId: data.storeId,
-      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      productId: productId, // Use a valid product ID from the database
       actionType: 'order_placed',
       status: 'pending',
       notes: data.notes

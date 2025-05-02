@@ -33,6 +33,12 @@ type OrderPlacementSectionProps = {
 };
 
 // Interfaces matching schema.ts
+interface PromotionItem {
+  productId: number;
+  price: number;
+  notes?: string;
+}
+
 interface WorkItem {
   id: number;
   title: string;
@@ -498,7 +504,8 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
     } else {
       newItems.push({
         productId: selectedProduct.id,
-        price: Math.round(numPrice * 100) // Convert to cents
+        price: Math.round(numPrice * 100), // Convert to cents
+        notes: '' // Add empty notes by default
       });
     }
     
