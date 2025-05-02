@@ -969,6 +969,146 @@ export class MemStorage implements IStorage {
       inventoryValue
     };
   }
+  
+  // Process Form methods
+  
+  // Merchandising Data
+  async createMerchandisingData(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    date: Date;
+    merchandisingItems: Array<{
+      productId: number;
+      price: number;
+      notes?: string;
+    }>;
+  }): Promise<any> {
+    const id = this.currentMerchandisingId++;
+    
+    const merchandisingData = {
+      id,
+      ...data,
+      createdAt: new Date()
+    };
+    
+    this.merchandisingData.set(id, merchandisingData);
+    
+    // Update the work item status to indicate progress
+    const workItem = await this.getWorkItem(data.workItemId);
+    if (workItem && workItem.status === WorkItemStatus.PENDING) {
+      await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+    }
+    
+    // Track this as an activity
+    await this.createActivity({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: data.merchandisingItems.length > 0 ? data.merchandisingItems[0].productId : 0,
+      actionType: 'merchandising_data',
+      status: 'completed',
+      timestamp: new Date(),
+      notes: `Merchandising data recorded for ${data.merchandisingItems.length} products`
+    });
+    
+    return merchandisingData;
+  }
+  
+  // Competitor Merchandising
+  async createCompetitorMerchandising(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    brand: string;
+    productDescription: string;
+    promoType?: string;
+    promoDetails?: string;
+    price?: number;
+    pictureUrl?: string;
+    date: Date;
+  }): Promise<any> {
+    const id = this.currentCompetitorId++;
+    
+    const competitorData = {
+      id,
+      ...data,
+      createdAt: new Date()
+    };
+    
+    this.competitorData.set(id, competitorData);
+    
+    // Update the work item status if needed
+    const workItem = await this.getWorkItem(data.workItemId);
+    if (workItem && workItem.status === WorkItemStatus.PENDING) {
+      await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+    }
+    
+    // Track this as an activity
+    await this.createActivity({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: 0, // No specific product ID for competitor data
+      actionType: 'competitor_analysis',
+      status: 'completed',
+      timestamp: new Date(),
+      notes: `Competitor data recorded for ${data.brand}`
+    });
+    
+    return competitorData;
+  }
+  
+  // Orders
+  async createOrder(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    products?: Array<{
+      productId: number;
+      quantity: number;
+    }>;
+    notes: string;
+    priority?: string;
+    status: string;
+    date: Date;
+  }): Promise<any> {
+    const id = this.currentOrderId++;
+    
+    const orderData = {
+      id,
+      ...data,
+      createdAt: new Date(),
+      // Set defaults if not provided
+      priority: data.priority || 'medium'
+    };
+    
+    this.orders.set(id, orderData);
+    
+    // Update the work item status
+    await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.COMPLETED });
+    
+    // Create alert for managers about the new order
+    await this.createAlert({
+      message: `New order created: ${data.notes}`,
+      type: 'order',
+      storeId: data.storeId,
+      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      status: 'active',
+      createdAt: new Date()
+    });
+    
+    // Track this as an activity
+    await this.createActivity({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      actionType: 'order_placed',
+      status: 'pending',
+      timestamp: new Date(),
+      notes: data.notes
+    });
+    
+    return orderData;
+  }
 }
 
 // Database storage implementation
@@ -1815,6 +1955,152 @@ export class DatabaseStorage implements IStorage {
       lowStockItems,
       activeStores,
       inventoryValue
+    };
+  }
+  
+  // Process Form methods
+  
+  // Merchandising Data
+  async createMerchandisingData(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    date: Date;
+    merchandisingItems: Array<{
+      productId: number;
+      price: number;
+      notes?: string;
+    }>;
+  }): Promise<any> {
+    // In a real implementation, we would add tables for merchandising data
+    // For now, we'll log the operation and update work items + create an activity record
+    console.log('Creating merchandising data:', data);
+    
+    // Update the work item to show progress
+    await db
+      .update(workItems)
+      .set({ 
+        status: WorkItemStatus.IN_PROGRESS,
+        updatedAt: new Date()
+      })
+      .where(eq(workItems.id, data.workItemId));
+    
+    // Create activity record
+    await db.insert(activities).values({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: data.merchandisingItems.length > 0 ? data.merchandisingItems[0].productId : 0,
+      actionType: 'merchandising_data',
+      status: 'completed',
+      notes: `Merchandising data recorded for ${data.merchandisingItems.length} products`
+    });
+    
+    // Return a mock response for now
+    return {
+      id: Date.now(),
+      ...data,
+      createdAt: new Date()
+    };
+  }
+  
+  // Competitor Merchandising
+  async createCompetitorMerchandising(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    brand: string;
+    productDescription: string;
+    promoType?: string;
+    promoDetails?: string;
+    price?: number;
+    pictureUrl?: string;
+    date: Date;
+  }): Promise<any> {
+    // In a real implementation, we would add tables for competitor data
+    // For now, we'll log the operation and update work items + create an activity record
+    console.log('Creating competitor merchandising data:', data);
+    
+    // Update the work item status if needed
+    await db
+      .update(workItems)
+      .set({ 
+        status: WorkItemStatus.IN_PROGRESS,
+        updatedAt: new Date()
+      })
+      .where(eq(workItems.id, data.workItemId));
+    
+    // Create activity record
+    await db.insert(activities).values({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: 0, // No specific product ID for competitor data
+      actionType: 'competitor_analysis',
+      status: 'completed',
+      notes: `Competitor data recorded for ${data.brand}`
+    });
+    
+    // Return a mock response for now
+    return {
+      id: Date.now(),
+      ...data,
+      createdAt: new Date()
+    };
+  }
+  
+  // Orders
+  async createOrder(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    products?: Array<{
+      productId: number;
+      quantity: number;
+    }>;
+    notes: string;
+    priority?: string;
+    status: string;
+    date: Date;
+  }): Promise<any> {
+    // In a real implementation, we would add tables for orders
+    // For now, we'll log the operation and update work items + create activity records
+    console.log('Creating order data:', data);
+    
+    // Update the work item to completed
+    await db
+      .update(workItems)
+      .set({ 
+        status: WorkItemStatus.COMPLETED,
+        updatedAt: new Date(),
+        completedAt: new Date()
+      })
+      .where(eq(workItems.id, data.workItemId));
+    
+    // Create alert for managers about the new order
+    await db.insert(alerts).values({
+      message: `New order created: ${data.notes}`,
+      type: 'order',
+      storeId: data.storeId,
+      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      status: 'active',
+      createdAt: new Date()
+    });
+    
+    // Create activity record
+    await db.insert(activities).values({
+      userId: data.userId,
+      storeId: data.storeId,
+      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+      actionType: 'order_placed',
+      status: 'pending',
+      notes: data.notes
+    });
+    
+    // Return a mock response for now
+    return {
+      id: Date.now(),
+      ...data,
+      createdAt: new Date(),
+      priority: data.priority || 'medium'
     };
   }
 }
