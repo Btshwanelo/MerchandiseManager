@@ -252,6 +252,62 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Bulk upload products via CSV
+  app.post("/api/products/bulk-upload", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
+    try {
+      // Validate the request body as an array of product items
+      const bulkProductSchema = z.array(
+        z.object({
+          name: z.string().min(1, "Product name is required"),
+          sku: z.string().min(1, "SKU is required"),
+          description: z.string().optional(),
+          category: z.string().min(1, "Category is required"),
+          price: z.coerce.number().min(1, "Price must be at least 1 cent"),
+          minStockLevel: z.coerce.number().min(1, "Minimum stock level must be at least 1"),
+          image: z.string().optional(),
+        })
+      );
+      
+      const items = bulkProductSchema.parse(req.body);
+      const results = [];
+      const errors = [];
+      
+      // Process each product
+      for (const item of items) {
+        try {
+          const product = await storage.createProduct(item);
+          results.push(product);
+        } catch (error) {
+          errors.push({
+            sku: item.sku,
+            name: item.name,
+            error: error instanceof Error ? error.message : "Unknown error"
+          });
+        }
+      }
+      
+      res.status(200).json({
+        success: true,
+        count: results.length,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error) {
+      console.error("Bulk product upload error:", error);
+      
+      if (error instanceof z.ZodError) {
+        return res.status(400).json({ 
+          message: "Invalid product data", 
+          errors: error.errors 
+        });
+      }
+      
+      res.status(500).json({ 
+        message: "Failed to process bulk product upload",
+        error: error instanceof Error ? error.message : "Unknown error" 
+      });
+    }
+  });
+  
   // Store routes
   app.get("/api/stores", async (req, res) => {
     try {

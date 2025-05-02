@@ -110,6 +110,11 @@ export async function parseCSV<T>(
   // Handle File object
   if (csvData instanceof File) {
     csvContent = await readFileAsText(csvData);
+    
+    // Clean up potential XML/HTML-like content that can confuse JSON parsers
+    csvContent = csvContent.replace(/[<>]/g, (match) => {
+      return match === '<' ? '(' : ')';
+    });
   } else {
     csvContent = csvData;
   }
