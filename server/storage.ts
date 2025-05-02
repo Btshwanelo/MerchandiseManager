@@ -126,6 +126,46 @@ export interface IStorage {
     inventoryValue: number
   }>;
   
+  // Process Form methods
+  createMerchandisingData(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    date: Date;
+    merchandisingItems: Array<{
+      productId: number;
+      price: number;
+      notes?: string;
+    }>;
+  }): Promise<any>;
+  
+  createCompetitorMerchandising(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    brand: string;
+    productDescription: string;
+    promoType?: string;
+    promoDetails?: string;
+    price?: number;
+    pictureUrl?: string;
+    date: Date;
+  }): Promise<any>;
+  
+  createOrder(data: {
+    storeId: number;
+    workItemId: number;
+    userId: number;
+    products?: Array<{
+      productId: number;
+      quantity: number;
+    }>;
+    notes: string;
+    priority?: string;
+    status: string;
+    date: Date;
+  }): Promise<any>;
+  
   // Session store for authentication
   sessionStore: any; // Express session store
 }
@@ -141,6 +181,9 @@ export class MemStorage implements IStorage {
   private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
   private storeAssignments: Map<number, StoreAssignment>;
   private workItems: Map<number, WorkItem>;
+  private merchandisingData: Map<number, any>;
+  private competitorData: Map<number, any>;
+  private orders: Map<number, any>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -152,6 +195,9 @@ export class MemStorage implements IStorage {
   currentAlertId: number;
   currentStoreAssignmentId: number;
   currentWorkItemId: number;
+  currentMerchandisingId: number;
+  currentCompetitorId: number;
+  currentOrderId: number;
 
   constructor() {
     this.users = new Map();
@@ -164,6 +210,9 @@ export class MemStorage implements IStorage {
     this.passwordResetTokens = new Map();
     this.storeAssignments = new Map();
     this.workItems = new Map();
+    this.merchandisingData = new Map();
+    this.competitorData = new Map();
+    this.orders = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -179,6 +228,9 @@ export class MemStorage implements IStorage {
     this.resetTokenIdCounter = 1;
     this.currentStoreAssignmentId = 1;
     this.currentWorkItemId = 1;
+    this.currentMerchandisingId = 1;
+    this.currentCompetitorId = 1;
+    this.currentOrderId = 1;
     
     // Initialize with sample admin user
     this.createUser({
