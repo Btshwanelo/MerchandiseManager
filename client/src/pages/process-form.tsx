@@ -985,6 +985,32 @@ const ProcessForm = () => {
     }
   });
   
+  // Complete work item mutation
+  const completeWorkItemMutation = useMutation({
+    mutationFn: async ({ id }: { id: number }) => {
+      const res = await apiRequest("PATCH", `/api/work-items/${id}`, { 
+        status: WorkItemStatus.COMPLETED 
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      toast({
+        title: "Work item completed",
+        description: "Work item has been marked as completed",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Error completing work item:", error);
+      toast({
+        title: "Error",
+        description: "Failed to mark work item as completed",
+        variant: "destructive",
+      });
+    }
+  });
+  
   // Handle starting the work item
   const handleStartWorkItem = async () => {
     if (workItem && workItem.status === WorkItemStatus.PENDING) {
