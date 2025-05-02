@@ -433,10 +433,19 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       // Create merchandising promotion
       const merchandisingData = {
         storeId,
-        promotionPictures,
-        items: JSON.stringify(promotionItems), // Convert to string as expected by server
-        workItemId // Include workItemId so server can mark it as completed
+        workItemId,
+        merchandisingItems: promotionItems.map(item => ({
+          productId: item.productId,
+          price: item.price,
+          notes: item.notes || '' // Add empty notes if not present
+        }))
       };
+      
+      // Include pictures if available (not required by server but stored for future reference)
+      if (promotionPictures.length > 0) {
+        // @ts-ignore - we're adding an extra field that the server will ignore
+        merchandisingData.promotionPictures = promotionPictures;
+      }
       
       const response = await apiRequest("POST", "/api/merchandising", merchandisingData);
       const result = await response.json();
@@ -685,12 +694,18 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       // Create competitor merchandising record
       const competitorData = {
         storeId,
+        workItemId,
         brand,
         productDescription,
-        promotionalPrice: promotionalPrice || 0,
-        promotionPictures: JSON.stringify(pictures), // Convert to string as expected by server
-        workItemId // Include workItemId so server can mark it as completed
+        price: promotionalPrice || undefined,
+        date: new Date()
       };
+      
+      // Include pictures if available
+      if (pictures.length > 0) {
+        // @ts-ignore
+        competitorData.pictureUrl = pictures.join(',');
+      }
       
       const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
       const result = await response.json();
@@ -844,11 +859,19 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
       // Create order if we have notes or pictures
       const orderData = {
         storeId,
+        workItemId,
+        userId: 0, // Will be set by the server from the authenticated user
         notes: notes || "No notes provided",
-        pictures: JSON.stringify(pictures), // Convert to string as expected by server
         status: "submitted",
-        workItemId // Include workItemId so server can mark it as completed
+        priority: "medium",
+        date: new Date()
       };
+      
+      // Add pictures if any
+      if (pictures.length > 0) {
+        // @ts-ignore
+        orderData.pictures = pictures;
+      }
       
       const response = await apiRequest("POST", "/api/orders", orderData);
       const result = await response.json();
