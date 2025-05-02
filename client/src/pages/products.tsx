@@ -273,8 +273,18 @@ const ProductsPage = () => {
   });
   
   // Handle CSV data after parsing
-  const handleCsvData = (data: ProductCSVItem[]) => {
-    setCsvData(data);
+  const handleCsvData = (data: any[]) => {
+    // Convert the data to the ProductCSVItem type
+    const productData = data.map(item => ({
+      name: String(item.name || ""),
+      sku: String(item.sku || ""),
+      description: item.description ? String(item.description) : undefined,
+      category: String(item.category || ""),
+      price: Number(item.price || 0),
+      minStockLevel: Number(item.minStockLevel || 10),
+      image: item.image ? String(item.image) : undefined,
+    }));
+    setCsvData(productData);
   };
   
   // Handle upload of CSV data
@@ -564,7 +574,7 @@ const ProductsPage = () => {
                     <FormItem className="col-span-2">
                       <FormLabel>Description</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter description" {...field} />
+                        <Input placeholder="Enter description" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -578,7 +588,7 @@ const ProductsPage = () => {
                     <FormItem className="col-span-2">
                       <FormLabel>Image URL</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter image URL" {...field} />
+                        <Input placeholder="Enter image URL" {...field} value={field.value || ""} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -596,6 +606,48 @@ const ProductsPage = () => {
               </DialogFooter>
             </form>
           </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* CSV Upload Dialog */}
+      <Dialog open={bulkUploadOpen} onOpenChange={setBulkUploadOpen}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Bulk Upload Products</DialogTitle>
+            <CardDescription className="mt-2">
+              Upload a CSV file to add multiple products at once. The CSV should include the following columns: name, sku, description (optional), category, price (in cents), minStockLevel, and image (optional).
+            </CardDescription>
+          </DialogHeader>
+          
+          <CSVUpload
+            onDataParsed={handleCsvData}
+            headerMapping={{
+              name: "Product Name",
+              sku: "SKU",
+              description: "Description",
+              category: "Category",
+              price: "Price (cents)",
+              minStockLevel: "Min Stock Level",
+              image: "Image URL"
+            }}
+            isUploading={bulkProductUploadMutation.isPending}
+            templateHeaders={["name", "sku", "description", "category", "price", "minStockLevel", "image"]}
+            templateFilename="product-template.csv"
+            instructions="Upload your product data in CSV format. Required fields: name, sku, category, price, minStockLevel."
+          />
+
+          <DialogFooter>
+            <Button 
+              type="button" 
+              onClick={handleUploadCsv}
+              disabled={bulkProductUploadMutation.isPending || csvData.length === 0}
+            >
+              {bulkProductUploadMutation.isPending && (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              )}
+              Upload Products
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
 
