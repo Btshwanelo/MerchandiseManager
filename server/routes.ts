@@ -18,6 +18,7 @@ import multer from "multer";
 import path from "path";
 import { registerUserRoutes } from "./user-routes";
 import { registerAssignmentRoutes } from "./assignments-routes";
+import { registerSettingsRoutes } from "./settings-routes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes first
@@ -83,6 +84,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up store assignment and work item routes
   registerAssignmentRoutes(app);
+  
+  // Set up settings routes
+  registerSettingsRoutes(app);
   
   // Process Form Routes for Merchandising, Competitors, and Orders
   
