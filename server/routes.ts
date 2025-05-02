@@ -942,11 +942,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
             }
           }
           
-          // Find the store
+          // Find the store with more flexible matching (case-insensitive)
           const stores = await storage.getAllStores();
-          const store = stores.find(s => s.name === item.storeName);
+          const store = stores.find(s => 
+            s.name.toLowerCase().trim() === item.storeName.toLowerCase().trim() ||
+            s.name.toLowerCase().includes(item.storeName.toLowerCase().trim()) ||
+            item.storeName.toLowerCase().includes(s.name.toLowerCase().trim())
+          );
+          
           if (!store) {
-            errors.push({ item, error: `Store with name ${item.storeName} not found` });
+            errors.push({ item, error: `Store with name "${item.storeName}" not found. Available stores: ${stores.map(s => s.name).join(', ')}` });
             continue;
           }
 
@@ -954,15 +959,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
           let shelf = null;
           
           if (item.shelfName) {
-            // Try to find a shelf with the given name in the store
+            // Try to find a shelf with the given name in the store (case-insensitive)
             const shelves = await storage.getShelfByStoreId(store.id);
-            shelf = shelves.find(s => s.name === item.shelfName);
+            shelf = shelves.find(s => 
+              s.name.toLowerCase().trim() === item.shelfName.toLowerCase().trim() ||
+              s.name.toLowerCase().includes(item.shelfName.toLowerCase().trim()) ||
+              item.shelfName.toLowerCase().includes(s.name.toLowerCase().trim())
+            );
           }
           
           // If no shelf was found or specified, try to find a shelf in the specified section
           if (!shelf && item.section) {
             const shelves = await storage.getShelfByStoreId(store.id);
-            shelf = shelves.find(s => s.section === item.section);
+            shelf = shelves.find(s => 
+              s.section.toLowerCase().trim() === item.section.toLowerCase().trim() ||
+              s.section.toLowerCase().includes(item.section.toLowerCase().trim()) ||
+              item.section.toLowerCase().includes(s.section.toLowerCase().trim())
+            );
           }
           
           // If we still don't have a shelf, create one
