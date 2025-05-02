@@ -1125,6 +1125,48 @@ export class MemStorage implements IStorage {
     
     return orderData;
   }
+  
+  // Settings methods implementation
+  async getSetting(key: string): Promise<Setting | undefined> {
+    return this.settingsMap.get(key);
+  }
+
+  async getAllSettings(): Promise<Setting[]> {
+    return Array.from(this.settingsMap.values());
+  }
+
+  async createSetting(setting: InsertSetting): Promise<Setting> {
+    const id = 1; // In memory settings uses the key as primary identifier
+    const newSetting: Setting = {
+      id,
+      key: setting.key,
+      value: setting.value,
+      description: setting.description || null,
+      updatedAt: new Date(),
+      updatedBy: setting.updatedBy || null
+    };
+    this.settingsMap.set(setting.key, newSetting);
+    return newSetting;
+  }
+
+  async updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined> {
+    const existingSetting = await this.getSetting(key);
+    if (!existingSetting) return undefined;
+    
+    const updatedSetting: Setting = {
+      ...existingSetting,
+      value,
+      updatedAt: new Date(),
+      updatedBy: userId || existingSetting.updatedBy
+    };
+    
+    this.settingsMap.set(key, updatedSetting);
+    return updatedSetting;
+  }
+
+  async deleteSetting(key: string): Promise<boolean> {
+    return this.settingsMap.delete(key);
+  }
 }
 
 // Database storage implementation
