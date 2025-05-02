@@ -154,19 +154,19 @@ const AuthPage = () => {
               <div className="bg-white/20 p-2 rounded-full">
                 <Package className="h-5 w-5" />
               </div>
-              <p className="text-lg">Manage products across multiple stores</p>
+              <p className="text-lg">Fixed user-specific work item permissions</p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="bg-white/20 p-2 rounded-full">
                 <UserPlus className="h-5 w-5" />
               </div>
-              <p className="text-lg">Role-based access for your team</p>
+              <p className="text-lg">Enhanced process form with improved validations</p>
             </div>
             <div className="flex items-center space-x-3">
               <div className="bg-white/20 p-2 rounded-full">
                 <LogIn className="h-5 w-5" />
               </div>
-              <p className="text-lg">Intuitive interface for merchandisers</p>
+              <p className="text-lg">Optimized inventory tracking for faster performance</p>
             </div>
           </div>
         </div>
@@ -383,6 +383,21 @@ const AuthPage = () => {
             </CardContent>
           </Tabs>
         </Card>
+      </div>
+      
+      {/* Footer */}
+      <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 px-4 text-xs text-center text-muted-foreground">
+        <div className="container max-w-7xl mx-auto flex justify-between items-center">
+          <div>&copy; {new Date().getFullYear()} InvenTrack. All rights reserved.</div>
+          <div className="flex items-center gap-4">
+            <a 
+              href="/changelog" 
+              className="hover:text-primary hover:underline transition-colors flex items-center gap-1"
+            >
+              <span>Changelog</span>
+            </a>
+          </div>
+        </div>
       </div>
     </div>
   );

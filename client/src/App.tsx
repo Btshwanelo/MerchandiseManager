@@ -18,6 +18,7 @@ import UserDetail from "@/pages/user-detail";
 import UserImport from "@/pages/user-import";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
+import Changelog from "@/pages/changelog";
 import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
@@ -62,6 +63,7 @@ function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/changelog" component={Changelog} />
       
       <ProtectedRoute path="/" component={RoleBasedRedirect} />
       
