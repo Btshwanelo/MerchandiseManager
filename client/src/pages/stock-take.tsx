@@ -1014,7 +1014,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                                   stockTake: {
                                     id: stockTake.id,
                                     user: stockTake.user,
-                                    store: stockTake.store,
+                                    storeId: stockTake.storeId,
                                     items: stockTake.items,
                                     date: stockTake.date,
                                     status: stockTake.status,
@@ -1050,7 +1050,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                                   stockTake: {
                                     id: stockTake.id,
                                     user: stockTake.user,
-                                    store: stockTake.store,
+                                    storeId: stockTake.storeId,
                                     items: stockTake.items,
                                     date: stockTake.date,
                                     status: stockTake.status,
