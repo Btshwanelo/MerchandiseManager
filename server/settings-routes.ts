@@ -46,7 +46,7 @@ export function registerSettingsRoutes(app: Express) {
       
       const newSetting = await storage.createSetting({
         ...parsedData,
-        updatedBy: req.user?.id || null
+        updatedBy: req.user?.id
       });
       
       res.status(201).json(newSetting);
@@ -74,7 +74,7 @@ export function registerSettingsRoutes(app: Express) {
         return res.status(404).json({ error: "Setting not found" });
       }
       
-      const updatedSetting = await storage.updateSetting(key, value, req.user?.id || null);
+      const updatedSetting = await storage.updateSetting(key, value, req.user?.id);
       res.json(updatedSetting);
     } catch (error) {
       console.error(`Error updating setting ${req.params.key}:`, error);

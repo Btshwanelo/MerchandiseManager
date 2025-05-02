@@ -14,8 +14,8 @@ export function useSettings() {
     error,
   } = useQuery<Setting[]>({
     queryKey: ["/api/settings"],
-    queryFn: async ({ signal }) => {
-      const response = await apiRequest("GET", "/api/settings", undefined, { signal });
+    queryFn: async () => {
+      const response = await apiRequest("GET", "/api/settings");
       if (!response.ok) {
         const text = await response.text();
         throw new Error(`Failed to fetch settings: ${text}`);
@@ -29,8 +29,8 @@ export function useSettings() {
   const getSetting = (key: string) => {
     return useQuery<Setting>({
       queryKey: ["/api/settings", key],
-      queryFn: async ({ signal }) => {
-        const response = await apiRequest("GET", `/api/settings/${key}`, undefined, { signal });
+      queryFn: async () => {
+        const response = await apiRequest("GET", `/api/settings/${key}`);
         if (!response.ok) {
           const text = await response.text();
           throw new Error(`Failed to fetch setting: ${text}`);

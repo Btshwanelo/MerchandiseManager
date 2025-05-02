@@ -208,7 +208,7 @@ export default function SettingsPage() {
               </CardContent>
               <CardFooter className="bg-muted/50 py-2">
                 <div className="flex items-center justify-between w-full text-xs text-muted-foreground">
-                  <span>Updated: {new Date(setting.updatedAt).toLocaleString()}</span>
+                  <span>Updated: {setting.updatedAt ? new Date(setting.updatedAt).toLocaleString() : 'Never'}</span>
                   <Button variant="ghost" size="sm" onClick={() => handleUpdateSetting(setting.key, setting.value)}>
                     Edit Value
                   </Button>
