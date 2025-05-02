@@ -1,11 +1,11 @@
 import {
-  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems,
+  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, settings,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
   type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
   type StockTakeItem, type InsertStockTakeItem, type StoreAssignment, type InsertStoreAssignment,
-  type WorkItem, type InsertWorkItem, WorkItemStatus
+  type WorkItem, type InsertWorkItem, type Setting, type InsertSetting, WorkItemStatus
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -126,6 +126,13 @@ export interface IStorage {
     inventoryValue: number
   }>;
   
+  // Settings methods
+  getSetting(key: string): Promise<Setting | undefined>;
+  getAllSettings(): Promise<Setting[]>;
+  createSetting(setting: InsertSetting): Promise<Setting>;
+  updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined>;
+  deleteSetting(key: string): Promise<boolean>;
+  
   // Process Form methods
   createMerchandisingData(data: {
     storeId: number;
@@ -166,6 +173,13 @@ export interface IStorage {
     date: Date;
   }): Promise<any>;
   
+  // Settings methods
+  getSetting(key: string): Promise<Setting | undefined>;
+  getAllSettings(): Promise<Setting[]>;
+  createSetting(setting: InsertSetting): Promise<Setting>;
+  updateSetting(key: string, value: any, userId?: number): Promise<Setting | undefined>;
+  deleteSetting(key: string): Promise<boolean>;
+  
   // Session store for authentication
   sessionStore: any; // Express session store
 }
@@ -184,6 +198,7 @@ export class MemStorage implements IStorage {
   private merchandisingData: Map<number, any>;
   private competitorData: Map<number, any>;
   private orders: Map<number, any>;
+  private settingsMap: Map<string, Setting>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -213,6 +228,7 @@ export class MemStorage implements IStorage {
     this.merchandisingData = new Map();
     this.competitorData = new Map();
     this.orders = new Map();
+    this.settingsMap = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
