@@ -1,73 +1,24 @@
 import { useState } from "react";
 import { useAuth } from "@/hooks/use-auth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Slider } from "@/components/ui/slider";
-import { Switch } from "@/components/ui/switch";
-import { useToast } from "@/hooks/use-toast";
-import { AlertTriangle, Save, Loader2 } from "lucide-react";
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { UserRole } from "@shared/schema";
+import SettingsPage from "./settings-page";
 
-const SettingsPage = () => {
-  const { toast } = useToast();
+const Settings = () => {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("general");
-  const [saving, setSaving] = useState(false);
 
-  // Sample settings state - in a real app, this would be fetched/saved via API
-  const [settings, setSettings] = useState({
-    general: {
-      companyName: "InvenTrack Inc.",
-      contactEmail: "admin@inventrack.com",
-      timezone: "America/New_York",
-      defaultCurrency: "USD",
-    },
-    inventory: {
-      lowStockThreshold: 20,
-      autoReorder: false,
-      showOutOfStock: true,
-      trackExpiredItems: true,
-    },
-    notifications: {
-      emailAlerts: true,
-      dailyReports: true,
-      criticalAlerts: true,
-      weeklyReports: false,
-    },
-    security: {
-      passwordExpiryDays: 90,
-      twoFactorAuth: false,
-      sessionTimeout: 30,
-      ipRestriction: false,
-    }
-  });
+  // For admin users, show the detailed settings page
+  // For now we will only show the settings page, but we could implement
+  // role-specific settings views in the future
+  if (user?.role === UserRole.ADMIN) {
+    return <SettingsPage />;
+  }
 
-  const handleSaveSettings = () => {
-    setSaving(true);
-    // Simulate API call
-    setTimeout(() => {
-      setSaving(false);
-      toast({
-        title: "Settings saved",
-        description: "Your settings have been updated successfully.",
-      });
-    }, 1000);
-  };
+  return (
+    <div className="container mx-auto p-4">
+      <h1 className="text-2xl font-bold mb-4">Settings</h1>
+      <p>You don't have permission to access settings. Please contact an administrator.</p>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -113,12 +64,12 @@ const SettingsPage = () => {
                 <Label htmlFor="companyName">Company Name</Label>
                 <Input
                   id="companyName"
-                  value={settings.general.companyName}
+                  value={appSettings.general.companyName}
                   onChange={(e) =>
-                    setSettings({
-                      ...settings,
+                    setAppSettings({
+                      ...appSettings,
                       general: {
-                        ...settings.general,
+                        ...appSettings.general,
                         companyName: e.target.value,
                       },
                     })
@@ -131,12 +82,12 @@ const SettingsPage = () => {
                 <Input
                   id="contactEmail"
                   type="email"
-                  value={settings.general.contactEmail}
+                  value={appSettings.general.contactEmail}
                   onChange={(e) =>
-                    setSettings({
-                      ...settings,
+                    setAppSettings({
+                      ...appSettings,
                       general: {
-                        ...settings.general,
+                        ...appSettings.general,
                         contactEmail: e.target.value,
                       },
                     })
