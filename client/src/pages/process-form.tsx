@@ -414,6 +414,22 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
   const submitMerchandising = async () => {
     setLoading(true);
     try {
+      // If no promotion items or pictures, just skip to the next step
+      if (promotionItems.length === 0 && promotionPictures.length === 0) {
+        // Skip to the next step without saving any data
+        toast({
+          title: "Step skipped",
+          description: "Merchandising step was skipped",
+        });
+        
+        // Move to the next step in the process
+        setTimeout(() => {
+          setActiveStep("competitor-analysis");
+        }, 500);
+        setLoading(false);
+        return;
+      }
+      
       // Create merchandising promotion
       const merchandisingData = {
         storeId,
@@ -628,11 +644,11 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       
       <Button 
         onClick={submitMerchandising} 
-        disabled={loading || (promotionItems.length === 0 && promotionPictures.length === 0)}
+        disabled={loading}
         className="w-full"
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Tag className="mr-2 h-4 w-4" />}
-        Submit Merchandising Information
+        {promotionItems.length === 0 && promotionPictures.length === 0 ? "Skip Merchandising Step" : "Submit Merchandising Information"}
       </Button>
     </div>
   );
@@ -650,6 +666,22 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
   const submitCompetitorAnalysis = async () => {
     setLoading(true);
     try {
+      // If brand and product description are empty, just skip to the next step
+      if (!brand && !productDescription) {
+        // Skip to the next step without saving any data
+        toast({
+          title: "Step skipped",
+          description: "Competitor analysis step was skipped",
+        });
+        
+        // Move to the next step in the process
+        setTimeout(() => {
+          setActiveStep("order-placement");
+        }, 500);
+        setLoading(false);
+        return;
+      }
+      
       // Create competitor merchandising record
       const competitorData = {
         storeId,
@@ -748,11 +780,11 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       
       <Button 
         onClick={submitCompetitorAnalysis} 
-        disabled={loading || !brand || !productDescription}
+        disabled={loading}
         className="w-full"
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <BarChart className="mr-2 h-4 w-4" />}
-        Submit Competitor Analysis
+        {!brand && !productDescription ? "Skip Competitor Analysis Step" : "Submit Competitor Analysis"}
       </Button>
     </div>
   );
@@ -789,10 +821,34 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
       
-      // Move to the final success step
-      setTimeout(() => {
-        setActiveStep("completed");
-      }, 1000);
+      // Mark the work item as completed and move to the success step
+      try {
+        // Call the API to mark the work item as completed
+        await apiRequest("PATCH", `/api/work-items/${workItemId}`, { 
+          status: WorkItemStatus.COMPLETED 
+        });
+        
+        // Invalidate queries to refresh data
+        queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+        
+        toast({
+          title: "Work item completed",
+          description: "Your work item has been marked as completed",
+        });
+        
+        // Move to the final success step
+        setTimeout(() => {
+          setActiveStep("completed");
+        }, 1000);
+      } catch (error) {
+        console.error("Error completing work item:", error);
+        toast({
+          title: "Error",
+          description: "Failed to mark work item as completed, but your order was saved",
+          variant: "destructive",
+        });
+      }
     } catch (error) {
       console.error("Error submitting order:", error);
       toast({
@@ -845,11 +901,11 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
       
       <Button 
         onClick={submitOrder} 
-        disabled={loading || !notes}
+        disabled={loading}
         className="w-full"
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-        Submit Order
+        {!notes ? "Skip Order Step & Complete" : "Submit Order & Complete"}
       </Button>
     </div>
   );
