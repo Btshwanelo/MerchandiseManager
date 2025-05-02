@@ -68,26 +68,29 @@ const navigationItems: NavItem[] = [
     href: "/stock-take",
     label: "Stock Take",
     icon: <ClipboardCheck className="h-5 w-5" />,
-    section: "merchandising"
+    section: "merchandising",
+    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER] // Explicitly allow all roles to see this
   },
   {
     href: "/merchandising",
     label: "Merchandising",
     icon: <Tag className="h-5 w-5" />,
-    section: "merchandising"
+    section: "merchandising",
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER] // Exclude ADMIN
   },
   {
     href: "/competitor-merchandising",
     label: "Competitor",
     icon: <Laptop className="h-5 w-5" />,
-    section: "merchandising"
+    section: "merchandising",
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER] // Exclude ADMIN
   },
   {
     href: "/flows",
     label: "Flows",
     icon: <FileText className="h-5 w-5" />,
     section: "merchandising",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
+    roles: [UserRole.MANAGER] // Exclude ADMIN
   },
   {
     href: "/assignments",
@@ -110,28 +113,28 @@ const navigationItems: NavItem[] = [
     label: "Product Sheets",
     icon: <FileText className="h-5 w-5" />,
     section: "documents",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
+    roles: [UserRole.MANAGER]
   },
   {
     href: "/list-prices",
     label: "List Prices",
     icon: <FileSpreadsheet className="h-5 w-5" />,
     section: "documents",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
+    roles: [UserRole.MANAGER]
   },
   {
     href: "/deals",
     label: "Deals",
     icon: <Tag className="h-5 w-5" />,
     section: "documents",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
+    roles: [UserRole.MANAGER]
   },
   {
     href: "/orders",
     label: "Orders",
     icon: <ShoppingCart className="h-5 w-5" />,
     section: "documents",
-    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER]
   },
   
   // Reporting & Admin
