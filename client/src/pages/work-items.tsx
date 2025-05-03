@@ -113,8 +113,8 @@ const WorkItemsPage = () => {
   const [filters, setFilters] = useState<WorkItemFilterState>({
     search: "",
     status: "all",
-    storeId: "",
-    userId: "",
+    storeId: "all",
+    userId: "all",
   });
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [selectedWorkItem, setSelectedWorkItem] = useState<WorkItem | null>(null);
