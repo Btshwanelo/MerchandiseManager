@@ -1,5 +1,6 @@
 import { Pool, neonConfig } from '@neondatabase/serverless';
 import { drizzle } from 'drizzle-orm/neon-serverless';
+import { sql } from 'drizzle-orm';
 import ws from "ws";
 import * as schema from "@shared/schema";
 
@@ -12,8 +13,21 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-// Create a connection pool
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+// Create a connection pool with query logging
+export const pool = new Pool({ 
+  connectionString: process.env.DATABASE_URL,
+  // Enable query logging for debugging
+  queryCallback: (query) => {
+    console.log('SQL Query:', query.text);
+  }
+});
 
 // Create a Drizzle ORM instance with the schema
 export const db = drizzle(pool, { schema });
+
+// Force query logging in Drizzle
+const originalQuery = pool.query.bind(pool);
+pool.query = function(...args) {
+  console.log('SQL Query:', args[0]);
+  return originalQuery(...args);
+};

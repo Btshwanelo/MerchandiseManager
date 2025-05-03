@@ -1,7 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { db } from "./db"; // Add import for database operations
+import { db, pool } from "./db"; // Add import for database operations
 import { setupAuth, checkRole, isAuthenticated } from "./auth";
 import { 
   UserRole, 
