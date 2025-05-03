@@ -69,7 +69,14 @@ const navigationItems: NavItem[] = [
     label: "Stock Take",
     icon: <ClipboardCheck className="h-5 w-5" />,
     section: "merchandising",
-    roles: [UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER] // Explicitly allow all roles to see this
+    roles: [UserRole.MANAGER, UserRole.MERCHANDISER] // Now only allow Manager and Merchandiser roles
+  },
+  {
+    href: "/work-items",
+    label: "Work Items",
+    icon: <ClipboardList className="h-5 w-5" />,
+    section: "merchandising",
+    roles: [UserRole.ADMIN] // Only for Admin
   },
   {
     href: "/merchandising",
