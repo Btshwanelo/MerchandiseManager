@@ -1685,21 +1685,43 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAllWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
-    const result = await db.select({
-      workItem: workItems,
-      user: users,
-      store: stores
-    })
-    .from(workItems)
-    .innerJoin(users, eq(workItems.userId, users.id))
-    .innerJoin(stores, eq(workItems.storeId, stores.id));
-    // No status filter - returns ALL work items
-    
-    return result.map(({ workItem, user, store }) => ({
-      ...workItem,
-      user,
-      store
-    }));
+    try {
+      // First, check directly how many work items are in the database
+      const rawCount = await db.select({ count: count() }).from(workItems);
+      console.log(`Raw count of work items in database: ${rawCount[0].count}`);
+      
+      // Let's also verify with a direct SQL query
+      const directResult = await pool.query('SELECT COUNT(*) FROM work_items');
+      console.log(`Direct SQL count: ${directResult.rows[0].count}`);
+      
+      // Check if there are completed work items
+      const completedCount = await pool.query("SELECT COUNT(*) FROM work_items WHERE status = 'completed'");
+      console.log(`Completed work items count: ${completedCount.rows[0].count}`);
+      
+      // Now do the join
+      const result = await db.select({
+        workItem: workItems,
+        user: users,
+        store: stores
+      })
+      .from(workItems)
+      .innerJoin(users, eq(workItems.userId, users.id))
+      .innerJoin(stores, eq(workItems.storeId, stores.id));
+      
+      console.log(`Items after join: ${result.length}`);
+      if (result.length === 0) {
+        console.log('No items found after join. This could be due to missing related records');
+      }
+      
+      return result.map(({ workItem, user, store }) => ({
+        ...workItem,
+        user,
+        store
+      }));
+    } catch (error) {
+      console.error('Error in getAllWorkItems:', error);
+      return [];
+    }
   }
   
   async getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]> {

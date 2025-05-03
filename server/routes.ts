@@ -105,13 +105,28 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all work items (admin only)
   app.get("/api/work-items", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
+      console.log("Starting to fetch work items...");
+      
+      // First, do a direct query to check how many work items exist
+      const checkQuery = await pool.query('SELECT COUNT(*) FROM work_items');
+      console.log(`Direct database check: ${checkQuery.rows[0].count} work items exist in database`);
+      
+      // Also check completed ones specifically
+      const completedQuery = await pool.query("SELECT COUNT(*) FROM work_items WHERE status = 'completed'");
+      console.log(`Direct database check: ${completedQuery.rows[0].count} COMPLETED work items exist`);
+      
       // Get all work items with user and store data already included
-      // The getAllWorkItems method in DatabaseStorage already includes the user and store data
-      // and does not filter by status, returning ALL work items
+      console.log("Calling storage.getAllWorkItems() method...");
       const workItems = await storage.getAllWorkItems();
-      console.log(`Fetched ${workItems.length} work items, including completed ones:`, 
-        workItems.map(item => ({ id: item.id, title: item.title, status: item.status }))
-      );
+      console.log(`Fetched ${workItems.length} work items from getAllWorkItems method`);
+      
+      if (workItems.length > 0) {
+        console.log("Work items sample:", 
+          workItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, status: item.status }))
+        );
+      } else {
+        console.log("No work items were returned from getAllWorkItems method");
+      }
       
       res.json(workItems);
     } catch (error) {
