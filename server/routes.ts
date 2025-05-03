@@ -105,7 +105,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/work-items", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
       const workItems = await storage.getAllWorkItems();
-      res.json(workItems);
+      
+      // Enrich with user and store data
+      const enrichedWorkItems = await Promise.all(
+        workItems.map(async (item) => {
+          try {
+            const user = await storage.getUser(item.userId);
+            const store = await storage.getStore(item.storeId);
+            return { 
+              ...item, 
+              user: user || undefined, 
+              store: store || undefined 
+            };
+          } catch (error) {
+            // If we can't fetch user or store, still include the work item
+            return item;
+          }
+        })
+      );
+      
+      res.json(enrichedWorkItems);
     } catch (error) {
       if (error instanceof Error) {
         return res.status(500).json({ message: error.message });
