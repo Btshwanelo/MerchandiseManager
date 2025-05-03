@@ -2404,6 +2404,111 @@ export class DatabaseStorage implements IStorage {
       priority: data.priority || 'medium'
     };
   }
+  
+  // Get order data by work item ID
+  async getOrderByWorkItemId(workItemId: number): Promise<any | null> {
+    try {
+      console.log(`Looking for order data for work item ${workItemId}`);
+      const result = await pool.query(
+        `SELECT * FROM orders WHERE work_item_id = $1 LIMIT 1`,
+        [workItemId]
+      );
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      // Get the user who created the order
+      const orderData = result.rows[0];
+      if (orderData.user_id) {
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, orderData.user_id));
+          
+        if (userRow) {
+          // Remove password before sending
+          const { password, ...safeUser } = userRow;
+          orderData.user = safeUser;
+        }
+      }
+      
+      return orderData;
+    } catch (error) {
+      console.error("Error in getOrderByWorkItemId:", error);
+      return null;
+    }
+  }
+  
+  // Get merchandising data by work item ID
+  async getMerchandisingDataByWorkItemId(workItemId: number): Promise<any | null> {
+    try {
+      console.log(`Looking for merchandising data for work item ${workItemId}`);
+      const result = await pool.query(
+        `SELECT * FROM merchandising_data WHERE work_item_id = $1 LIMIT 1`,
+        [workItemId]
+      );
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      // Get the user who created the data
+      const merchandisingData = result.rows[0];
+      if (merchandisingData.user_id) {
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, merchandisingData.user_id));
+          
+        if (userRow) {
+          // Remove password before sending
+          const { password, ...safeUser } = userRow;
+          merchandisingData.user = safeUser;
+        }
+      }
+      
+      return merchandisingData;
+    } catch (error) {
+      console.error("Error in getMerchandisingDataByWorkItemId:", error);
+      return null;
+    }
+  }
+  
+  // Get competitor merchandising data by work item ID
+  async getCompetitorMerchandisingByWorkItemId(workItemId: number): Promise<any | null> {
+    try {
+      console.log(`Looking for competitor merchandising data for work item ${workItemId}`);
+      const result = await pool.query(
+        `SELECT * FROM competitor_merchandising WHERE work_item_id = $1 LIMIT 1`,
+        [workItemId]
+      );
+      
+      if (result.rows.length === 0) {
+        return null;
+      }
+      
+      // Get the user who created the data
+      const competitorData = result.rows[0];
+      if (competitorData.user_id) {
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, competitorData.user_id));
+          
+        if (userRow) {
+          // Remove password before sending
+          const { password, ...safeUser } = userRow;
+          competitorData.user = safeUser;
+        }
+      }
+      
+      return competitorData;
+    } catch (error) {
+      console.error("Error in getCompetitorMerchandisingByWorkItemId:", error);
+      return null;
+    }
+  }
 }
 
 // Create a seed function to initialize database
