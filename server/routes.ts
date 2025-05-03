@@ -109,7 +109,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // The getAllWorkItems method in DatabaseStorage already includes the user and store data
       // and does not filter by status, returning ALL work items
       const workItems = await storage.getAllWorkItems();
-      console.log(`Fetched ${workItems.length} work items, including completed ones`);
+      console.log(`Fetched ${workItems.length} work items, including completed ones:`, 
+        workItems.map(item => ({ id: item.id, title: item.title, status: item.status }))
+      );
       
       res.json(workItems);
     } catch (error) {
