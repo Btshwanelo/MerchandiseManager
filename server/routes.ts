@@ -104,27 +104,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get all work items (admin only)
   app.get("/api/work-items", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
+      // Get all work items with user and store data already included
+      // The getAllWorkItems method in DatabaseStorage already includes the user and store data
+      // and does not filter by status, returning ALL work items
       const workItems = await storage.getAllWorkItems();
+      console.log(`Fetched ${workItems.length} work items, including completed ones`);
       
-      // Enrich with user and store data
-      const enrichedWorkItems = await Promise.all(
-        workItems.map(async (item) => {
-          try {
-            const user = await storage.getUser(item.userId);
-            const store = await storage.getStore(item.storeId);
-            return { 
-              ...item, 
-              user: user || undefined, 
-              store: store || undefined 
-            };
-          } catch (error) {
-            // If we can't fetch user or store, still include the work item
-            return item;
-          }
-        })
-      );
-      
-      res.json(enrichedWorkItems);
+      res.json(workItems);
     } catch (error) {
       if (error instanceof Error) {
         return res.status(500).json({ message: error.message });
