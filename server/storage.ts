@@ -1684,8 +1684,22 @@ export class DatabaseStorage implements IStorage {
     return workItem;
   }
   
-  async getAllWorkItems(): Promise<WorkItem[]> {
-    return db.select().from(workItems);
+  async getAllWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
+    const result = await db.select({
+      workItem: workItems,
+      user: users,
+      store: stores
+    })
+    .from(workItems)
+    .innerJoin(users, eq(workItems.userId, users.id))
+    .innerJoin(stores, eq(workItems.storeId, stores.id));
+    // No status filter - returns ALL work items
+    
+    return result.map(({ workItem, user, store }) => ({
+      ...workItem,
+      user,
+      store
+    }));
   }
   
   async getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]> {
