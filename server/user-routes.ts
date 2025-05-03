@@ -58,6 +58,37 @@ export function registerUserRoutes(app: Express) {
       res.status(500).json({ message: "Failed to retrieve users" });
     }
   });
+  
+  // Get users by role (admin/manager only)
+  app.get("/api/users/:role", async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = req.user as UserType;
+      const roleParam = req.params.role;
+      
+      // Check if user is admin or manager
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER) {
+        return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
+      }
+      
+      // Get all users and filter by role
+      const users = await storage.getAllUsers();
+      const filteredUsers = users.filter(u => u.role.toLowerCase() === roleParam.toLowerCase());
+      
+      // Remove password fields for security
+      const sanitizedUsers = filteredUsers.map(({ password, ...rest }) => rest);
+      
+      res.json(sanitizedUsers);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve users by role" });
+    }
+  });
 
   // Get user by ID (admin/manager only, or self)
   app.get("/api/users/:id", async (req, res) => {
