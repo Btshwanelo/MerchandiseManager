@@ -897,9 +897,11 @@ export class MemStorage implements IStorage {
   }
   
   // Audit Trail methods
-  async createAuditEntry(workItemId: number, entry: { 
+  async createAuditEntry(auditEntry: { 
+    workItemId: number;
     userId: number;
     action: string;
+    timestamp: Date;
     previousStatus?: string;
     newStatus?: string;
     comment?: string;
@@ -914,18 +916,18 @@ export class MemStorage implements IStorage {
     comment?: string;
   }> {
     const id = this.currentAuditEntryId++;
-    const auditEntry = {
+    const createdEntry = {
       id,
-      workItemId,
-      userId: entry.userId,
-      action: entry.action,
-      timestamp: new Date(),
-      previousStatus: entry.previousStatus,
-      newStatus: entry.newStatus,
-      comment: entry.comment
+      workItemId: auditEntry.workItemId,
+      userId: auditEntry.userId,
+      action: auditEntry.action,
+      timestamp: auditEntry.timestamp || new Date(),
+      previousStatus: auditEntry.previousStatus,
+      newStatus: auditEntry.newStatus,
+      comment: auditEntry.comment
     };
-    this.auditEntries.set(id, auditEntry);
-    return auditEntry;
+    this.auditEntries.set(id, createdEntry);
+    return createdEntry;
   }
   
   async getWorkItemAuditTrail(workItemId: number): Promise<{

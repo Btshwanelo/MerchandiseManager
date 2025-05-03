@@ -23,6 +23,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes first
   setupAuth(app);
   
+  // Get all merchandisers (for admins/managers)
+  app.get("/api/users/merchandisers", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
+    try {
+      const allUsers = await storage.getAllUsers();
+      const merchandisers = allUsers.filter(u => u.role === UserRole.MERCHANDISER);
+      
+      // Remove password fields before sending
+      const safeUsers = merchandisers.map(({ password, ...rest }) => rest);
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching merchandisers:", error);
+      res.status(500).json({ message: "Failed to fetch merchandisers" });
+    }
+  });
+  
   // Endpoint for bulk deleting items
   app.delete("/api/bulk-delete/:resource", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
