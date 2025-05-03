@@ -1,6 +1,7 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
+import { db } from "./db"; // Add import for database operations
 import { setupAuth, checkRole, isAuthenticated } from "./auth";
 import { 
   UserRole, 
@@ -309,46 +310,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to access this work item's orders" });
       }
       
-      // In a real implementation, we would query orders with a direct relation to the work item
-      // For now, since we're using a placeholder, we'll provide a simulated result based on the workItemId
+      console.log(`Fetching order data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // For the first version, we'll use the createOrder data that's stored with the work item completion
       try {
-        // Mock fetching orders - in a real implementation we would have a proper DB table and query
-        const orders = await db.query(`
-          SELECT * FROM (
-            SELECT * FROM jsonb_to_recordset(
-              (SELECT orders FROM order_data WHERE work_item_id = $1)
-            ) AS o(
-              id int, 
-              store_id int, 
-              user_id int, 
-              work_item_id int, 
-              status text, 
-              notes text, 
-              products jsonb,
-              priority text, 
-              date timestamp
-            )
-          ) AS orders
-        `, [workItemId]);
-        
-        if (orders.rows.length > 0) {
-          const order = orders.rows[0];
-          res.json({
-            id: order.id,
-            storeId: order.store_id,
-            userId: order.user_id,
-            workItemId: order.work_item_id,
-            status: order.status,
-            notes: order.notes,
-            products: order.products,
-            priority: order.priority,
-            date: order.date
-          });
-        } else {
-          res.json(null);
-        }
+        // Get the orders by workItemId from storage
+        const order = await storage.getOrderByWorkItemId(workItemId);
+        console.log(`Found order data for work item ${workItemId}:`, order);
+        res.json(order);
       } catch (err) {
-        console.log("Error fetching orders (expected if table doesn't exist yet):", err);
+        console.log("Error fetching orders (expected if not found):", err);
         res.json(null);
       }
     } catch (error) {
@@ -377,40 +348,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to access this work item's merchandising data" });
       }
       
-      // In a real implementation, we would query merchandising data with a direct relation to the work item
-      // For now, since we're using a placeholder, we'll provide a simulated response
+      console.log(`Fetching merchandising data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // For the first version, we'll use the createMerchandisingData call that's stored with the work item completion
       try {
-        // Mock fetching merchandising data - in a real implementation we would have a proper DB table and query
-        const merchandising = await db.query(`
-          SELECT * FROM (
-            SELECT * FROM jsonb_to_recordset(
-              (SELECT merchandising FROM merchandising_data WHERE work_item_id = $1)
-            ) AS m(
-              id int, 
-              store_id int, 
-              user_id int, 
-              work_item_id int, 
-              merchandising_items jsonb,
-              date timestamp
-            )
-          ) AS merchandising
-        `, [workItemId]);
-        
-        if (merchandising.rows.length > 0) {
-          const data = merchandising.rows[0];
-          res.json({
-            id: data.id,
-            storeId: data.store_id,
-            userId: data.user_id,
-            workItemId: data.work_item_id,
-            merchandisingItems: data.merchandising_items,
-            date: data.date
-          });
-        } else {
-          res.json(null);
-        }
+        // Get the merchandising data by workItemId from storage
+        const merchandisingData = await storage.getMerchandisingDataByWorkItemId(workItemId);
+        console.log(`Found merchandising data for work item ${workItemId}:`, merchandisingData);
+        res.json(merchandisingData);
       } catch (err) {
-        console.log("Error fetching merchandising data (expected if table doesn't exist yet):", err);
+        console.log("Error fetching merchandising data (expected if not found):", err);
         res.json(null);
       }
     } catch (error) {
@@ -439,50 +386,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to access this work item's competitor data" });
       }
       
-      // In a real implementation, we would query competitor data with a direct relation to the work item
-      // For now, since we're using a placeholder, we'll provide a simulated response
+      console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // For the first version, we'll use the createCompetitorMerchandising call that's stored with the work item completion
       try {
-        // Mock fetching competitor data - in a real implementation we would have a proper DB table and query
-        const competitorData = await db.query(`
-          SELECT * FROM (
-            SELECT * FROM jsonb_to_recordset(
-              (SELECT competitor_data FROM competitor_merchandising WHERE work_item_id = $1)
-            ) AS c(
-              id int, 
-              store_id int, 
-              user_id int, 
-              work_item_id int, 
-              brand text,
-              product_description text,
-              promo_type text,
-              promo_details text,
-              price float,
-              picture_url text,
-              date timestamp
-            )
-          ) AS competitor_data
-        `, [workItemId]);
-        
-        if (competitorData.rows.length > 0) {
-          const data = competitorData.rows[0];
-          res.json({
-            id: data.id,
-            storeId: data.store_id,
-            userId: data.user_id,
-            workItemId: data.work_item_id,
-            brand: data.brand,
-            productDescription: data.product_description,
-            promoType: data.promo_type,
-            promoDetails: data.promo_details,
-            price: data.price,
-            pictureUrl: data.picture_url,
-            date: data.date
-          });
-        } else {
-          res.json(null);
-        }
+        // Get the competitor data by workItemId from storage
+        const competitorData = await storage.getCompetitorMerchandisingByWorkItemId(workItemId);
+        console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
+        res.json(competitorData);
       } catch (err) {
-        console.log("Error fetching competitor data (expected if table doesn't exist yet):", err);
+        console.log("Error fetching competitor data (expected if not found):", err);
         res.json(null);
       }
     } catch (error) {
@@ -1014,23 +927,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to view this work item" });
       }
       
-      // Get all stock takes for this store
-      const stockTakes = await storage.getStockTakeByStoreId(workItem.storeId);
+      console.log(`Fetching stock take data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Filter to the most recent stock take for this work item (if any)
-      // In a real implementation, we would have a direct relation between stock takes and work items
-      const filteredStockTakes = stockTakes
-        .filter(st => st.userId === workItem.userId)
-        .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-      
-      if (filteredStockTakes.length === 0) {
-        // No stock takes found for this work item
+      try {
+        // Get all stock takes for this store
+        const stockTakes = await storage.getStockTakeByStoreId(workItem.storeId);
+        
+        // Filter to the most recent stock take for this work item (if any)
+        // In a real implementation, we would have a direct relation between stock takes and work items
+        const filteredStockTakes = stockTakes
+          .filter(st => st.userId === workItem.userId)
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+        
+        if (filteredStockTakes.length === 0) {
+          // No stock takes found for this work item
+          console.log(`No stock takes found for work item ${workItemId}`);
+          return res.json(null);
+        }
+        
+        // Return the most recent stock take with its items
+        const stockTake = await storage.getStockTakeWithItems(filteredStockTakes[0].id);
+        console.log(`Found stock take ${stockTake?.id} for work item ${workItemId}`);
+        res.json(stockTake);
+      } catch (innerError) {
+        // Handle missing tables or other database errors by returning null
+        console.error(`Inner error fetching stock take data: ${innerError}`);
         return res.json(null);
       }
-      
-      // Return the most recent stock take with its items
-      const stockTake = await storage.getStockTakeWithItems(filteredStockTakes[0].id);
-      res.json(stockTake);
     } catch (error) {
       console.error("Error getting stock take by work item:", error);
       if (error instanceof Error) {
