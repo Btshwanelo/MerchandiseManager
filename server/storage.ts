@@ -45,7 +45,8 @@ export interface IStorage {
   
   // Work Item methods
   getWorkItem(id: number): Promise<WorkItem | undefined>;
-  getAllWorkItems(): Promise<WorkItem[]>;
+  getWorkItemById(id: number): Promise<(WorkItem & { user?: User, store?: Store, creator?: User }) | undefined>;
+  getAllWorkItems(): Promise<(WorkItem & { user?: User, store?: Store })[]>;
   getWorkItemsByUserId(userId: number): Promise<(WorkItem & { store: Store })[]>;
   getWorkItemsByStoreId(storeId: number): Promise<(WorkItem & { user: User })[]>;
   getWorkItemsByAssignmentId(assignmentId: number): Promise<WorkItem[]>;
@@ -54,6 +55,18 @@ export interface IStorage {
   updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined>;
   completeWorkItem(id: number): Promise<WorkItem | undefined>;
   deleteWorkItem(id: number): Promise<boolean>;
+  
+  // Audit Trail methods
+  createAuditEntry(auditEntry: { 
+    workItemId: number;
+    userId: number;
+    action: string;
+    timestamp: Date;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }): Promise<any>;
+  getWorkItemAuditTrail(workItemId: number): Promise<any[]>;
   
   // Store methods
   getStore(id: number): Promise<Store | undefined>;
@@ -184,6 +197,7 @@ export class MemStorage implements IStorage {
   private merchandisingData: Map<number, any>;
   private competitorData: Map<number, any>;
   private orders: Map<number, any>;
+  private auditEntries: Map<number, any>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -198,6 +212,7 @@ export class MemStorage implements IStorage {
   currentMerchandisingId: number;
   currentCompetitorId: number;
   currentOrderId: number;
+  currentAuditEntryId: number;
 
   constructor() {
     this.users = new Map();
@@ -213,6 +228,7 @@ export class MemStorage implements IStorage {
     this.merchandisingData = new Map();
     this.competitorData = new Map();
     this.orders = new Map();
+    this.auditEntries = new Map();
     
     this.sessionStore = new MemoryStore({
       checkPeriod: 86400000,
@@ -231,6 +247,7 @@ export class MemStorage implements IStorage {
     this.currentMerchandisingId = 1;
     this.currentCompetitorId = 1;
     this.currentOrderId = 1;
+    this.currentAuditEntryId = 1;
     
     // Initialize with sample admin user
     this.createUser({
@@ -1120,6 +1137,136 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+  
+  // Work Item methods with detailed implementation
+  async getWorkItemById(id: number): Promise<(WorkItem & { user?: User, store?: Store, creator?: User }) | undefined> {
+    try {
+      // First get the work item
+      const [workItem] = await db
+        .select()
+        .from(workItems)
+        .where(eq(workItems.id, id));
+      
+      if (!workItem) return undefined;
+      
+      // Get user (merchandiser) info
+      let user = undefined;
+      if (workItem.userId) {
+        const [userRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, workItem.userId));
+        if (userRow) {
+          // Remove sensitive data
+          const { password, ...safeUser } = userRow;
+          user = safeUser;
+        }
+      }
+      
+      // Get store info
+      let store = undefined;
+      if (workItem.storeId) {
+        const [storeRow] = await db
+          .select()
+          .from(stores)
+          .where(eq(stores.id, workItem.storeId));
+        store = storeRow;
+      }
+      
+      // Get creator info
+      let creator = undefined;
+      if (workItem.createdBy) {
+        const [creatorRow] = await db
+          .select()
+          .from(users)
+          .where(eq(users.id, workItem.createdBy));
+        if (creatorRow) {
+          // Remove sensitive data
+          const { password, ...safeCreator } = creatorRow;
+          creator = safeCreator;
+        }
+      }
+      
+      return {
+        ...workItem,
+        user,
+        store,
+        creator
+      };
+    } catch (error) {
+      console.error("Error in getWorkItemById:", error);
+      return undefined;
+    }
+  }
+  
+  // Get audit trail for a work item
+  async getWorkItemAuditTrail(workItemId: number): Promise<any[]> {
+    try {
+      // Get audit entries
+      const auditEntries = await db
+        .select()
+        .from(sql`work_item_audit_trail`)
+        .where(sql`work_item_id = ${workItemId}`)
+        .orderBy(sql`timestamp desc`);
+      
+      // Enrich with user information
+      const enrichedEntries = await Promise.all(
+        auditEntries.map(async (entry) => {
+          if (!entry.userId) return entry;
+          
+          // Get user info
+          const [userRow] = await db
+            .select()
+            .from(users)
+            .where(eq(users.id, entry.userId));
+          
+          if (userRow) {
+            // Remove password
+            const { password, ...safeUser } = userRow;
+            return { ...entry, user: safeUser };
+          }
+          
+          return entry;
+        })
+      );
+      
+      return enrichedEntries;
+    } catch (error) {
+      console.error("Error in getWorkItemAuditTrail:", error);
+      return [];
+    }
+  }
+  
+  // Create a new audit entry
+  async createAuditEntry(auditEntry: {
+    workItemId: number;
+    userId: number;
+    action: string;
+    timestamp: Date;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }): Promise<any> {
+    try {
+      const [result] = await db
+        .insert(sql`work_item_audit_trail`)
+        .values({
+          work_item_id: auditEntry.workItemId,
+          user_id: auditEntry.userId,
+          action: auditEntry.action,
+          timestamp: auditEntry.timestamp,
+          previous_status: auditEntry.previousStatus,
+          new_status: auditEntry.newStatus,
+          comment: auditEntry.comment
+        })
+        .returning();
+      
+      return result;
+    } catch (error) {
+      console.error("Error in createAuditEntry:", error);
+      throw error;
+    }
   }
   
   // Stock Take methods

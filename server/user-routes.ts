@@ -60,7 +60,7 @@ export function registerUserRoutes(app: Express) {
   });
   
   // Get users by role (admin/manager only)
-  app.get("/api/users/:role", async (req, res) => {
+  app.get("/api/users/role/:role", async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized" });

@@ -84,6 +84,96 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up store assignment and work item routes
   registerAssignmentRoutes(app);
   
+  // Work Items Endpoints for Admin
+  
+  // Get all work items (admin only)
+  app.get("/api/work-items", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const workItems = await storage.getAllWorkItems();
+      res.json(workItems);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve work items" });
+    }
+  });
+  
+  // Get single work item by ID (admin only)
+  app.get("/api/work-items/:id", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const workItem = await storage.getWorkItemById(id);
+      
+      if (!workItem) {
+        return res.status(404).json({ message: "Work item not found" });
+      }
+      
+      res.json(workItem);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve work item" });
+    }
+  });
+  
+  // Update work item with audit trail (admin only)
+  app.patch("/api/work-items/:id", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { status, auditComment } = req.body;
+      
+      if (!auditComment) {
+        return res.status(400).json({ message: "Audit comment is required for admin edits" });
+      }
+      
+      const workItem = await storage.getWorkItemById(id);
+      
+      if (!workItem) {
+        return res.status(404).json({ message: "Work item not found" });
+      }
+      
+      // Create audit trail entry
+      await storage.createAuditEntry({
+        workItemId: id,
+        userId: req.user!.id,
+        action: "updated",
+        timestamp: new Date(),
+        previousStatus: workItem.status,
+        newStatus: status || workItem.status,
+        comment: auditComment
+      });
+      
+      // Update the work item if status has changed
+      let updatedWorkItem = workItem;
+      if (status && status !== workItem.status) {
+        updatedWorkItem = await storage.updateWorkItem(id, { status });
+      }
+      
+      res.json(updatedWorkItem);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to update work item" });
+    }
+  });
+  
+  // Get audit trail for a work item (admin only)
+  app.get("/api/work-items/:id/audit", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const auditTrail = await storage.getWorkItemAuditTrail(id);
+      res.json(auditTrail);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve audit trail" });
+    }
+  });
+  
   // Process Form Routes for Merchandising, Competitors, and Orders
   
   // Merchandising Information
