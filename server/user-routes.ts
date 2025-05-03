@@ -31,6 +31,27 @@ function generateSecureToken() {
 }
 
 export function registerUserRoutes(app: Express) {
+  // Get users by role (e.g., merchandisers)
+  app.get("/api/users/:role", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
+    try {
+      const { role } = req.params;
+      
+      if (!Object.values(UserRole).includes(role as UserRole)) {
+        return res.status(400).json({ message: "Invalid role parameter" });
+      }
+      
+      const allUsers = await storage.getAllUsers();
+      const usersWithRole = allUsers.filter(u => u.role === role);
+      
+      // Remove password fields before sending
+      const safeUsers = usersWithRole.map(({ password, ...rest }) => rest);
+      res.json(safeUsers);
+    } catch (error) {
+      console.error("Error fetching users by role:", error);
+      res.status(500).json({ message: "Failed to fetch users" });
+    }
+  });
+  
   // Get all users (admin/manager only)
   app.get("/api/users", async (req, res) => {
     try {

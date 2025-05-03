@@ -194,10 +194,21 @@ export class MemStorage implements IStorage {
   private passwordResetTokens: Map<number, { id: number, userId: number, token: string, expiresAt: Date }>;
   private storeAssignments: Map<number, StoreAssignment>;
   private workItems: Map<number, WorkItem>;
+  private stockTakes: Map<number, StockTake>;
+  private stockTakeItems: Map<number, StockTakeItem>;
   private merchandisingData: Map<number, any>;
   private competitorData: Map<number, any>;
   private orders: Map<number, any>;
-  private auditEntries: Map<number, any>;
+  private auditEntries: Map<number, {
+    id: number;
+    workItemId: number;
+    userId: number;
+    action: string;
+    timestamp: Date;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }>;
   
   sessionStore: any; // Express session store
   currentUserId: number;
@@ -225,6 +236,8 @@ export class MemStorage implements IStorage {
     this.passwordResetTokens = new Map();
     this.storeAssignments = new Map();
     this.workItems = new Map();
+    this.stockTakes = new Map();
+    this.stockTakeItems = new Map();
     this.merchandisingData = new Map();
     this.competitorData = new Map();
     this.orders = new Map();
@@ -861,6 +874,10 @@ export class MemStorage implements IStorage {
     return this.workItems.get(id);
   }
   
+  async getWorkItemById(id: number): Promise<WorkItem | undefined> {
+    return this.workItems.get(id);
+  }
+  
   async getAllWorkItems(): Promise<WorkItem[]> {
     return Array.from(this.workItems.values());
   }
@@ -877,6 +894,113 @@ export class MemStorage implements IStorage {
       }
       return { ...item, store };
     }));
+  }
+  
+  // Audit Trail methods
+  async createAuditEntry(workItemId: number, entry: { 
+    userId: number;
+    action: string;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }): Promise<{ 
+    id: number;
+    workItemId: number;
+    userId: number;
+    action: string;
+    timestamp: Date;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }> {
+    const id = this.currentAuditEntryId++;
+    const auditEntry = {
+      id,
+      workItemId,
+      userId: entry.userId,
+      action: entry.action,
+      timestamp: new Date(),
+      previousStatus: entry.previousStatus,
+      newStatus: entry.newStatus,
+      comment: entry.comment
+    };
+    this.auditEntries.set(id, auditEntry);
+    return auditEntry;
+  }
+  
+  async getWorkItemAuditTrail(workItemId: number): Promise<{
+    id: number;
+    workItemId: number;
+    userId: number;
+    action: string;
+    timestamp: Date;
+    previousStatus?: string;
+    newStatus?: string;
+    comment?: string;
+  }[]> {
+    return Array.from(this.auditEntries.values())
+      .filter((entry) => entry.workItemId === workItemId)
+      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
+  }
+  
+  // Stock Take methods
+  async getStockTake(id: number): Promise<any> {
+    return {};
+  }
+  
+  async getStockTakeByWorkItemId(workItemId: number): Promise<any> {
+    return {};
+  }
+  
+  async updateStockTake(id: number, data: any): Promise<any> {
+    return {};
+  }
+  
+  async createStockTake(data: any): Promise<any> {
+    return {};
+  }
+  
+  // Merchandising data methods
+  async createMerchandising(data: any): Promise<any> {
+    return {};
+  }
+  
+  async getMerchandising(id: number): Promise<any> {
+    return {};
+  }
+  
+  async getMerchandisingByWorkItemId(workItemId: number): Promise<any> {
+    return {};
+  }
+  
+  // Competitor data methods
+  async createCompetitorMerchandising(data: any): Promise<any> {
+    return {};
+  }
+  
+  async getCompetitorMerchandising(id: number): Promise<any> {
+    return {};
+  }
+  
+  async getCompetitorMerchandisingByWorkItemId(workItemId: number): Promise<any> {
+    return {};
+  }
+  
+  // Order methods
+  async createOrder(data: any): Promise<any> {
+    return {};
+  }
+  
+  async getOrder(id: number): Promise<any> {
+    return {};
+  }
+  
+  async getOrderByWorkItemId(workItemId: number): Promise<any> {
+    return {};
+  }
+  
+  async updateOrder(id: number, data: any): Promise<any> {
+    return {};
   }
   
   async getWorkItemsByStoreId(storeId: number): Promise<(WorkItem & { user: User })[]> {
