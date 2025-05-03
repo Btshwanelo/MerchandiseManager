@@ -242,10 +242,10 @@ const WorkItemsPage = () => {
     const statusMatch = filters.status === 'all' || item.status === filters.status;
     
     // Filter by store
-    const storeMatch = !filters.storeId || item.storeId.toString() === filters.storeId;
+    const storeMatch = filters.storeId === 'all' || item.storeId.toString() === filters.storeId;
     
     // Filter by user (merchandiser)
-    const userMatch = !filters.userId || item.userId.toString() === filters.userId;
+    const userMatch = filters.userId === 'all' || item.userId.toString() === filters.userId;
     
     return searchMatch && statusMatch && storeMatch && userMatch;
   });
@@ -342,10 +342,10 @@ const WorkItemsPage = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Statuses</SelectItem>
-                  <SelectItem value={WorkItemStatus.PENDING}>Pending</SelectItem>
-                  <SelectItem value={WorkItemStatus.IN_PROGRESS}>In Progress</SelectItem>
-                  <SelectItem value={WorkItemStatus.COMPLETED}>Completed</SelectItem>
-                  <SelectItem value={WorkItemStatus.CANCELLED}>Cancelled</SelectItem>
+                  <SelectItem value={WorkItemStatus.PENDING || "pending"}>Pending</SelectItem>
+                  <SelectItem value={WorkItemStatus.IN_PROGRESS || "in_progress"}>In Progress</SelectItem>
+                  <SelectItem value={WorkItemStatus.COMPLETED || "completed"}>Completed</SelectItem>
+                  <SelectItem value={WorkItemStatus.CANCELLED || "cancelled"}>Cancelled</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -358,7 +358,7 @@ const WorkItemsPage = () => {
                   <SelectValue placeholder="Filter by store" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Stores</SelectItem>
+                  <SelectItem value="all">All Stores</SelectItem>
                   {stores.map((store) => (
                     <SelectItem key={store.id} value={store.id.toString()}>
                       {store.name}
@@ -376,7 +376,7 @@ const WorkItemsPage = () => {
                   <SelectValue placeholder="Filter by merchandiser" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Merchandisers</SelectItem>
+                  <SelectItem value="all">All Merchandisers</SelectItem>
                   {merchandisers.map((merchandiser) => (
                     <SelectItem key={merchandiser.id} value={merchandiser.id.toString()}>
                       {merchandiser.name}
