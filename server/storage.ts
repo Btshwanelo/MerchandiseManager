@@ -28,6 +28,13 @@ export interface IStorage {
   deleteUser(id: number): Promise<boolean>;
   getAllUsers(): Promise<User[]>;
   
+  // User Alerts methods
+  createUserAlert(alert: InsertUserAlert): Promise<UserAlert>;
+  getUserAlerts(userId: number): Promise<UserAlert[]>;
+  getUserUnreadAlerts(userId: number): Promise<UserAlert[]>;
+  markAlertAsRead(alertId: number): Promise<UserAlert | undefined>;
+  deleteUserAlert(alertId: number): Promise<boolean>;
+  
   // Password reset methods
   createPasswordResetToken(token: { userId: number, token: string, expiresAt: Date }): Promise<any>;
   getPasswordResetToken(token: string): Promise<{ id: number, userId: number, token: string, expiresAt: Date } | undefined>;
