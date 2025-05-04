@@ -1,6 +1,21 @@
 import { db } from './db';
-import { userAlerts, AlertStatus, AlertType, UserAlert, InsertUserAlert } from '@shared/schema';
+import { userAlerts, AlertStatus, AlertType } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
+import { z } from 'zod';
+
+// Define types for user alerts
+export type UserAlert = typeof userAlerts.$inferSelect;
+export type InsertUserAlert = z.infer<typeof userAlertSchema>;
+
+// Define schema for inserting user alerts
+export const userAlertSchema = z.object({
+  userId: z.number(),
+  type: z.nativeEnum(AlertType),
+  message: z.string(),
+  relatedItemId: z.number().nullable().optional(),
+  status: z.nativeEnum(AlertStatus).optional(),
+  createdAt: z.date().optional()
+});
 
 /**
  * Helper functions for working with user alerts
@@ -63,16 +78,16 @@ export async function createSystemAlert(params: {
   userId: number;
   type: AlertType;
   message: string;
-  relatedId?: number;
+  relatedItemId?: number;
 }): Promise<boolean> {
   try {
-    const { userId, type, message, relatedId } = params;
+    const { userId, type, message, relatedItemId } = params;
     
     await createUserAlert({
       userId,
       type,
       message,
-      relatedId,
+      relatedItemId,
       status: AlertStatus.UNREAD,
       createdAt: new Date()
     });

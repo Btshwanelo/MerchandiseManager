@@ -19,6 +19,7 @@ import multer from "multer";
 import path from "path";
 import { registerUserRoutes } from "./user-routes";
 import { registerAssignmentRoutes } from "./assignments-routes";
+import { userAlertsRouter } from "./routes/alerts";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes first
@@ -99,6 +100,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Set up store assignment and work item routes
   registerAssignmentRoutes(app);
+  
+  // Register user alerts routes
+  app.use(userAlertsRouter);
   
   // Work Items Endpoints for Admin
   

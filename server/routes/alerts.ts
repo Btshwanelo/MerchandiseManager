@@ -1,13 +1,22 @@
 import { Router } from 'express';
 import { storage } from '../storage';
-import { AlertStatus, AlertType, UserRole } from '@shared/schema';
-import { insertUserAlertSchema } from '@shared/schema';
-import { checkAuth, checkRole } from '../auth';
+import { AlertStatus, AlertType, UserRole, userAlerts } from '@shared/schema';
+import { z } from 'zod';
+import { isAuthenticated, checkRole } from '../auth';
+
+// Define user alert schema
+const userAlertSchema = z.object({
+  userId: z.number(),
+  type: z.nativeEnum(AlertType),
+  message: z.string(),
+  relatedItemId: z.number().nullable().optional(),
+  status: z.nativeEnum(AlertStatus).optional()
+});
 
 export const userAlertsRouter = Router();
 
 // Get all alerts for authenticated user
-userAlertsRouter.get('/user-alerts', checkAuth, async (req, res) => {
+userAlertsRouter.get('/user-alerts', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -25,7 +34,7 @@ userAlertsRouter.get('/user-alerts', checkAuth, async (req, res) => {
 });
 
 // Get unread alerts for authenticated user
-userAlertsRouter.get('/user-alerts/unread', checkAuth, async (req, res) => {
+userAlertsRouter.get('/user-alerts/unread', isAuthenticated, async (req, res) => {
   try {
     const userId = req.user?.id;
     if (!userId) {
@@ -43,7 +52,7 @@ userAlertsRouter.get('/user-alerts/unread', checkAuth, async (req, res) => {
 });
 
 // Mark an alert as read
-userAlertsRouter.patch('/user-alerts/:id/read', checkAuth, async (req, res) => {
+userAlertsRouter.patch('/user-alerts/:id/read', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
     const alertId = parseInt(id);
@@ -68,7 +77,7 @@ userAlertsRouter.patch('/user-alerts/:id/read', checkAuth, async (req, res) => {
 });
 
 // Delete an alert
-userAlertsRouter.delete('/user-alerts/:id', checkAuth, async (req, res) => {
+userAlertsRouter.delete('/user-alerts/:id', isAuthenticated, async (req, res) => {
   try {
     const { id } = req.params;
     const alertId = parseInt(id);
@@ -93,9 +102,9 @@ userAlertsRouter.delete('/user-alerts/:id', checkAuth, async (req, res) => {
 });
 
 // Create a new alert (admin/managers only)
-userAlertsRouter.post('/user-alerts', checkRole([UserRole.ADMIN, UserRole.MANAGER]), async (req, res) => {
+userAlertsRouter.post('/user-alerts', isAuthenticated, checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
   try {
-    const alertSchema = insertUserAlertSchema.safeParse(req.body);
+    const alertSchema = userAlertSchema.safeParse(req.body);
     
     if (!alertSchema.success) {
       return res.status(400).json({ 
@@ -119,18 +128,17 @@ export async function createSystemAlert(params: {
   userId: number;
   type: AlertType;
   message: string;
-  relatedId?: number;
+  relatedItemId?: number;
 }) {
   try {
-    const { userId, type, message, relatedId } = params;
+    const { userId, type, message, relatedItemId } = params;
     
     await storage.createUserAlert({
       userId,
       type,
       message,
-      relatedId,
-      status: AlertStatus.UNREAD,
-      createdAt: new Date()
+      relatedItemId,
+      status: AlertStatus.UNREAD
     });
     
     return true;
