@@ -127,14 +127,14 @@ const WorkItemsPage = () => {
     workDescription: ""
   });
 
-  // Fetch work items (will be filtered on the client side)
+  // Fetch work items (including completed ones - will be filtered on the client side)
   const { 
     data: workItems = [], 
     isLoading: isLoadingWorkItems,
     error: workItemsError,
     refetch: refetchWorkItems
   } = useQuery<WorkItem[]>({
-    queryKey: ['/api/work-items'],
+    queryKey: ['/api/work-items/all'],
     enabled: !!user && user.role === UserRole.ADMIN
   });
 

@@ -102,26 +102,83 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Work Items Endpoints for Admin
   
-  // Get all work items (admin only)
+  // Get active work items (admin only, PENDING and IN_PROGRESS only)
   app.get("/api/work-items", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
-      console.log("Starting to fetch work items...");
+      console.log("Starting to fetch active work items...");
       
-      // Get all work items with user and store data already included
-      // The getAllWorkItems method has been fixed to return ALL items including completed ones
-      console.log("Calling storage.getAllWorkItems() method...");
-      const workItems = await storage.getAllWorkItems();
-      console.log(`Fetched ${workItems.length} work items from getAllWorkItems method`);
-      
-      if (workItems.length > 0) {
-        console.log("Work items sample:", 
-          workItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, status: item.status }))
-        );
-      } else {
-        console.log("No work items were returned from getAllWorkItems method");
-      }
+      // This returns only PENDING and IN_PROGRESS items by default (active items)
+      console.log("Calling storage.getActiveWorkItems() method...");
+      const workItems = await storage.getActiveWorkItems();
+      console.log(`Fetched ${workItems.length} active work items`);
       
       res.json(workItems);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve work items" });
+    }
+  });
+  
+  // Get ALL work items including completed ones (admin only)
+  app.get("/api/work-items/all", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      console.log("Starting to fetch ALL work items (including completed)...");
+      
+      // Direct SQL query to bypass any filtering
+      const directItemsQuery = await pool.query(`
+        SELECT 
+          w.*, 
+          u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
+          s.id as store_id, s.name as store_name, s.location
+        FROM work_items w
+        INNER JOIN users u ON w.user_id = u.id
+        INNER JOIN stores s ON w.store_id = s.id
+        ORDER BY w.created_at DESC
+      `);
+      
+      // Format the results to match the expected structure
+      const allWorkItems = directItemsQuery.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type,
+        userId: row.user_id,
+        storeId: row.store_id,
+        storeAssignmentId: row.store_assignment_id,
+        status: row.status,
+        priority: row.priority,
+        dueDate: row.due_date,
+        completedAt: row.completed_at,
+        notes: row.notes,
+        attachments: row.attachments,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        user: {
+          id: row.user_id,
+          username: row.username,
+          name: row.user_name,
+          email: row.email,
+          role: row.role
+        },
+        store: {
+          id: row.store_id,
+          name: row.store_name,
+          location: row.location
+        }
+      }));
+      
+      console.log(`Fetched ${allWorkItems.length} total work items (all statuses)`);
+      
+      if (allWorkItems.length > 0) {
+        console.log("Work items sample:", 
+          allWorkItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, status: item.status }))
+        );
+      }
+      
+      res.json(allWorkItems);
     } catch (error) {
       if (error instanceof Error) {
         return res.status(500).json({ message: error.message });
