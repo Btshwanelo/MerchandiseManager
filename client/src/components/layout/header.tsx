@@ -1,10 +1,11 @@
 import { useLocation, Link } from "wouter";
-import { Search, Bell, HelpCircle, Menu, User, Users, Settings, LogOut } from "lucide-react";
+import { Search, HelpCircle, Menu, User, Users, Settings, LogOut } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
+import { AlertsDropdown } from "@/components/alerts-dropdown";
 import {
   DropdownMenu,
   DropdownMenuContent,

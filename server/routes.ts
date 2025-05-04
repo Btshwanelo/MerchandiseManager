@@ -102,7 +102,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerAssignmentRoutes(app);
   
   // Register user alerts routes
-  app.use(userAlertsRouter);
+  app.use('/api', userAlertsRouter);
   
   // Work Items Endpoints for Admin
   
