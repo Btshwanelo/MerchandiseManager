@@ -1149,14 +1149,23 @@ const ProcessForm = () => {
   const handleStartWorkItem = async () => {
     if (workItem && workItem.status === WorkItemStatus.PENDING) {
       try {
-        // Use the dedicated endpoint for updating status
-        await apiRequest("PUT", `/api/work-items/${workItemId}/status`, {
-          status: WorkItemStatus.IN_PROGRESS
-        });
+        // Try the assigned-work-items endpoint first for merchandisers
+        try {
+          await apiRequest("PUT", `/api/work-items/${workItemId}/status`, {
+            status: WorkItemStatus.IN_PROGRESS
+          });
+        } catch (err) {
+          console.log("Error using main status update endpoint, trying fallback", err);
+          // Fallback to the dedicated endpoint for updating status via assigned-work-items
+          await apiRequest("PUT", `/api/assigned-work-items/${workItemId}/status`, {
+            status: WorkItemStatus.IN_PROGRESS
+          });
+        }
         
         // Manually invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
         queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+        queryClient.invalidateQueries({ queryKey: ['/api/assigned-work-items', workItemId] });
         
         toast({
           title: "Work item updated",
@@ -1181,8 +1190,8 @@ const ProcessForm = () => {
       // Check if we have workItemId but not storeId
       if (workItemId && !storeId) {
         try {
-          // Try to fetch the work item to get its storeId
-          const response = await fetch(`/api/work-items/${workItemId}`);
+          // Try to fetch the work item to get its storeId using the assigned-work-items endpoint for merchandisers
+          const response = await fetch(`/api/assigned-work-items/${workItemId}`);
           if (response.ok) {
             const workItemData = await response.json();
             if (workItemData && workItemData.storeId) {
@@ -1190,6 +1199,19 @@ const ProcessForm = () => {
               // Redirect with both parameters
               navigate(`/process-form?workItemId=${workItemId}&storeId=${workItemData.storeId}`);
               return;
+            }
+          } else {
+            // Fallback to admin endpoint if necessary
+            console.log("First endpoint failed, trying admin endpoint as fallback");
+            const adminResponse = await fetch(`/api/work-items/${workItemId}`);
+            if (adminResponse.ok) {
+              const adminWorkItemData = await adminResponse.json();
+              if (adminWorkItemData && adminWorkItemData.storeId) {
+                console.log(`Found storeId ${adminWorkItemData.storeId} from admin endpoint for workItemId ${workItemId}`);
+                // Redirect with both parameters
+                navigate(`/process-form?workItemId=${workItemId}&storeId=${adminWorkItemData.storeId}`);
+                return;
+              }
             }
           }
         } catch (err) {
