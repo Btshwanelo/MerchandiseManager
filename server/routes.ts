@@ -143,74 +143,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
         console.error("Error checking work_items table:", err);
       }
       
-      // Direct SQL query to avoid any filtering
-      const query = `
-        SELECT 
-          w.id, w.title, w.description, w.type, w.user_id, w.store_id, 
-          w.store_assignment_id, w.due_date, w.priority, w.status, 
-          w.completed_at, w.notes, w.attachments, w.created_by, 
-          w.created_at, w.updated_at,
-          u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
-          s.id as store_id, s.name as store_name, s.location
-        FROM work_items w
-        JOIN users u ON w.user_id = u.id
-        JOIN stores s ON w.store_id = s.id
-      `;
-      
-      console.log("Executing SQL query:", query);
-      const directItemsQuery = await pool.query(query);
-      console.log("Query executed successfully, rows returned:", directItemsQuery.rows.length);
-      
-      if (directItemsQuery.rows.length === 0) {
-        console.log("No work items found in database");
-        return res.json([]);
-      }
-      
-      // Format the results to match the expected structure
-      const allWorkItems = directItemsQuery.rows.map(row => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        type: row.type,
-        userId: row.user_id,
-        storeId: row.store_id,
-        storeAssignmentId: row.store_assignment_id,
-        status: row.status,
-        priority: row.priority,
-        dueDate: row.due_date,
-        completedAt: row.completed_at,
-        notes: row.notes,
-        attachments: row.attachments || [],
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        user: {
-          id: row.user_id,
-          username: row.username,
-          name: row.user_name,
-          email: row.email,
-          role: row.role
-        },
-        store: {
-          id: row.store_id,
-          name: row.store_name,
-          location: row.location
+      try {
+        // Use the storage interface instead of direct query to avoid SQL errors
+        const workItems = await storage.getAllWorkItems();
+        console.log(`Fetched ${workItems.length} total work items using storage interface`);
+        
+        if (workItems.length > 0) {
+          console.log("Sample work items:", 
+            workItems.slice(0, 3).map(item => ({ 
+              id: item.id, 
+              title: item.title, 
+              status: item.status 
+            }))
+          );
         }
-      }));
-      
-      console.log(`Fetched ${allWorkItems.length} total work items using direct SQL query`);
-      
-      if (allWorkItems.length > 0) {
-        console.log("Sample work items:", 
-          allWorkItems.slice(0, 3).map(item => ({ 
-            id: item.id, 
-            title: item.title, 
-            status: item.status 
-          }))
-        );
+        
+        return res.json(workItems);
+      } catch (queryError) {
+        console.error("Error using storage interface, falling back to direct SQL...", queryError);
+        
+        // Direct SQL query as a fallback
+        const query = `
+          SELECT 
+            w.id, w.title, w.description, w.type, w.user_id, w.store_id, 
+            w.store_assignment_id, w.due_date, w.priority, w.status, 
+            w.completed_at, w.notes, w.attachments, w.created_by, 
+            w.created_at, w.updated_at,
+            u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
+            s.id as store_id, s.name as store_name, s.location
+          FROM work_items w
+          LEFT JOIN users u ON w.user_id = u.id
+          LEFT JOIN stores s ON w.store_id = s.id
+        `;
+        
+        console.log("Executing SQL query:", query);
+        const directItemsQuery = await pool.query(query);
+        console.log("Query executed successfully, rows returned:", directItemsQuery.rows.length);
+        
+        if (directItemsQuery.rows.length === 0) {
+          console.log("No work items found in database");
+          return res.json([]);
+        }
+        
+        // Format the results to match the expected structure
+        const allWorkItems = directItemsQuery.rows.map(row => ({
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: row.type,
+          userId: row.user_id,
+          storeId: row.store_id,
+          storeAssignmentId: row.store_assignment_id,
+          status: row.status || 'pending',
+          priority: row.priority || 'medium',
+          dueDate: row.due_date,
+          completedAt: row.completed_at,
+          notes: row.notes,
+          attachments: row.attachments || [],
+          createdBy: row.created_by,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at,
+          user: row.username ? {
+            id: row.user_id,
+            username: row.username,
+            name: row.user_name,
+            email: row.email,
+            role: row.role
+          } : null,
+          store: row.store_name ? {
+            id: row.store_id,
+            name: row.store_name,
+            location: row.location
+          } : null
+        }));
+        
+        console.log(`Processed ${allWorkItems.length} total work items using direct SQL query`);
+        
+        return res.json(allWorkItems);
       }
-      
-      return res.json(allWorkItems);
     } catch (error) {
       console.error("Error in /api/work-items/all endpoint:", error);
       if (error instanceof Error) {
