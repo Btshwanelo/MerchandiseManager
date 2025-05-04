@@ -126,6 +126,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Starting to fetch ALL work items (including completed)...");
       
+      // First, check if the work_items table exists and has records
+      try {
+        const tableCheck = await pool.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'work_items')");
+        console.log("work_items table exists:", tableCheck.rows[0].exists);
+        
+        if (tableCheck.rows[0].exists) {
+          const countCheck = await pool.query("SELECT COUNT(*) FROM work_items");
+          console.log("Total work_items count:", countCheck.rows[0].count);
+        }
+      } catch (err) {
+        console.error("Error checking work_items table:", err);
+      }
+      
       // Direct SQL query to avoid any filtering
       const query = `
         SELECT 
@@ -140,7 +153,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         JOIN stores s ON w.store_id = s.id
       `;
       
+      console.log("Executing SQL query:", query);
       const directItemsQuery = await pool.query(query);
+      console.log("Query executed successfully, rows returned:", directItemsQuery.rows.length);
       
       if (directItemsQuery.rows.length === 0) {
         console.log("No work items found in database");

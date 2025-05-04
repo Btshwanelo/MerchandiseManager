@@ -378,6 +378,9 @@ export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
 export type WorkItem = typeof workItems.$inferSelect;
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 
+export type UserAlert = typeof userAlerts.$inferSelect;
+export type InsertUserAlert = z.infer<typeof insertUserAlertSchema>;
+
 // Enum for stock take type options
 export enum StockTakeType {
   SHELF = "shelf",
@@ -414,6 +417,39 @@ export enum WorkItemStatus {
   COMPLETED = "completed",   // Completed
   CANCELLED = "cancelled"   // Cancelled or no longer needed
 }
+
+// Alert type enum
+export enum AlertType {
+  WORK_ITEM_COMPLETED = "work_item_completed", // Alert for admins when work items are completed
+  STORE_ASSIGNED = "store_assigned",       // Alert for merchandisers when assigned to a store
+  WORK_ITEM_ASSIGNED = "work_item_assigned",  // Alert for merchandisers when assigned a work item
+  DUE_DATE_APPROACHING = "due_date_approaching" // Alert for merchandisers when assignment due date is approaching
+}
+
+// Alert status enum
+export enum AlertStatus {
+  UNREAD = "unread",
+  READ = "read"
+}
+
+// User alerts table - for in-app notifications
+export const userAlerts = pgTable("user_alerts", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // Using AlertType enum
+  relatedItemId: integer("related_item_id"), // Can reference work items, store assignments, etc.
+  status: text("status").notNull().default(AlertStatus.UNREAD),
+  createdAt: timestamp("created_at").defaultNow(),
+  readAt: timestamp("read_at"),
+});
+
+export const insertUserAlertSchema = createInsertSchema(userAlerts).omit({
+  id: true,
+  createdAt: true,
+  readAt: true,
+});
 
 export enum WorkItemType {
   STOCK_TAKE = "stock_take",         // Regular stock taking task
@@ -456,6 +492,14 @@ export const usersRelations = relations(users, ({ many }) => ({
   alerts: many(alerts, { relationName: "resolvedByUser" }),
   storeAssignments: many(storeAssignments, { relationName: "assignedStores" }),
   workItems: many(workItems, { relationName: "assignedWorkItems" }),
+  userAlerts: many(userAlerts),
+}));
+
+export const userAlertsRelations = relations(userAlerts, ({ one }) => ({
+  user: one(users, {
+    fields: [userAlerts.userId],
+    references: [users.id],
+  }),
 }));
 
 export const storesRelations = relations(stores, ({ one, many }) => ({
