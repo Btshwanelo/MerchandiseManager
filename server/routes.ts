@@ -126,17 +126,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Starting to fetch ALL work items (including completed)...");
       
-      // Direct SQL query to bypass any filtering
-      const directItemsQuery = await pool.query(`
+      // Direct SQL query to avoid any filtering
+      const query = `
         SELECT 
-          w.*, 
+          w.id, w.title, w.description, w.type, w.user_id, w.store_id, 
+          w.store_assignment_id, w.due_date, w.priority, w.status, 
+          w.completed_at, w.notes, w.attachments, w.created_by, 
+          w.created_at, w.updated_at,
           u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
           s.id as store_id, s.name as store_name, s.location
         FROM work_items w
-        INNER JOIN users u ON w.user_id = u.id
-        INNER JOIN stores s ON w.store_id = s.id
-        ORDER BY w.created_at DESC
-      `);
+        JOIN users u ON w.user_id = u.id
+        JOIN stores s ON w.store_id = s.id
+      `;
+      
+      const directItemsQuery = await pool.query(query);
+      
+      if (directItemsQuery.rows.length === 0) {
+        console.log("No work items found in database");
+        return res.json([]);
+      }
       
       // Format the results to match the expected structure
       const allWorkItems = directItemsQuery.rows.map(row => ({
@@ -152,7 +161,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         dueDate: row.due_date,
         completedAt: row.completed_at,
         notes: row.notes,
-        attachments: row.attachments,
+        attachments: row.attachments || [],
         createdBy: row.created_by,
         createdAt: row.created_at,
         updatedAt: row.updated_at,
@@ -170,16 +179,21 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }));
       
-      console.log(`Fetched ${allWorkItems.length} total work items (all statuses)`);
+      console.log(`Fetched ${allWorkItems.length} total work items using direct SQL query`);
       
       if (allWorkItems.length > 0) {
-        console.log("Work items sample:", 
-          allWorkItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, status: item.status }))
+        console.log("Sample work items:", 
+          allWorkItems.slice(0, 3).map(item => ({ 
+            id: item.id, 
+            title: item.title, 
+            status: item.status 
+          }))
         );
       }
       
-      res.json(allWorkItems);
+      return res.json(allWorkItems);
     } catch (error) {
+      console.error("Error in /api/work-items/all endpoint:", error);
       if (error instanceof Error) {
         return res.status(500).json({ message: error.message });
       }
