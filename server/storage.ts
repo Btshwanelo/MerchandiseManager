@@ -1,11 +1,12 @@
 import {
-  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems,
+  users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, userAlerts,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
   type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
   type StockTakeItem, type InsertStockTakeItem, type StoreAssignment, type InsertStoreAssignment,
-  type WorkItem, type InsertWorkItem, WorkItemStatus
+  type WorkItem, type InsertWorkItem, WorkItemStatus, AlertStatus,
+  type UserAlert, type InsertUserAlert
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -1270,6 +1271,59 @@ export class DatabaseStorage implements IStorage {
       pool, 
       createTableIfMissing: true 
     });
+  }
+  
+  // User Alerts methods
+  async createUserAlert(alert: InsertUserAlert): Promise<UserAlert> {
+    const [newAlert] = await db.insert(userAlerts).values({
+      userId: alert.userId,
+      type: alert.type,
+      title: alert.title || "", // Provide default if not set
+      message: alert.message,
+      relatedItemId: alert.relatedItemId || null,
+      status: alert.status || AlertStatus.UNREAD
+    }).returning();
+    
+    return newAlert;
+  }
+  
+  async getUserAlerts(userId: number): Promise<UserAlert[]> {
+    const alerts = await db.select().from(userAlerts)
+      .where(eq(userAlerts.userId, userId))
+      .orderBy(desc(userAlerts.createdAt));
+    
+    return alerts;
+  }
+  
+  async getUserUnreadAlerts(userId: number): Promise<UserAlert[]> {
+    const alerts = await db.select().from(userAlerts)
+      .where(and(
+        eq(userAlerts.userId, userId),
+        eq(userAlerts.status, AlertStatus.UNREAD)
+      ))
+      .orderBy(desc(userAlerts.createdAt));
+    
+    return alerts;
+  }
+  
+  async markAlertAsRead(alertId: number): Promise<UserAlert | undefined> {
+    const [updatedAlert] = await db.update(userAlerts)
+      .set({ 
+        status: AlertStatus.READ,
+        readAt: new Date()
+      })
+      .where(eq(userAlerts.id, alertId))
+      .returning();
+    
+    return updatedAlert;
+  }
+  
+  async deleteUserAlert(alertId: number): Promise<boolean> {
+    const result = await db.delete(userAlerts)
+      .where(eq(userAlerts.id, alertId))
+      .returning({ id: userAlerts.id });
+    
+    return result.length > 0;
   }
   
   // Work Item methods with detailed implementation

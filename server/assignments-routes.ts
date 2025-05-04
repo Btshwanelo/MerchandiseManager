@@ -708,6 +708,35 @@ export function registerAssignmentRoutes(app: express.Express) {
         });
       }
       
+      // Create alerts for admins and managers when work items are completed
+      try {
+        // Get all admin and manager users
+        const users = await storage.getAllUsers();
+        const adminsAndManagers = users.filter(
+          user => user.role === 'admin' || user.role === 'manager'
+        );
+        
+        // Create alert for each admin and manager
+        const userDisplayName = req.user?.name || req.user?.username || 'A user';
+        const alertMessage = `${userDisplayName} completed work item "${existing.title}" for store ${existing.storeId}`;
+        
+        for (const user of adminsAndManagers) {
+          await storage.createUserAlert({
+            userId: user.id,
+            type: 'work_item_completed',
+            title: 'Work Item Completed',
+            message: alertMessage,
+            relatedItemId: existing.id,
+            status: 'unread'
+          });
+          
+          console.log(`Created work item completion alert for ${user.username}`);
+        }
+      } catch (alertError) {
+        // Don't fail the request if alert creation fails, just log the error
+        console.error("Error creating work item completion alerts:", alertError);
+      }
+      
       res.json(completed);
     } catch (error) {
       console.error("Error completing work item:", error);
