@@ -70,11 +70,7 @@ export const Header = ({ onMobileMenuToggle }: HeaderProps) => {
           />
         </div>
 
-        <Button variant="ghost" size="icon" className="relative">
-          <Bell className="h-5 w-5" />
-          <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full"></span>
-          <span className="sr-only">Notifications</span>
-        </Button>
+        <AlertsDropdown />
 
         <Button variant="ghost" size="icon">
           <HelpCircle className="h-5 w-5" />
