@@ -1656,7 +1656,8 @@ export class DatabaseStorage implements IStorage {
     })
     .from(storeAssignments)
     .innerJoin(stores, eq(storeAssignments.storeId, stores.id))
-    .where(eq(storeAssignments.userId, userId));
+    .where(eq(storeAssignments.userId, userId))
+    .orderBy(desc(storeAssignments.createdAt));
     
     return result.map(({ assignment, store }) => ({
       ...assignment,
@@ -1665,7 +1666,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getAssignmentsByUserId(userId: number): Promise<StoreAssignment[]> {
-    return db.select().from(storeAssignments).where(eq(storeAssignments.userId, userId));
+    return db.select()
+      .from(storeAssignments)
+      .where(eq(storeAssignments.userId, userId))
+      .orderBy(desc(storeAssignments.createdAt));
   }
   
   async getAssignmentByWorkItemId(workItemId: number): Promise<StoreAssignment | undefined> {
@@ -1846,7 +1850,8 @@ export class DatabaseStorage implements IStorage {
     })
     .from(workItems)
     .innerJoin(stores, eq(workItems.storeId, stores.id))
-    .where(eq(workItems.userId, userId));
+    .where(eq(workItems.userId, userId))
+    .orderBy(desc(workItems.createdAt));
     
     return result.map(({ workItem, store }) => ({
       ...workItem,
@@ -1861,7 +1866,8 @@ export class DatabaseStorage implements IStorage {
     })
     .from(workItems)
     .innerJoin(users, eq(workItems.userId, users.id))
-    .where(eq(workItems.storeId, storeId));
+    .where(eq(workItems.storeId, storeId))
+    .orderBy(desc(workItems.createdAt));
     
     return result.map(({ workItem, user }) => ({
       ...workItem,
@@ -1870,7 +1876,10 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getWorkItemsByAssignmentId(assignmentId: number): Promise<WorkItem[]> {
-    return db.select().from(workItems).where(eq(workItems.storeAssignmentId, assignmentId));
+    return db.select()
+      .from(workItems)
+      .where(eq(workItems.storeAssignmentId, assignmentId))
+      .orderBy(desc(workItems.createdAt));
   }
   
   async getActiveWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
@@ -1887,7 +1896,8 @@ export class DatabaseStorage implements IStorage {
         eq(workItems.status, WorkItemStatus.PENDING),
         eq(workItems.status, WorkItemStatus.IN_PROGRESS)
       )
-    );
+    )
+    .orderBy(desc(workItems.createdAt));
     
     return result.map(({ workItem, user, store }) => ({
       ...workItem,
@@ -1976,11 +1986,16 @@ export class DatabaseStorage implements IStorage {
   }
 
   async getAllProducts(): Promise<Product[]> {
-    return db.select().from(products);
+    return db.select()
+      .from(products)
+      .orderBy(desc(products.createdAt));
   }
 
   async getProductsByCategory(category: string): Promise<Product[]> {
-    return db.select().from(products).where(eq(products.category, category));
+    return db.select()
+      .from(products)
+      .where(eq(products.category, category))
+      .orderBy(desc(products.createdAt));
   }
 
   async createProduct(insertProduct: InsertProduct): Promise<Product> {
