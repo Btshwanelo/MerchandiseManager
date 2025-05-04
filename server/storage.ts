@@ -1698,25 +1698,63 @@ export class DatabaseStorage implements IStorage {
       const completedCount = await pool.query("SELECT COUNT(*) FROM work_items WHERE status = 'completed'");
       console.log(`Completed work items count: ${completedCount.rows[0].count}`);
       
-      // Now do the join
-      const result = await db.select({
-        workItem: workItems,
-        user: users,
-        store: stores
-      })
-      .from(workItems)
-      .innerJoin(users, eq(workItems.userId, users.id))
-      .innerJoin(stores, eq(workItems.storeId, stores.id));
+      console.log('Running direct SQL query for ALL work items, including completed ones');
       
-      console.log(`Items after join: ${result.length}`);
-      if (result.length === 0) {
-        console.log('No items found after join. This could be due to missing related records');
+      // Use direct SQL query to bypass any drizzle issues
+      const query = `
+        SELECT 
+          w.*, 
+          u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
+          s.id as store_id, s.name as store_name, s.location
+        FROM work_items w
+        INNER JOIN users u ON w.user_id = u.id
+        INNER JOIN stores s ON w.store_id = s.id
+        ORDER BY w.created_at DESC
+      `;
+      
+      const directQueryResult = await pool.query(query);
+      console.log(`Direct SQL query returned ${directQueryResult.rows.length} work items`);
+      
+      if (directQueryResult.rows.length > 0) {
+        console.log('First 3 items from direct query:', 
+          directQueryResult.rows.slice(0, 3).map(row => ({ 
+            id: row.id, 
+            title: row.title, 
+            status: row.status 
+          }))
+        );
       }
       
-      return result.map(({ workItem, user, store }) => ({
-        ...workItem,
-        user,
-        store
+      // Format the results to match the expected structure
+      return directQueryResult.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type,
+        userId: row.user_id,
+        storeId: row.store_id,
+        storeAssignmentId: row.store_assignment_id,
+        status: row.status,
+        priority: row.priority,
+        dueDate: row.due_date,
+        completedAt: row.completed_at,
+        notes: row.notes,
+        attachments: row.attachments,
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        user: {
+          id: row.user_id,
+          username: row.username,
+          name: row.user_name,
+          email: row.email,
+          role: row.role
+        },
+        store: {
+          id: row.store_id,
+          name: row.store_name,
+          location: row.location
+        }
       }));
     } catch (error) {
       console.error('Error in getAllWorkItems:', error);

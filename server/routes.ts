@@ -107,70 +107,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Starting to fetch work items...");
       
-      // First, do a direct query to check how many work items exist
-      const checkQuery = await pool.query('SELECT COUNT(*) FROM work_items');
-      console.log(`Direct database check: ${checkQuery.rows[0].count} work items exist in database`);
-      
-      // Also check completed ones specifically
-      const completedQuery = await pool.query("SELECT COUNT(*) FROM work_items WHERE status = 'completed'");
-      console.log(`Direct database check: ${completedQuery.rows[0].count} COMPLETED work items exist`);
-      
-      // DIRECT QUERY FOR ALL WORK ITEMS
-      // Instead of calling storage.getAllWorkItems, we'll run a direct query to avoid any issues
-      // with method overriding or inheritance problems
-      console.log("Running direct SQL query for all work items with joins...");
-      
-      const directItemsQuery = await pool.query(`
-        SELECT 
-          w.*, 
-          u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
-          s.id as store_id, s.name as store_name, s.location
-        FROM work_items w
-        INNER JOIN users u ON w.user_id = u.id
-        INNER JOIN stores s ON w.store_id = s.id
-        ORDER BY w.created_at DESC
-      `);
-      
-      // Format the results to match the expected structure
-      const workItems = directItemsQuery.rows.map(row => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        type: row.type,
-        userId: row.user_id,
-        storeId: row.store_id,
-        storeAssignmentId: row.store_assignment_id,
-        status: row.status,
-        priority: row.priority,
-        dueDate: row.due_date,
-        completedAt: row.completed_at,
-        notes: row.notes,
-        attachments: row.attachments,
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        user: {
-          id: row.user_id,
-          username: row.username,
-          name: row.user_name,
-          email: row.email,
-          role: row.role
-        },
-        store: {
-          id: row.store_id,
-          name: row.store_name,
-          location: row.location
-        }
-      }));
-      
-      console.log(`Fetched ${workItems.length} work items via direct SQL query`);
+      // Get all work items with user and store data already included
+      // The getAllWorkItems method has been fixed to return ALL items including completed ones
+      console.log("Calling storage.getAllWorkItems() method...");
+      const workItems = await storage.getAllWorkItems();
+      console.log(`Fetched ${workItems.length} work items from getAllWorkItems method`);
       
       if (workItems.length > 0) {
         console.log("Work items sample:", 
           workItems.slice(0, 3).map(item => ({ id: item.id, title: item.title, status: item.status }))
         );
       } else {
-        console.log("No work items were returned from direct SQL query");
+        console.log("No work items were returned from getAllWorkItems method");
       }
       
       res.json(workItems);
