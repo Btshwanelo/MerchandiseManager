@@ -1745,7 +1745,7 @@ export class DatabaseStorage implements IStorage {
     return workItem;
   }
   
-  async getAllWorkItems(): Promise<(WorkItem & { user: User, store: Store })[]> {
+  async getAllWorkItems(): Promise<(WorkItem & { user?: User, store?: Store })[]> {
     try {
       // First, check directly how many work items are in the database
       const rawCount = await db.select({ count: count() }).from(workItems);
@@ -1761,15 +1761,15 @@ export class DatabaseStorage implements IStorage {
       
       console.log('Running direct SQL query for ALL work items, including completed ones');
       
-      // Use direct SQL query to bypass any drizzle issues
+      // Use direct SQL query with LEFT JOINs to include all work items even if user or store references are invalid
       const query = `
         SELECT 
           w.*, 
           u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
           s.id as store_id, s.name as store_name, s.location
         FROM work_items w
-        INNER JOIN users u ON w.user_id = u.id
-        INNER JOIN stores s ON w.store_id = s.id
+        LEFT JOIN users u ON w.user_id = u.id
+        LEFT JOIN stores s ON w.store_id = s.id
         ORDER BY w.created_at DESC
       `;
       
@@ -1787,39 +1787,55 @@ export class DatabaseStorage implements IStorage {
       }
       
       // Format the results to match the expected structure
-      return directQueryResult.rows.map(row => ({
-        id: row.id,
-        title: row.title,
-        description: row.description,
-        type: row.type,
-        userId: row.user_id,
-        storeId: row.store_id,
-        storeAssignmentId: row.store_assignment_id,
-        status: row.status,
-        priority: row.priority,
-        dueDate: row.due_date,
-        completedAt: row.completed_at,
-        notes: row.notes,
-        attachments: row.attachments,
-        createdBy: row.created_by,
-        createdAt: row.created_at,
-        updatedAt: row.updated_at,
-        user: {
-          id: row.user_id,
-          username: row.username,
-          name: row.user_name,
-          email: row.email,
-          role: row.role
-        },
-        store: {
-          id: row.store_id,
-          name: row.store_name,
-          location: row.location
+      return directQueryResult.rows.map(row => {
+        const workItem = {
+          id: row.id,
+          title: row.title,
+          description: row.description,
+          type: row.type,
+          userId: row.user_id,
+          storeId: row.store_id,
+          storeAssignmentId: row.store_assignment_id,
+          status: row.status || 'pending',
+          priority: row.priority || 'medium',
+          dueDate: row.due_date,
+          completedAt: row.completed_at,
+          notes: row.notes,
+          attachments: row.attachments || [],
+          createdBy: row.created_by,
+          createdAt: row.created_at,
+          updatedAt: row.updated_at
+        };
+        
+        // Only add user if we have valid user data
+        if (row.username) {
+          Object.assign(workItem, {
+            user: {
+              id: row.user_id,
+              username: row.username,
+              name: row.user_name,
+              email: row.email,
+              role: row.role
+            }
+          });
         }
-      }));
+        
+        // Only add store if we have valid store data
+        if (row.store_name) {
+          Object.assign(workItem, {
+            store: {
+              id: row.store_id,
+              name: row.store_name,
+              location: row.location
+            }
+          });
+        }
+        
+        return workItem;
+      });
     } catch (error) {
       console.error('Error in getAllWorkItems:', error);
-      return [];
+      throw error; // Let the API endpoint handle the error
     }
   }
   
