@@ -25,6 +25,77 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes first
   setupAuth(app);
   
+  // Admin-only work items routes - add these BEFORE other work item routes
+  // to prevent conflicts with parameterized routes
+  app.get("/api/work-items/all", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      console.log("Starting to fetch ALL work items (including completed)...");
+      
+      // Use direct SQL query with LEFT JOINs to include all work items
+      const query = `
+        SELECT 
+          w.*, 
+          u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
+          s.id as store_id, s.name as store_name, s.location
+        FROM work_items w
+        LEFT JOIN users u ON w.user_id = u.id
+        LEFT JOIN stores s ON w.store_id = s.id
+        ORDER BY w.created_at DESC
+      `;
+      
+      console.log("Executing SQL query for ALL work items");
+      const directItemsQuery = await pool.query(query);
+      console.log(`Query executed successfully, found ${directItemsQuery.rows.length} work items`);
+      
+      if (directItemsQuery.rows.length === 0) {
+        console.log("No work items found in database");
+        return res.json([]);
+      }
+      
+      // Format the results to match the expected structure
+      const allWorkItems = directItemsQuery.rows.map(row => ({
+        id: row.id,
+        title: row.title,
+        description: row.description,
+        type: row.type,
+        userId: row.user_id,
+        storeId: row.store_id,
+        storeAssignmentId: row.store_assignment_id,
+        status: row.status || 'pending',
+        priority: row.priority || 'medium',
+        dueDate: row.due_date,
+        completedAt: row.completed_at,
+        notes: row.notes,
+        attachments: row.attachments || [],
+        createdBy: row.created_by,
+        createdAt: row.created_at,
+        updatedAt: row.updated_at,
+        user: row.username ? {
+          id: row.user_id,
+          username: row.username,
+          name: row.user_name,
+          email: row.email,
+          role: row.role
+        } : null,
+        store: row.store_name ? {
+          id: row.store_id,
+          name: row.store_name,
+          location: row.location
+        } : null
+      }));
+      
+      console.log(`Processed ${allWorkItems.length} total work items`);
+      
+      return res.json(allWorkItems);
+    } catch (error) {
+      console.error("Error in /api/work-items/all endpoint:", error);
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to retrieve work items" });
+    }
+  });
+  
   // Get all merchandisers (for admins/managers)
   app.get("/api/users/merchandisers", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
     try {
@@ -125,110 +196,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Get ALL work items including completed ones (admin only)
-  app.get("/api/work-items/all", checkRole(UserRole.ADMIN), async (req, res) => {
-    try {
-      console.log("Starting to fetch ALL work items (including completed)...");
-      
-      // First, check if the work_items table exists and has records
-      try {
-        const tableCheck = await pool.query("SELECT EXISTS (SELECT FROM information_schema.tables WHERE table_name = 'work_items')");
-        console.log("work_items table exists:", tableCheck.rows[0].exists);
-        
-        if (tableCheck.rows[0].exists) {
-          const countCheck = await pool.query("SELECT COUNT(*) FROM work_items");
-          console.log("Total work_items count:", countCheck.rows[0].count);
-        }
-      } catch (err) {
-        console.error("Error checking work_items table:", err);
-      }
-      
-      try {
-        // Use the storage interface instead of direct query to avoid SQL errors
-        const workItems = await storage.getAllWorkItems();
-        console.log(`Fetched ${workItems.length} total work items using storage interface`);
-        
-        if (workItems.length > 0) {
-          console.log("Sample work items:", 
-            workItems.slice(0, 3).map(item => ({ 
-              id: item.id, 
-              title: item.title, 
-              status: item.status 
-            }))
-          );
-        }
-        
-        return res.json(workItems);
-      } catch (queryError) {
-        console.error("Error using storage interface, falling back to direct SQL...", queryError);
-        
-        // Direct SQL query as a fallback
-        const query = `
-          SELECT 
-            w.id, w.title, w.description, w.type, w.user_id, w.store_id, 
-            w.store_assignment_id, w.due_date, w.priority, w.status, 
-            w.completed_at, w.notes, w.attachments, w.created_by, 
-            w.created_at, w.updated_at,
-            u.id as user_id, u.username, u.name as user_name, u.email, u.role, 
-            s.id as store_id, s.name as store_name, s.location
-          FROM work_items w
-          LEFT JOIN users u ON w.user_id = u.id
-          LEFT JOIN stores s ON w.store_id = s.id
-        `;
-        
-        console.log("Executing SQL query:", query);
-        const directItemsQuery = await pool.query(query);
-        console.log("Query executed successfully, rows returned:", directItemsQuery.rows.length);
-        
-        if (directItemsQuery.rows.length === 0) {
-          console.log("No work items found in database");
-          return res.json([]);
-        }
-        
-        // Format the results to match the expected structure
-        const allWorkItems = directItemsQuery.rows.map(row => ({
-          id: row.id,
-          title: row.title,
-          description: row.description,
-          type: row.type,
-          userId: row.user_id,
-          storeId: row.store_id,
-          storeAssignmentId: row.store_assignment_id,
-          status: row.status || 'pending',
-          priority: row.priority || 'medium',
-          dueDate: row.due_date,
-          completedAt: row.completed_at,
-          notes: row.notes,
-          attachments: row.attachments || [],
-          createdBy: row.created_by,
-          createdAt: row.created_at,
-          updatedAt: row.updated_at,
-          user: row.username ? {
-            id: row.user_id,
-            username: row.username,
-            name: row.user_name,
-            email: row.email,
-            role: row.role
-          } : null,
-          store: row.store_name ? {
-            id: row.store_id,
-            name: row.store_name,
-            location: row.location
-          } : null
-        }));
-        
-        console.log(`Processed ${allWorkItems.length} total work items using direct SQL query`);
-        
-        return res.json(allWorkItems);
-      }
-    } catch (error) {
-      console.error("Error in /api/work-items/all endpoint:", error);
-      if (error instanceof Error) {
-        return res.status(500).json({ message: error.message });
-      }
-      res.status(500).json({ message: "Failed to retrieve work items" });
-    }
-  });
+  // Note: "/api/work-items/all" route is defined at the top of the file
+  // This comment is kept here to maintain code readability
   
   // Get single work item by ID (admin only)
   app.get("/api/work-items/:id", checkRole(UserRole.ADMIN), async (req, res) => {

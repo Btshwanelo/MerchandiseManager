@@ -363,16 +363,20 @@ export function registerAssignmentRoutes(app: express.Express) {
     }
   });
   
-  // Get a single work item by ID
-  app.get("/api/work-items/:id", isAuthenticated, async (req, res) => {
+  // Get a single work item by ID - with special role permissions
+  // This endpoint is for merchandisers to view their assigned work items
+  // Different from the admin-only endpoint in routes.ts
+  app.get("/api/assigned-work-items/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       if (isNaN(id)) {
         return res.status(400).json({ error: "Invalid work item ID" });
       }
       
+      console.log(`Merchandiser retrieving work item with ID ${id}`);
       const workItem = await storage.getWorkItem(id);
       if (!workItem) {
+        console.log(`Work item with ID ${id} not found`);
         return res.status(404).json({ error: "Work item not found" });
       }
       
