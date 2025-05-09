@@ -42,6 +42,13 @@ const navigationItems: NavItem[] = [
     roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
+    href: "/my-assignments",
+    label: "My Assignments",
+    icon: <ClipboardList className="h-5 w-5" />,
+    section: "core",
+    roles: [UserRole.MERCHANDISER]
+  },
+  {
     href: "/inventory",
     label: "Inventory",
     icon: <Package className="h-5 w-5" />,
@@ -105,13 +112,6 @@ const navigationItems: NavItem[] = [
     icon: <Calendar className="h-5 w-5" />,
     section: "merchandising",
     roles: [UserRole.ADMIN, UserRole.MANAGER]
-  },
-  {
-    href: "/my-assignments",
-    label: "My Assignments",
-    icon: <ClipboardList className="h-5 w-5" />,
-    section: "merchandising",
-    roles: [UserRole.MERCHANDISER]
   },
 
   // Documents & Orders

@@ -8,7 +8,8 @@ import {
   Package,
   Tags,
   Bell,
-  MoreHorizontal
+  MoreHorizontal,
+  ClipboardList
 } from "lucide-react";
 
 const mobileNavItems = [
@@ -16,6 +17,13 @@ const mobileNavItems = [
     href: "/",
     label: "Dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
+  },
+  {
+    href: "/my-assignments",
+    label: "Assignments",
+    icon: <ClipboardList className="h-5 w-5" />,
+    roles: [UserRole.MERCHANDISER]
   },
   {
     href: "/inventory",
@@ -27,6 +35,7 @@ const mobileNavItems = [
     href: "/products",
     label: "Products",
     icon: <Tags className="h-5 w-5" />,
+    roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
   {
     href: "/alerts",
