@@ -12,7 +12,7 @@
 import { db, pool } from './server/db.js';
 import axios from 'axios';
 import fs from 'fs';
-const baseURL = 'http://localhost:3000';
+const baseURL = 'http://localhost:5000';
 
 // Test results tracking
 const testResults = {

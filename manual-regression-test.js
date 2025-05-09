@@ -1,11 +1,11 @@
 /**
  * Manual Regression Test for InvenTrack Application
- * This script runs simpler regression tests that don't require ES modules
+ * This script runs regression tests for key functionality
  */
 
-const axios = require('axios');
-const fs = require('fs');
-const baseURL = 'http://localhost:3000';
+import axios from 'axios';
+import fs from 'fs';
+const baseURL = 'http://localhost:5000';
 
 // Test results tracking
 const testResults = {
@@ -65,8 +65,10 @@ async function testUserLogin() {
   try {
     const adminClient = await createAuthenticatedClient('admin', 'admin123');
     const userResponse = await adminClient.get('/api/user');
-    recordTest('Admin Login', userResponse.data.role === 'ADMIN');
+    console.log('Admin user response:', JSON.stringify(userResponse.data, null, 2));
+    recordTest('Admin Login', userResponse.data && userResponse.data.role === 'ADMIN');
   } catch (error) {
+    console.error('Admin login error details:', error);
     recordTest('Admin Login', false, error);
   }
   

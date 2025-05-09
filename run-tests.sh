@@ -1,8 +1,8 @@
 #!/bin/bash
 
 # Check if the server is running
-if ! curl -s http://localhost:3000 > /dev/null; then
-  echo "The application server doesn't seem to be running at http://localhost:3000."
+if ! curl -s http://localhost:5000 > /dev/null; then
+  echo "The application server doesn't seem to be running at http://localhost:5000."
   echo "Please make sure the server is running and try again."
   exit 1
 fi
