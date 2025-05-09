@@ -293,9 +293,9 @@ const MerchandisingPage = () => {
                   </Select>
                 </div>
                 <div className="w-full sm:w-32 space-y-2">
-                  <label className="text-sm font-medium">Price ($)</label>
+                  <label className="text-sm font-medium">Price (R)</label>
                   <div className="relative">
-                    <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                    <span className="absolute left-3 top-3 h-4 w-4 text-muted-foreground">R</span>
                     <Input 
                       type="number" 
                       value={price}

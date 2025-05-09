@@ -6,13 +6,14 @@ export function cn(...inputs: ClassValue[]) {
 }
 
 // Format currency values
-export function formatCurrency(value: number, currency = "USD", style = "currency") {
-  return new Intl.NumberFormat("en-US", {
+export function formatCurrency(value: number, currency = "ZAR", style: 'currency' | 'decimal' | 'percent' | 'unit' = "currency") {
+  return new Intl.NumberFormat("en-ZA", {
     style,
     currency,
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
-  }).format(value / 100); // Convert cents to dollars
+    currencyDisplay: 'symbol'
+  }).format(value / 100); // Convert cents to Rands
 }
 
 // Calculate percentage of current stock relative to minimum stock level
