@@ -484,7 +484,7 @@ const ProductsPage = () => {
                             <TableCell>
                               <Badge variant="outline">{product.category}</Badge>
                             </TableCell>
-                            <TableCell>${(product.price / 100).toFixed(2)}</TableCell>
+                            <TableCell>{formatCurrency(product.price)}</TableCell>
                             <TableCell>{product.minStockLevel} units</TableCell>
                             {canManageProducts && (
                               <TableCell className="text-right">
