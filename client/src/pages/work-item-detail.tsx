@@ -57,7 +57,8 @@ import {
   ThumbsDown,
   ShoppingCart,
   BarChart,
-  Plus
+  Plus,
+  XSquare
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -588,7 +589,8 @@ const WorkItemDetailPage = () => {
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {isLoading ? (
+              {isLoadingWorkItem || isLoadingStockTake || isLoadingMerchandising || 
+                isLoadingCompetitorMerchandising || isLoadingOrder ? (
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
@@ -610,140 +612,155 @@ const WorkItemDetailPage = () => {
                   className="w-full"
                 >
                   <TabsList className="mb-4">
-                    {stockTake && (
-                      <TabsTrigger value="stock-take">
-                        <ClipboardCheck className="h-4 w-4 mr-2" />
-                        Stock Take
-                      </TabsTrigger>
-                    )}
-                    {merchandising && (
-                      <TabsTrigger value="merchandising">
-                        <Store className="h-4 w-4 mr-2" />
-                        Merchandising
-                      </TabsTrigger>
-                    )}
-                    {competitorMerchandising && (
-                      <TabsTrigger value="competitor">
-                        <BarChart className="h-4 w-4 mr-2" />
-                        Competitor
-                      </TabsTrigger>
-                    )}
-                    {order && (
-                      <TabsTrigger value="order">
-                        <ShoppingCart className="h-4 w-4 mr-2" />
-                        Order
-                      </TabsTrigger>
-                    )}
+                    {/* Always show Stock Take tab */}
+                    <TabsTrigger value="stock-take">
+                      <ClipboardCheck className="h-4 w-4 mr-2" />
+                      Stock Take
+                    </TabsTrigger>
+                    
+                    {/* Always show Merchandising tab */}
+                    <TabsTrigger value="merchandising">
+                      <Store className="h-4 w-4 mr-2" />
+                      Merchandising
+                    </TabsTrigger>
+                    
+                    {/* Always show Competitor Analysis tab */}
+                    <TabsTrigger value="competitor">
+                      <BarChart className="h-4 w-4 mr-2" />
+                      Competitor
+                    </TabsTrigger>
+                    
+                    {/* Always show Order tab */}
+                    <TabsTrigger value="order">
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Order
+                    </TabsTrigger>
                   </TabsList>
                   
                   {/* Stock Take Tab */}
-                  {stockTake && (
-                    <TabsContent value="stock-take" className="space-y-4">
-                      <div className="bg-muted p-4 rounded-md">
-                        <h3 className="font-medium mb-2">Stock Take Info</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-muted-foreground">Date:</span>
-                          <span>{formatDate(stockTake.date)}</span>
-                          
-                          <span className="text-muted-foreground">Status:</span>
-                          <span className="capitalize">{stockTake.status}</span>
-                          
-                          <span className="text-muted-foreground">Total Items:</span>
-                          <span>{stockTake.items?.length || 0}</span>
-                        </div>
-                      </div>
-                      
-                      {stockTake.comment && (
+                  <TabsContent value="stock-take" className="space-y-4">
+                    {stockTake ? (
+                      <>
                         <div className="bg-muted p-4 rounded-md">
-                          <h3 className="font-medium mb-2">Merchandiser Comment</h3>
-                          <p className="text-sm">{stockTake.comment}</p>
-                        </div>
-                      )}
-                      
-                      {stockTake.items && stockTake.items.length > 0 && (
-                        <div>
-                          <h3 className="font-medium mb-2">Stock Take Items</h3>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Quantity</TableHead>
-                                <TableHead>Location</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {stockTake.items.map((item, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    {item.product?.name || `Product #${item.productId}`}
-                                  </TableCell>
-                                  <TableCell>{item.quantity}</TableCell>
-                                  <TableCell className="capitalize">
-                                    {item.location.replace('_', ' ')}
-                                  </TableCell>
-                                </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                      
-                      {stockTake.pictures && stockTake.pictures.length > 0 && (
-                        <div>
-                          <h3 className="font-medium mb-2">Pictures</h3>
-                          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                            {stockTake.pictures.map((pic, index) => (
-                              <div key={index} className="aspect-square bg-muted rounded-md flex items-center justify-center">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                              </div>
-                            ))}
+                          <h3 className="font-medium mb-2">Stock Take Info</h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span>{formatDate(stockTake.date)}</span>
+                            
+                            <span className="text-muted-foreground">Status:</span>
+                            <span className="capitalize">{stockTake.status}</span>
+                            
+                            <span className="text-muted-foreground">Total Items:</span>
+                            <span>{stockTake.items?.length || 0}</span>
                           </div>
                         </div>
-                      )}
-                    </TabsContent>
-                  )}
+                        
+                        {stockTake.comment && (
+                          <div className="bg-muted p-4 rounded-md">
+                            <h3 className="font-medium mb-2">Merchandiser Comment</h3>
+                            <p className="text-sm">{stockTake.comment}</p>
+                          </div>
+                        )}
+                        
+                        {stockTake.items && stockTake.items.length > 0 && (
+                          <div>
+                            <h3 className="font-medium mb-2">Stock Take Items</h3>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Product</TableHead>
+                                  <TableHead>Quantity</TableHead>
+                                  <TableHead>Location</TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {stockTake.items.map((item, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      {item.product?.name || `Product #${item.productId}`}
+                                    </TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                    <TableCell className="capitalize">
+                                      {item.location.replace('_', ' ')}
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                        
+                        {stockTake.pictures && stockTake.pictures.length > 0 && (
+                          <div>
+                            <h3 className="font-medium mb-2">Pictures</h3>
+                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                              {stockTake.pictures.map((pic, index) => (
+                                <div key={index} className="aspect-square bg-muted rounded-md flex items-center justify-center">
+                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <ClipboardX className="h-12 w-12 mx-auto mb-4 text-muted" />
+                        <h3 className="text-lg font-medium mb-2">No Stock Take Data</h3>
+                        <p>This work item does not have any stock take data submitted.</p>
+                      </div>
+                    )}
+                  </TabsContent>
                   
                   {/* Merchandising Tab */}
-                  {merchandising && (
-                    <TabsContent value="merchandising" className="space-y-4">
-                      <div className="bg-muted p-4 rounded-md">
-                        <h3 className="font-medium mb-2">Merchandising Info</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-muted-foreground">Date:</span>
-                          <span>{formatDate(merchandising.date)}</span>
-                          
-                          <span className="text-muted-foreground">Total Items:</span>
-                          <span>{merchandising.merchandisingItems?.length || 0}</span>
+                  <TabsContent value="merchandising" className="space-y-4">
+                    {merchandising ? (
+                      <>
+                        <div className="bg-muted p-4 rounded-md">
+                          <h3 className="font-medium mb-2">Merchandising Info</h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span>{formatDate(merchandising.date)}</span>
+                            
+                            <span className="text-muted-foreground">Total Items:</span>
+                            <span>{merchandising.merchandisingItems?.length || 0}</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      {merchandising.merchandisingItems && merchandising.merchandisingItems.length > 0 && (
-                        <div>
-                          <h3 className="font-medium mb-2">Merchandising Items</h3>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Notes</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {merchandising.merchandisingItems.map((item, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    {item.product?.name || `Product #${item.productId}`}
-                                  </TableCell>
-                                  <TableCell>R{item.price.toFixed(2)}</TableCell>
-                                  <TableCell>{item.notes || '-'}</TableCell>
+                        
+                        {merchandising.merchandisingItems && merchandising.merchandisingItems.length > 0 && (
+                          <div>
+                            <h3 className="font-medium mb-2">Merchandising Items</h3>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Product</TableHead>
+                                  <TableHead>Price</TableHead>
+                                  <TableHead>Notes</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </TabsContent>
-                  )}
+                              </TableHeader>
+                              <TableBody>
+                                {merchandising.merchandisingItems.map((item, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      {item.product?.name || `Product #${item.productId}`}
+                                    </TableCell>
+                                    <TableCell>R{item.price.toFixed(2)}</TableCell>
+                                    <TableCell>{item.notes || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Store className="h-12 w-12 mx-auto mb-4 text-muted" />
+                        <h3 className="text-lg font-medium mb-2">No Merchandising Data</h3>
+                        <p>This work item does not have any merchandising data submitted.</p>
+                      </div>
+                    )}
+                  </TabsContent>
                   
                   {/* Competitor Tab */}
                   {competitorMerchandising && (
