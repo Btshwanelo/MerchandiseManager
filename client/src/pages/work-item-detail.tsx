@@ -344,6 +344,16 @@ const WorkItemDetailPage = () => {
   const isLoading = isLoadingWorkItem || isLoadingStockTake || 
                    isLoadingMerchandising || isLoadingCompetitorMerchandising || 
                    isLoadingOrder || isLoadingAuditTrail;
+                   
+  // Debug - Log data for each tab
+  useEffect(() => {
+    console.log('Work Item Data:', workItem);
+    console.log('Stock Take Data:', stockTake);
+    console.log('Merchandising Data:', merchandising);
+    console.log('Competitor Data:', competitorMerchandising);
+    console.log('Order Data:', order);
+    console.log('Audit Trail:', auditTrail);
+  }, [workItem, stockTake, merchandising, competitorMerchandising, order, auditTrail]);
 
   // Handle admin edit actions
   const handleAdminAction = (newStatus: string) => {
