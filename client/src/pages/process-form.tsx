@@ -517,7 +517,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
     
     toast({
       title: "Promotion product added",
-      description: `Added ${selectedProduct.name} with price $${numPrice.toFixed(2)}`,
+      description: `Added ${selectedProduct.name} with price R${numPrice.toFixed(2)}`,
     });
   };
   
@@ -587,9 +587,9 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
           </div>
           
           <div className="md:col-span-3">
-            <label className="text-base font-medium mb-2 block">Price ($)</label>
+            <label className="text-base font-medium mb-2 block">Price (R)</label>
             <div className="relative">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">$</span>
+              <span className="absolute inset-y-0 left-0 flex items-center pl-3 text-muted-foreground">R</span>
               <Input
                 type="number"
                 min="0"
@@ -635,8 +635,8 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
                       <p className="text-sm text-muted-foreground">SKU: {item?.product?.sku || 'N/A'}</p>
                     </div>
                     <div className="text-right">
-                      <p className="font-medium text-lg">${((item?.price || 0) / 100).toFixed(2)}</p>
-                      <p className="text-xs text-muted-foreground">Regular: ${((item?.product?.price || 0) / 100).toFixed(2)}</p>
+                      <p className="font-medium text-lg">R{((item?.price || 0) / 100).toFixed(2)}</p>
+                      <p className="text-xs text-muted-foreground">Regular: R{((item?.product?.price || 0) / 100).toFixed(2)}</p>
                     </div>
                   </div>
                 </div>
