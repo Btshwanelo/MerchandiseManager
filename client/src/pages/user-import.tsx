@@ -109,33 +109,46 @@ const UserImportPage = () => {
 
     try {
       const content = await file.text();
-      const { data, errors } = await parseCSV<UserImport>(content, {
-        required: ['username', 'name', 'email', 'role', 'password'],
-        validate: (row: Partial<UserImport>) => {
-          const validations = [];
-          
-          // Validate email
-          if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
-            validations.push(`Invalid email format for ${row.email}`);
-          }
-          
-          // Validate role
-          if (row.role && !Object.values(UserRole).includes(row.role as UserRole)) {
-            validations.push(`Invalid role: ${row.role}. Must be one of: ${Object.values(UserRole).join(', ')}`);
-          }
-          
-          // Validate password length
-          if (row.password && row.password.length < 6) {
-            validations.push(`Password too short for ${row.username}`);
-          }
-          
-          return validations;
+      
+      // Define validation function
+      const validate = (row: Partial<UserImport>) => {
+        const validations: string[] = [];
+        
+        // Validate email
+        if (row.email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(row.email)) {
+          validations.push(`Invalid email format for ${row.email}`);
         }
-      });
-
-      setParsedData(data);
-      if (errors.length > 0) {
-        setParseError(`${errors.length} validation error(s) found in the CSV.`);
+        
+        // Validate role
+        if (row.role && !Object.values(UserRole).includes(row.role as UserRole)) {
+          validations.push(`Invalid role: ${row.role}. Must be one of: ${Object.values(UserRole).join(', ')}`);
+        }
+        
+        // Validate password length
+        if (row.password && row.password.length < 6) {
+          validations.push(`Password too short for ${row.username}`);
+        }
+        
+        return validations;
+      };
+      
+      try {
+        // Parse CSV data
+        const data = await parseCSV<UserImport>(content, {}, {
+          required: ['username', 'name', 'email', 'role', 'password'],
+          validate
+        });
+        
+        setParsedData(data);
+      } catch (parseError) {
+        if (parseError instanceof Error) {
+          setParseError(parseError.message);
+        } else {
+          setParseError("Failed to parse CSV file. Please check the format and try again.");
+        }
+        
+        // Clear the data when there's a parse error
+        setParsedData([]);
       }
 
       // Clear the timer and set progress to 100%
