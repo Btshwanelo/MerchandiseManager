@@ -69,7 +69,7 @@ const AuthPage = () => {
       <div className="hidden md:flex md:w-[60%] bg-[#7ccd57] flex-col justify-center items-center p-8 text-white">
         <div className="max-w-xl">
           <div className="flex items-center space-x-3 mb-8">
-            <Package className="h-10 w-10 text-white" />
+            <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-14" />
             <h1 className="text-3xl font-bold">InvenTrack</h1>
           </div>
           
@@ -102,7 +102,7 @@ const AuthPage = () => {
       {/* Right side - Form (40%) */}
       <div className="flex flex-col justify-center items-center w-full md:w-[40%] p-6 bg-white">
         <div className="md:hidden flex items-center space-x-2 mb-8">
-          <Package className="h-8 w-8 text-[#7ccd57]" />
+          <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-10" />
           <h1 className="text-2xl font-bold">InvenTrack</h1>
         </div>
 
