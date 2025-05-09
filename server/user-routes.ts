@@ -31,8 +31,9 @@ function generateSecureToken() {
 }
 
 export function registerUserRoutes(app: Express) {
-  // Get users by role (e.g., merchandisers)
-  app.get("/api/users/:role", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
+  // Get users by role (admin/manager only) - specific route with 'role' prefix
+  // to avoid conflict with the get user by ID route
+  app.get("/api/users/role/:role", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
     try {
       const { role } = req.params;
       
@@ -80,36 +81,7 @@ export function registerUserRoutes(app: Express) {
     }
   });
   
-  // Get users by role (admin/manager only)
-  app.get("/api/users/role/:role", async (req, res) => {
-    try {
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized" });
-      }
-      
-      const user = req.user as UserType;
-      const roleParam = req.params.role;
-      
-      // Check if user is admin or manager
-      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER) {
-        return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
-      }
-      
-      // Get all users and filter by role
-      const users = await storage.getAllUsers();
-      const filteredUsers = users.filter(u => u.role.toLowerCase() === roleParam.toLowerCase());
-      
-      // Remove password fields for security
-      const sanitizedUsers = filteredUsers.map(({ password, ...rest }) => rest);
-      
-      res.json(sanitizedUsers);
-    } catch (error) {
-      if (error instanceof Error) {
-        return res.status(500).json({ message: error.message });
-      }
-      res.status(500).json({ message: "Failed to retrieve users by role" });
-    }
-  });
+  // This route was duplicated and has been removed
 
   // Get user by ID (admin/manager only, or self)
   app.get("/api/users/:id", async (req, res) => {
@@ -119,7 +91,14 @@ export function registerUserRoutes(app: Express) {
       }
       
       const currentUser = req.user as UserType;
-      const userId = parseInt(req.params.id);
+      const idParam = req.params.id;
+      
+      // Check if the ID is a valid number to distinguish from role-based requests
+      if (!/^\d+$/.test(idParam)) {
+        return res.status(400).json({ message: "Invalid ID format - must be a number" });
+      }
+      
+      const userId = parseInt(idParam);
       
       // Allow if user is requesting their own data, or is admin/manager
       if (
@@ -156,7 +135,14 @@ export function registerUserRoutes(app: Express) {
       }
       
       const currentUser = req.user as UserType;
-      const userId = parseInt(req.params.id);
+      const idParam = req.params.id;
+      
+      // Check if the ID is a valid number
+      if (!/^\d+$/.test(idParam)) {
+        return res.status(400).json({ message: "Invalid ID format - must be a number" });
+      }
+      
+      const userId = parseInt(idParam);
       
       // Get user to update
       const userToUpdate = await storage.getUser(userId);
@@ -205,7 +191,14 @@ export function registerUserRoutes(app: Express) {
   // Delete user (admin only)
   app.delete("/api/users/:id", checkRole(UserRole.ADMIN), async (req, res) => {
     try {
-      const userId = parseInt(req.params.id);
+      const idParam = req.params.id;
+      
+      // Check if the ID is a valid number
+      if (!/^\d+$/.test(idParam)) {
+        return res.status(400).json({ message: "Invalid ID format - must be a number" });
+      }
+      
+      const userId = parseInt(idParam);
       const currentUser = req.user as UserType;
       
       // Prevent self-deletion
