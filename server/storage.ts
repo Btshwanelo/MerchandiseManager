@@ -114,6 +114,7 @@ export interface IStorage {
   getActivity(id: number): Promise<Activity | undefined>;
   getAllActivities(): Promise<Activity[]>;
   getRecentActivities(limit: number): Promise<(Activity & { product: Product, user: User, store: Store })[]>;
+  getActivitiesByUserId(userId: number, limit: number): Promise<(Activity & { product: Product, user: User, store: Store })[]>;
   createActivity(activity: InsertActivity): Promise<Activity>;
   
   // Alert methods
