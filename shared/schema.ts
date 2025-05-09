@@ -320,6 +320,21 @@ export const insertOrderSchema = createInsertSchema(orders).omit({
   orderDate: true,
 });
 
+// Order Items table
+export const orderItems = pgTable("order_items", {
+  id: serial("id").primaryKey(),
+  orderId: integer("order_id").references(() => orders.id).notNull(),
+  productId: integer("product_id").references(() => products.id).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const insertOrderItemSchema = createInsertSchema(orderItems).omit({
+  id: true,
+  createdAt: true,
+});
+
 // Type definitions
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
@@ -371,6 +386,9 @@ export type InsertDeal = z.infer<typeof insertDealSchema>;
 
 export type Order = typeof orders.$inferSelect;
 export type InsertOrder = z.infer<typeof insertOrderSchema>;
+
+export type OrderItem = typeof orderItems.$inferSelect;
+export type InsertOrderItem = z.infer<typeof insertOrderItemSchema>;
 
 export type StoreAssignment = typeof storeAssignments.$inferSelect;
 export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
@@ -650,7 +668,18 @@ export const competitorMerchandisingRelations = relations(competitorMerchandisin
   }),
 }));
 
-export const ordersRelations = relations(orders, ({ one }) => ({
+export const orderItemsRelations = relations(orderItems, ({ one }) => ({
+  order: one(orders, {
+    fields: [orderItems.orderId],
+    references: [orders.id],
+  }),
+  product: one(products, {
+    fields: [orderItems.productId],
+    references: [products.id],
+  }),
+}));
+
+export const ordersRelations = relations(orders, ({ one, many }) => ({
   store: one(stores, {
     fields: [orders.storeId],
     references: [stores.id],
@@ -659,6 +688,7 @@ export const ordersRelations = relations(orders, ({ one }) => ({
     fields: [orders.userId],
     references: [users.id],
   }),
+  items: many(orderItems),
 }));
 
 export const storeAssignmentsRelations = relations(storeAssignments, ({ one, many }) => ({
