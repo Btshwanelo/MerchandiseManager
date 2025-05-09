@@ -1,7 +1,37 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { Product, WorkItemStatus as WorkItemStatusEnum, StockTakeType } from "@shared/schema";
+import { 
+  Product, 
+  WorkItemStatus, 
+  WorkItemType,
+  StockTakeType, 
+  StockTake, 
+  StockTakeItem, 
+  Inventory
+} from "@shared/schema";
+
+// UI Components
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Badge } from "@/components/ui/badge";
+import { 
+  Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, 
+  CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera, QrCode, 
+  ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw
+} from "lucide-react";
+import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { WorkItemAccessError } from "@/components/ui/error-state";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+// Hooks and Utilities
+import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 
 // Type declarations for component props
 type StockTakeSectionProps = {
@@ -69,22 +99,6 @@ interface StoreAssignment {
   stockTakeType: string;
   createdAt: string;
 }
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera } from "lucide-react";
-import { QrCode } from "lucide-react";
-import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { WorkItemAccessError } from "@/components/ui/error-state";
-import { useToast } from "@/hooks/use-toast";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
-import { useAuth } from "@/hooks/use-auth";
-import { apiRequest, queryClient } from "@/lib/queryClient";
-import { WorkItemStatus, WorkItemType } from "@shared/schema";
 
 // Component for Stock Take section
 const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: StockTakeSectionProps) => {
@@ -814,13 +828,154 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
+  const [orderItems, setOrderItems] = useState<{productId: number, quantity: number, notes: string}[]>([]);
+  const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
+  const [quantity, setQuantity] = useState("1");
+  const [itemNotes, setItemNotes] = useState("");
   const { toast } = useToast();
+  
+  // Fetch products and low stock data
+  const { data: products = [] } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+    enabled: !!storeId,
+  });
+  
+  // Get stock take data to identify low stock items
+  const { data: stockTakes = [] } = useQuery<StockTake[]>({
+    queryKey: ['/api/stock-takes'],
+    enabled: !!storeId,
+  });
+  
+  const { data: stockTakeItems = [] } = useQuery<StockTakeItem[]>({
+    queryKey: ['/api/stock-take-items'],
+    enabled: stockTakes.length > 0,
+  });
+  
+  // Get inventory data related to this store
+  const { data: inventory = [] } = useQuery<Inventory[]>({
+    queryKey: ['/api/inventory', { storeId }],
+    enabled: !!storeId,
+  });
+  
+  // Helper function to identify items below threshold
+  const getLowStockItems = useCallback(() => {
+    if (!products.length || !inventory.length) return [];
+    
+    return inventory
+      .filter(item => {
+        const product = products.find(p => p.id === item.productId);
+        return product && item.quantity < product.minStockLevel;
+      })
+      .map(item => {
+        const product = products.find(p => p.id === item.productId);
+        return {
+          productId: item.productId,
+          productName: product?.name || 'Unknown product',
+          currentStock: item.quantity,
+          minStockLevel: product?.minStockLevel || 5,
+          quantityToOrder: product ? Math.max(product.minStockLevel - item.quantity, 1) : 1
+        };
+      });
+  }, [products, inventory]);
+  
+  const lowStockItems = getLowStockItems();
+  
+  // Add item to order
+  const addItemToOrder = () => {
+    if (!selectedProduct) return;
+    
+    const numQuantity = parseInt(quantity) || 1;
+    
+    // Add the selected product to order items
+    setOrderItems(prev => [
+      ...prev, 
+      {
+        productId: selectedProduct.id,
+        quantity: numQuantity,
+        notes: itemNotes
+      }
+    ]);
+    
+    // Reset form
+    setSelectedProduct(null);
+    setQuantity("1");
+    setItemNotes("");
+    
+    toast({
+      title: "Item added",
+      description: `Added ${selectedProduct.name} to order`
+    });
+  };
+  
+  // Add low stock item to order
+  const addLowStockItem = (item: { productId: number, productName: string, quantityToOrder: number }) => {
+    setOrderItems(prev => {
+      // Check if item already exists
+      const existingIndex = prev.findIndex(i => i.productId === item.productId);
+      if (existingIndex >= 0) {
+        // Update existing item
+        const updated = [...prev];
+        updated[existingIndex] = {
+          ...updated[existingIndex],
+          quantity: item.quantityToOrder
+        };
+        return updated;
+      } else {
+        // Add new item
+        return [
+          ...prev, 
+          {
+            productId: item.productId,
+            quantity: item.quantityToOrder,
+            notes: "Auto-added from low stock detection"
+          }
+        ];
+      }
+    });
+    
+    toast({
+      title: "Low stock item added",
+      description: `Added ${item.productName} to order`
+    });
+  };
+  
+  // Add all low stock items
+  const addAllLowStockItems = () => {
+    if (!lowStockItems.length) return;
+    
+    const updatedItems = [...orderItems];
+    
+    lowStockItems.forEach(item => {
+      const existingIndex = updatedItems.findIndex(i => i.productId === item.productId);
+      if (existingIndex >= 0) {
+        // Update existing item
+        updatedItems[existingIndex] = {
+          ...updatedItems[existingIndex],
+          quantity: item.quantityToOrder
+        };
+      } else {
+        // Add new item
+        updatedItems.push({
+          productId: item.productId,
+          quantity: item.quantityToOrder,
+          notes: "Auto-added from low stock detection"
+        });
+      }
+    });
+    
+    setOrderItems(updatedItems);
+    
+    toast({
+      title: "Low stock items added",
+      description: `Added ${lowStockItems.length} items to order`
+    });
+  };
   
   const submitOrder = async () => {
     setLoading(true);
     try {
-      // If no notes are provided, we're skipping the order step
-      if (!notes && pictures.length === 0) {
+      // If no notes, pictures, or items are provided, we're skipping the order step
+      if (!notes && pictures.length === 0 && orderItems.length === 0) {
         toast({
           title: "Step skipped",
           description: "Order step was skipped, completing work item",
@@ -860,7 +1015,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
         }
       }
       
-      // Create order if we have notes or pictures
+      // Create order if we have notes, pictures, or order items
       const orderData = {
         storeId,
         workItemId,
@@ -868,7 +1023,8 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
         notes: notes || "No notes provided",
         status: "submitted",
         priority: "medium",
-        date: new Date()
+        date: new Date(),
+        orderItems: orderItems
       };
       
       // Add pictures if any
@@ -941,9 +1097,141 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
   };
   
   return (
-    <div className="space-y-4">
+    <div className="space-y-8">
+      {/* Low Stock Items Section */}
+      <div className="space-y-4">
+        <div className="flex justify-between items-center mb-2">
+          <h3 className="font-semibold text-lg">Low Stock Items</h3>
+          {lowStockItems.length > 0 && (
+            <Button 
+              onClick={addAllLowStockItems} 
+              variant="secondary" 
+              size="sm"
+            >
+              <Plus className="h-4 w-4 mr-1" /> Add All to Order
+            </Button>
+          )}
+        </div>
+        
+        {lowStockItems.length === 0 ? (
+          <div className="text-center p-4 bg-muted rounded-md">
+            <ShoppingBasket className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
+            <p className="text-sm text-muted-foreground">No low stock items detected.</p>
+          </div>
+        ) : (
+          <div className="space-y-2">
+            {lowStockItems.map((item) => (
+              <div key={item.productId} className="flex justify-between items-center p-3 border rounded-md">
+                <div>
+                  <p className="font-medium">{item.productName}</p>
+                  <div className="flex items-center text-sm text-muted-foreground gap-2">
+                    <span>Current: {item.currentStock}</span>
+                    <span>•</span>
+                    <span>Min: {item.minStockLevel}</span>
+                    <span>•</span>
+                    <span className="text-primary">Need: {item.quantityToOrder}</span>
+                  </div>
+                </div>
+                <Button 
+                  onClick={() => addLowStockItem(item)} 
+                  variant="outline" 
+                  size="sm"
+                >
+                  <Plus className="h-4 w-4 mr-1" /> Add
+                </Button>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+      
+      {/* Manual Order Items Section */}
+      <div className="space-y-4">
+        <h3 className="font-semibold text-lg">Add Items Manually</h3>
+        <div className="flex gap-2">
+          <div className="flex-1">
+            <Select
+              onValueChange={(value) => setSelectedProduct(products.find(p => p.id === parseInt(value)) || null)}
+              value={selectedProduct?.id.toString() || ""}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder="Select product" />
+              </SelectTrigger>
+              <SelectContent>
+                {products.map((product) => (
+                  <SelectItem key={product.id} value={product.id.toString()}>
+                    {product.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="w-24">
+            <Input
+              type="number"
+              min="1"
+              value={quantity}
+              onChange={(e) => setQuantity(e.target.value)}
+              placeholder="Qty"
+            />
+          </div>
+          <Button onClick={addItemToOrder} disabled={!selectedProduct}>
+            <Plus className="h-4 w-4" />
+          </Button>
+        </div>
+        
+        <div className="space-y-2">
+          <Label htmlFor="item-notes">Item Notes</Label>
+          <Textarea 
+            id="item-notes" 
+            placeholder="Additional notes for this item..." 
+            value={itemNotes}
+            onChange={(e) => setItemNotes(e.target.value)}
+            rows={2}
+          />
+        </div>
+      </div>
+      
+      {/* Added Items List */}
+      {orderItems.length > 0 && (
+        <div className="space-y-2">
+          <h3 className="font-semibold text-lg">Order Items</h3>
+          <div className="space-y-2">
+            {orderItems.map((item, index) => {
+              const product = products.find(p => p.id === item.productId);
+              return (
+                <div key={index} className="flex justify-between items-center p-3 border rounded-md">
+                  <div>
+                    <p className="font-medium">{product?.name || 'Unknown product'}</p>
+                    <div className="flex items-center text-sm text-muted-foreground gap-2">
+                      <span>Qty: {item.quantity}</span>
+                      {item.notes && (
+                        <>
+                          <span>•</span>
+                          <span className="italic">{item.notes}</span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => {
+                      setOrderItems(orderItems.filter((_, i) => i !== index));
+                    }} 
+                    variant="ghost" 
+                    size="sm"
+                  >
+                    <Trash className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+      
+      {/* Order Notes Section */}
       <div className="space-y-2">
-        <Label htmlFor="order-notes">Order Notes</Label>
+        <Label htmlFor="order-notes">General Order Notes</Label>
         <Textarea 
           id="order-notes" 
           placeholder="Provide details for this order..." 
@@ -973,7 +1261,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
         className="w-full"
       >
         {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ShoppingCart className="mr-2 h-4 w-4" />}
-        {!notes ? "Skip Order Step & Complete" : "Submit Order & Complete"}
+        {!notes && orderItems.length === 0 ? "Skip Order Step & Complete" : "Submit Order & Complete"}
       </Button>
     </div>
   );
