@@ -44,7 +44,12 @@ import {
   Activity,
   KeyRound,
   Trash2,
-  User
+  User,
+  Map,
+  Clock,
+  ShoppingCart,
+  CalendarCheck,
+  CalendarClock
 } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Separator } from "@/components/ui/separator";
@@ -71,6 +76,7 @@ import {
 import { useToast } from "@/hooks/use-toast";
 import { UserRole, type User as UserType } from "@shared/schema";
 import { useAuth } from "@/hooks/use-auth";
+import { formatDate } from "@/lib/utils";
 
 const UserDetailPage = () => {
   const { toast } = useToast();
@@ -104,6 +110,24 @@ const UserDetailPage = () => {
     isError 
   } = useQuery<UserType>({
     queryKey: [`/api/users/${userId}`],
+    enabled: !!userId && !!currentUser,
+  });
+  
+  // Get user's assigned stores
+  const {
+    data: assignedStores,
+    isLoading: isLoadingStores,
+  } = useQuery({
+    queryKey: [`/api/users/${userId}/stores`],
+    enabled: !!userId && !!currentUser,
+  });
+  
+  // Get user's activity history
+  const {
+    data: activities,
+    isLoading: isLoadingActivities,
+  } = useQuery({
+    queryKey: [`/api/users/${userId}/activities`],
     enabled: !!userId && !!currentUser,
   });
 
@@ -393,23 +417,168 @@ const UserDetailPage = () => {
               </TabsContent>
               
               <TabsContent value="stores">
-                <div className="rounded-md border p-6 flex flex-col items-center justify-center">
-                  <Store className="h-8 w-8 text-muted-foreground mb-2" />
-                  <h3 className="text-lg font-medium">No Stores Assigned</h3>
-                  <p className="text-sm text-muted-foreground text-center mt-1">
-                    This user doesn't have any stores assigned to them yet.
-                  </p>
-                </div>
+                {isLoadingStores ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : assignedStores && assignedStores.length > 0 ? (
+                  <div className="space-y-4">
+                    <h3 className="text-lg font-medium mb-4">Assigned Stores ({assignedStores.length})</h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                      {assignedStores.map((store: any) => (
+                        <Card key={store.id} className="overflow-hidden">
+                          <CardHeader className="bg-muted/50 pb-3">
+                            <CardTitle className="text-base flex items-center">
+                              <Store className="h-4 w-4 mr-2" />
+                              {store.name}
+                            </CardTitle>
+                            <CardDescription className="flex items-center">
+                              <Map className="h-3 w-3 mr-1" />
+                              {store.location}
+                            </CardDescription>
+                          </CardHeader>
+                          <CardContent className="pt-4 pb-3">
+                            <div className="text-sm space-y-2">
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Status:</span>
+                                <Badge variant={store.status === "ACTIVE" ? "outline" : "secondary"} className="text-xs">
+                                  {store.status}
+                                </Badge>
+                              </div>
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Start Date:</span>
+                                <span className="font-medium">
+                                  {store.startDate ? new Date(store.startDate).toLocaleDateString() : "N/A"}
+                                </span>
+                              </div>
+                              {store.endDate && (
+                                <div className="flex justify-between">
+                                  <span className="text-muted-foreground">End Date:</span>
+                                  <span className="font-medium">
+                                    {new Date(store.endDate).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              )}
+                              <div className="flex justify-between">
+                                <span className="text-muted-foreground">Assignment Type:</span>
+                                <span className="font-medium">{store.stockTakeType || "Standard"}</span>
+                              </div>
+                            </div>
+                          </CardContent>
+                          <CardFooter className="bg-muted/30 py-2 flex justify-end">
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link href={`/stores/${store.storeId}`}>
+                                View Store Details
+                              </Link>
+                            </Button>
+                          </CardFooter>
+                        </Card>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border p-6 flex flex-col items-center justify-center">
+                    <Store className="h-8 w-8 text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium">No Stores Assigned</h3>
+                    <p className="text-sm text-muted-foreground text-center mt-1">
+                      This user doesn't have any stores assigned to them yet.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
               
               <TabsContent value="activity">
-                <div className="rounded-md border p-6 flex flex-col items-center justify-center">
-                  <Activity className="h-8 w-8 text-muted-foreground mb-2" />
-                  <h3 className="text-lg font-medium">No Activity</h3>
-                  <p className="text-sm text-muted-foreground text-center mt-1">
-                    No recent activity found for this user.
-                  </p>
-                </div>
+                {isLoadingActivities ? (
+                  <div className="flex justify-center items-center py-8">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                  </div>
+                ) : activities && activities.length > 0 ? (
+                  <div className="space-y-6">
+                    <h3 className="text-lg font-medium">Recent Activity ({activities.length})</h3>
+                    
+                    <div className="space-y-4">
+                      {activities.map((activity: any) => {
+                        // Set icon based on activity type
+                        let ActivityIcon = Activity;
+                        let statusColor = "bg-muted text-muted-foreground";
+                        
+                        switch (activity.actionType) {
+                          case 'STOCK_TAKE':
+                            ActivityIcon = CalendarCheck;
+                            statusColor = "bg-primary/20 text-primary border-primary/20";
+                            break;
+                          case 'STOCK_MOVE':
+                            ActivityIcon = ShoppingCart;
+                            statusColor = "bg-orange-500/20 text-orange-500 border-orange-500/20";
+                            break;
+                          case 'WORK_ITEM':
+                            ActivityIcon = CalendarClock;
+                            statusColor = "bg-blue-500/20 text-blue-500 border-blue-500/20";
+                            break;
+                          default:
+                            ActivityIcon = Activity;
+                            statusColor = "bg-muted text-muted-foreground";
+                        }
+                        
+                        return (
+                          <div key={activity.id} className="flex gap-4 p-4 rounded-lg border">
+                            <div className={`h-10 w-10 rounded-full ${statusColor} flex items-center justify-center flex-shrink-0`}>
+                              <ActivityIcon className="h-5 w-5" />
+                            </div>
+                            
+                            <div className="flex-1 space-y-1">
+                              <div className="flex items-center justify-between">
+                                <h4 className="text-sm font-medium flex items-center">
+                                  {activity.actionType.replace(/_/g, ' ')} 
+                                  {activity.status && 
+                                    <Badge variant="outline" className="ml-2 text-[10px]">{activity.status}</Badge>
+                                  }
+                                </h4>
+                                <time className="text-xs text-muted-foreground">
+                                  {activity.timestamp ? formatDate(activity.timestamp) : 'N/A'}
+                                </time>
+                              </div>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-y-1 gap-x-4 text-sm">
+                                <div className="flex items-center">
+                                  <span className="text-muted-foreground mr-1">Store:</span>
+                                  <span className="font-medium">{activity.storeName}</span>
+                                </div>
+                                
+                                <div className="flex items-center">
+                                  <span className="text-muted-foreground mr-1">Product:</span>
+                                  <span className="font-medium">{activity.productName}</span>
+                                </div>
+                                
+                                {activity.quantity && (
+                                  <div className="flex items-center">
+                                    <span className="text-muted-foreground mr-1">Quantity:</span>
+                                    <span className="font-medium">{activity.quantity}</span>
+                                  </div>
+                                )}
+                                
+                                {activity.notes && (
+                                  <div className="md:col-span-2 mt-1">
+                                    <span className="text-muted-foreground mr-1">Notes:</span>
+                                    <span className="font-medium">{activity.notes}</span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="rounded-md border p-6 flex flex-col items-center justify-center">
+                    <Activity className="h-8 w-8 text-muted-foreground mb-2" />
+                    <h3 className="text-lg font-medium">No Activity</h3>
+                    <p className="text-sm text-muted-foreground text-center mt-1">
+                      No recent activity found for this user.
+                    </p>
+                  </div>
+                )}
               </TabsContent>
             </Tabs>
           </CardContent>
