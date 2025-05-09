@@ -50,8 +50,8 @@ function RoleBasedRedirect() {
   useEffect(() => {
     if (user) {
       if (user.role === UserRole.MERCHANDISER) {
-        // Merchandisers go directly to stock take page
-        navigate("/stock-take");
+        // Merchandisers go directly to My Assignments page
+        navigate("/my-assignments");
       } else {
         // Admins and Managers go to dashboard
         navigate("/dashboard");

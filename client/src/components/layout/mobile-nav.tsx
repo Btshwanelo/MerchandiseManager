@@ -14,7 +14,7 @@ import {
 
 const mobileNavItems = [
   {
-    href: "/",
+    href: "/dashboard",
     label: "Dashboard",
     icon: <LayoutDashboard className="h-5 w-5" />,
     roles: [UserRole.ADMIN, UserRole.MANAGER]
