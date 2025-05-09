@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { formatCurrency } from "@/lib/utils";
 import { 
   Table, 
   TableBody, 
@@ -482,7 +483,7 @@ const ProductsPage = () => {
                             <TableCell className="font-medium">{product.name}</TableCell>
                             <TableCell>{product.sku}</TableCell>
                             <TableCell>
-                              <Badge variant="outline">{product.category}</Badge>
+                              <Badge variant="outline" className="whitespace-nowrap overflow-hidden text-ellipsis max-w-[120px]">{product.category}</Badge>
                             </TableCell>
                             <TableCell>{formatCurrency(product.price)}</TableCell>
                             <TableCell>{product.minStockLevel} units</TableCell>
