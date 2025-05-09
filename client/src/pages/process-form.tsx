@@ -266,10 +266,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
       <div className="bg-card border rounded-lg p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <h2 className="text-2xl font-bold">Product Availability</h2>
-          <Button variant="outline" className="flex items-center gap-2">
-            <QrCode className="h-5 w-5" />
-            Scan Barcode
-          </Button>
+          {/* Barcode scanner button has been hidden */}
         </div>
         
         <div className="grid md:grid-cols-12 gap-4 mb-6">
