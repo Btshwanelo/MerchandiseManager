@@ -597,7 +597,18 @@ const WorkItemDetailPage = () => {
                   <p>No process data found for this work item.</p>
                 </div>
               ) : (
-                <Tabs defaultValue="stock-take" className="w-full">
+                <Tabs 
+                  defaultValue={
+                    stockTake 
+                      ? "stock-take" 
+                      : merchandising 
+                        ? "merchandising" 
+                        : competitorMerchandising 
+                          ? "competitor" 
+                          : "order"
+                  } 
+                  className="w-full"
+                >
                   <TabsList className="mb-4">
                     {stockTake && (
                       <TabsTrigger value="stock-take">
