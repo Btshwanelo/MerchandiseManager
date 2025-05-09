@@ -66,11 +66,19 @@ const AuthPage = () => {
   return (
     <div className="flex min-h-screen">
       {/* Left side - Hero/Info (60%) */}
-      <div className="hidden md:flex md:w-[60%] bg-[#7ccd57] flex-col justify-center items-center p-8 text-white">
-        <div className="max-w-xl">
-          <div className="flex items-center space-x-3 mb-8">
-            <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-14" />
-            <h1 className="text-3xl font-bold">InvenTrack</h1>
+      <div className="hidden md:flex md:w-[60%] relative flex-col justify-center items-center p-8 text-white overflow-hidden">
+        {/* Background image */}
+        <div 
+          className="absolute inset-0 bg-cover bg-center z-0" 
+          style={{ backgroundImage: "url('/images/hero-background.png')" }}
+        />
+        
+        {/* Gradient overlay for better text readability */}
+        <div className="absolute inset-0 bg-gradient-to-r from-[#000000cc] to-[#00000080] z-10"></div>
+        
+        <div className="max-w-xl relative z-20">
+          <div className="flex items-center mb-8">
+            <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-16" />
           </div>
           
           <h2 className="text-4xl font-bold mb-6">Inventory Management Made Simple</h2>
@@ -101,9 +109,8 @@ const AuthPage = () => {
       
       {/* Right side - Form (40%) */}
       <div className="flex flex-col justify-center items-center w-full md:w-[40%] p-6 bg-white">
-        <div className="md:hidden flex items-center space-x-2 mb-8">
-          <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-10" />
-          <h1 className="text-2xl font-bold">InvenTrack</h1>
+        <div className="md:hidden flex items-center justify-center mb-8">
+          <img src="/images/reimagined-logo.png" alt="Re-Imagined Excellence Logo" className="h-14" />
         </div>
 
         <Card className="w-full max-w-md shadow-none border-0 md:border md:shadow-sm">
@@ -168,7 +175,7 @@ const AuthPage = () => {
       {/* Footer */}
       <div className="fixed bottom-0 left-0 right-0 bg-white border-t py-2 px-4 text-xs text-center text-muted-foreground">
         <div className="container max-w-7xl mx-auto flex justify-between items-center">
-          <div>&copy; {new Date().getFullYear()} InvenTrack. All rights reserved.</div>
+          <div>&copy; {new Date().getFullYear()} Re-Imagined Excellence. All rights reserved.</div>
           <div className="flex items-center gap-4">
             <Link 
               href="/changelog" 
