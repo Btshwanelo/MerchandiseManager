@@ -1970,8 +1970,42 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteStore(id: number): Promise<boolean> {
-    const result = await db.delete(stores).where(eq(stores.id, id));
-    return !!result;
+    try {
+      // First, delete all activities associated with this store
+      await db.delete(activities).where(eq(activities.storeId, id));
+      
+      // Then, delete any alerts associated with this store
+      await db.delete(alerts).where(eq(alerts.storeId, id));
+      
+      // Delete store assignments associated with this store
+      await db.delete(storeAssignments).where(eq(storeAssignments.storeId, id));
+      
+      // Delete work items associated with this store
+      await db.delete(workItems).where(eq(workItems.storeId, id));
+      
+      // Delete stock takes associated with this store
+      const storeTakes = await db.select().from(stockTakes).where(eq(stockTakes.storeId, id));
+      for (const take of storeTakes) {
+        await db.delete(stockTakeItems).where(eq(stockTakeItems.stockTakeId, take.id));
+      }
+      await db.delete(stockTakes).where(eq(stockTakes.storeId, id));
+      
+      // Get all shelves in this store to delete related inventory
+      const storeShelves = await db.select().from(shelves).where(eq(shelves.storeId, id));
+      for (const shelf of storeShelves) {
+        await db.delete(inventory).where(eq(inventory.shelfId, shelf.id));
+      }
+      
+      // Delete shelves in the store
+      await db.delete(shelves).where(eq(shelves.storeId, id));
+      
+      // Finally delete the store itself
+      const result = await db.delete(stores).where(eq(stores.id, id));
+      return result.rowCount > 0;
+    } catch (error) {
+      console.error("Error deleting store:", error);
+      throw error;
+    }
   }
 
   // Product methods
