@@ -1339,22 +1339,22 @@ const ProcessForm = () => {
               
               {/* Step 2: Merchandising */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Merchandising</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-[#7ccd57]' : ''}`}>Merchandising</h3>
                 <p className="text-sm text-muted-foreground">Promotions for any of our products</p>
               </div>
               
               {/* Step 3: Competitor Promotions */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Competitor Promotions</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-[#7ccd57]' : ''}`}>Competitor Promotions</h3>
                 <p className="text-sm text-muted-foreground">Any promotions from competitors</p>
               </div>
               
               {/* Step 4: Orders */}
               <div className="flex flex-col">
-                <div className={`h-2 rounded-full mb-2 ${activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-blue-600' : 'bg-gray-200'}`}></div>
-                <h3 className={`font-medium ${activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Orders</h3>
+                <div className={`h-2 rounded-full mb-2 ${activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
+                <h3 className={`font-medium ${activeStep === 'order-placement' || activeStep === 'completed' ? 'text-[#7ccd57]' : ''}`}>Orders</h3>
                 <p className="text-sm text-muted-foreground">Orders of stock that is depleted etc</p>
               </div>
             </div>
@@ -1365,32 +1365,32 @@ const ProcessForm = () => {
             <div className="flex flex-col items-center">
               {activeStep === 'stock-take' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
-                  <h3 className="font-medium text-blue-600">Stock Take</h3>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <h3 className="font-medium text-[#7ccd57]">Stock Take</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 1 of 4: Stock taking at shelf or Store</p>
                 </>
               )}
               
               {activeStep === 'merchandising' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
-                  <h3 className="font-medium text-blue-600">Merchandising</h3>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <h3 className="font-medium text-[#7ccd57]">Merchandising</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 2 of 4: Promotions for any of our products</p>
                 </>
               )}
               
               {activeStep === 'competitor-analysis' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
-                  <h3 className="font-medium text-blue-600">Competitor Promotions</h3>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <h3 className="font-medium text-[#7ccd57]">Competitor Promotions</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 3 of 4: Any promotions from competitors</p>
                 </>
               )}
               
               {activeStep === 'order-placement' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-blue-600"></div>
-                  <h3 className="font-medium text-blue-600">Orders</h3>
+                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <h3 className="font-medium text-[#7ccd57]">Orders</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 4 of 4: Orders of stock that is depleted</p>
                 </>
               )}
