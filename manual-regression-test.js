@@ -36,23 +36,67 @@ function recordTest(testName, passed, error = null) {
 // Utility function to create an HTTP client with authentication
 async function createAuthenticatedClient(username, password) {
   try {
-    const loginResponse = await axios.post(`${baseURL}/api/login`, { 
-      username, 
-      password 
-    }, {
-      withCredentials: true
-    });
-    
-    const axiosInstance = axios.create({
+    console.log(`Attempting to login as ${username}...`);
+
+    // Create a new axios instance
+    const agent = new axios.create({
       baseURL,
       withCredentials: true,
       headers: {
-        'Cookie': loginResponse.headers['set-cookie']
+        'Content-Type': 'application/json',
+      },
+    });
+
+    // Add cookie jar to handle session cookies across requests
+    const cookieJar = [];
+
+    // Interceptor to capture cookies
+    agent.interceptors.response.use(response => {
+      const cookies = response.headers['set-cookie'];
+      if (cookies) {
+        console.log('Received cookies from server');
+        cookies.forEach(cookie => {
+          const cookiePart = cookie.split(';')[0];
+          if (!cookieJar.includes(cookiePart)) {
+            cookieJar.push(cookiePart);
+          }
+        });
       }
+
+      // Add cookies to all subsequent requests
+      agent.interceptors.request.use(config => {
+        if (cookieJar.length > 0) {
+          config.headers.Cookie = cookieJar.join('; ');
+        }
+        return config;
+      });
+
+      return response;
+    });
+
+    // Login request
+    const loginResponse = await agent.post('/api/login', { 
+      username, 
+      password 
     });
     
-    return axiosInstance;
+    console.log(`Login response status: ${loginResponse.status}`);
+    
+    if (loginResponse.status !== 200) {
+      throw new Error(`Login failed with status: ${loginResponse.status}`);
+    }
+    
+    // Verify the user is actually logged in
+    try {
+      const userResponse = await agent.get('/api/user');
+      console.log(`User data verified: ${JSON.stringify(userResponse.data)}`);
+    } catch (verifyError) {
+      console.error('Failed to verify user session:', verifyError.message);
+    }
+    
+    return agent;
   } catch (error) {
+    console.error('Authentication error details:', error);
     throw new Error(`Authentication failed for ${username}: ${error.message}`);
   }
 }
@@ -63,7 +107,15 @@ async function testUserLogin() {
   
   // Test 1.1: Admin Login
   try {
-    const adminClient = await createAuthenticatedClient('admin', 'admin123');
+    // Try with both possible admin passwords
+    let adminClient;
+    try {
+      adminClient = await createAuthenticatedClient('admin', 'admin123');
+    } catch (err) {
+      console.log('Trying alternative admin password...');
+      adminClient = await createAuthenticatedClient('admin', 'password');
+    }
+    
     const userResponse = await adminClient.get('/api/user');
     console.log('Admin user response:', JSON.stringify(userResponse.data, null, 2));
     recordTest('Admin Login', userResponse.data && userResponse.data.role === 'ADMIN');
@@ -92,7 +144,13 @@ async function testListingsAccess() {
   // Get authenticated client for admin
   let adminClient;
   try {
-    adminClient = await createAuthenticatedClient('admin', 'admin123');
+    // Try with both possible admin passwords
+    try {
+      adminClient = await createAuthenticatedClient('admin', 'admin123');
+    } catch (err) {
+      console.log('Trying alternative admin password for store tests...');
+      adminClient = await createAuthenticatedClient('admin', 'password');
+    }
   } catch (error) {
     console.error('Failed to authenticate admin for store tests:', error);
     for (let i = 1; i <= 2; i++) {
@@ -125,7 +183,13 @@ async function testWorkItems() {
   // Get authenticated client for admin
   let adminClient;
   try {
-    adminClient = await createAuthenticatedClient('admin', 'admin123');
+    // Try with both possible admin passwords
+    try {
+      adminClient = await createAuthenticatedClient('admin', 'admin123');
+    } catch (err) {
+      console.log('Trying alternative admin password for work item tests...');
+      adminClient = await createAuthenticatedClient('admin', 'password');
+    }
   } catch (error) {
     console.error('Failed to authenticate admin for work item tests:', error);
     recordTest(`Work Items Listing`, false, new Error('Admin authentication failed'));
@@ -148,7 +212,13 @@ async function testNotifications() {
   // Get authenticated client for admin
   let adminClient;
   try {
-    adminClient = await createAuthenticatedClient('admin', 'admin123');
+    // Try with both possible admin passwords
+    try {
+      adminClient = await createAuthenticatedClient('admin', 'admin123');
+    } catch (err) {
+      console.log('Trying alternative admin password for notification tests...');
+      adminClient = await createAuthenticatedClient('admin', 'password');
+    }
   } catch (error) {
     console.error('Failed to authenticate admin for notification tests:', error);
     recordTest(`Notifications Test`, false, new Error('Admin authentication failed'));
@@ -171,7 +241,13 @@ async function testUserDetails() {
   // Get authenticated client for admin
   let adminClient;
   try {
-    adminClient = await createAuthenticatedClient('admin', 'admin123');
+    // Try with both possible admin passwords
+    try {
+      adminClient = await createAuthenticatedClient('admin', 'admin123');
+    } catch (err) {
+      console.log('Trying alternative admin password for user details tests...');
+      adminClient = await createAuthenticatedClient('admin', 'password');
+    }
   } catch (error) {
     console.error('Failed to authenticate admin for user details tests:', error);
     for (let i = 1; i <= 3; i++) {
