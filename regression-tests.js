@@ -458,7 +458,7 @@ async function testViewCompletedItems() {
   
   // Test 5.2: View Completed Work Item Details
   try {
-    const completedResponse = await adminClient.get('/api/work-items?status=COMPLETED');
+    const completedResponse = await adminClient.get('/api/work-items?status=completed');
     const completedItems = completedResponse.data;
     
     if (completedItems.length > 0) {
