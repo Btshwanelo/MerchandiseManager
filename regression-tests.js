@@ -287,18 +287,33 @@ async function testWorkItemCompletion() {
       const adminUserResponse = await adminClient.get('/api/user');
       const adminUser = adminUserResponse.data;
 
-      // Create a test work item - using snake_case as per database
+      // First, create a store assignment for the merchandiser
+      const storeAssignmentData = {
+        userId: merchandiserUser.id,
+        storeId: stores[0].id,
+        assignedBy: adminUser.id,
+        startDate: new Date().toISOString(),
+        endDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 1 week later
+        status: 'active',
+        stockTakeType: 'full'
+      };
+      
+      const storeAssignmentResponse = await adminClient.post('/api/store-assignments', storeAssignmentData);
+      const storeAssignment = storeAssignmentResponse.data;
+      
+      // Create a test work item - using camelCase for API
       const workItemData = {
         title: 'Regression Test Work Item',
-        store_id: stores[0].id,
-        user_id: merchandiserUser.id,
-        type: 'STOCK_TAKE',
-        status: 'ASSIGNED',
-        due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
-        priority: 'MEDIUM',
+        storeId: stores[0].id,
+        userId: merchandiserUser.id,
+        storeAssignmentId: storeAssignment.id,
+        type: 'stock_take', // Use lowercase as per enum
+        status: 'assigned',
+        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
+        priority: 'medium',
         description: 'This is a test work item created for regression testing',
-        created_by: adminUser.id,
-        store_assignment_id: null
+        createdBy: adminUser.id,
+        attachments: []
       };
       
       const createResponse = await adminClient.post('/api/work-items', workItemData);
@@ -316,7 +331,7 @@ async function testWorkItemCompletion() {
   try {
     const workItem = workItems[0];
     const updateResponse = await merchandiserClient.patch(`/api/work-items/${workItem.id}`, {
-      status: 'IN_PROGRESS'
+      status: 'in_progress'  // Using lowercase as per enum
     });
     recordTest('Update Work Item to IN_PROGRESS', updateResponse.status === 200);
   } catch (error) {
@@ -327,8 +342,8 @@ async function testWorkItemCompletion() {
   try {
     const workItem = workItems[0];
     const completeResponse = await merchandiserClient.patch(`/api/work-items/${workItem.id}`, {
-      status: 'COMPLETED',
-      completed_at: new Date().toISOString(),
+      status: 'completed',  // Using lowercase as per enum
+      completedAt: new Date().toISOString(),  // Using camelCase for API
       notes: 'Completed during regression testing'
     });
     recordTest('Complete Work Item', completeResponse.status === 200);
@@ -378,12 +393,12 @@ async function testNotifications() {
     
     // Create notification for merchandiser
     const notificationData = {
-      user_id: merchandiserId,  // Using snake_case as per database schema
+      userId: merchandiserId,  // Using camelCase for API requests
       title: 'Regression Test Notification',
       message: 'This is a test notification created during regression testing',
-      type: 'GENERAL',  // Ensure this matches the allowed types in the backend
-      status: 'UNREAD', // Ensure this matches the allowed statuses in the backend
-      related_item_id: null // This can be null but including it for completeness
+      type: 'store_assigned',  // Using a valid AlertType from enum
+      status: 'unread', // Using a valid AlertStatus from enum
+      relatedItemId: null // Can be null, using camelCase for API
     };
     
     const createResponse = await adminClient.post('/api/user-alerts', notificationData);
@@ -393,7 +408,7 @@ async function testNotifications() {
     const verifyResponse = await merchandiserClient.get('/api/user-alerts/unread');
     const found = verifyResponse.data.some(alert => 
       alert.title === 'Regression Test Notification' && 
-      alert.status === 'UNREAD'
+      (alert.status === 'UNREAD' || alert.status === 'unread')
     );
     recordTest('Verify Unread Notification', found);
   } catch (error) {
@@ -435,7 +450,7 @@ async function testViewCompletedItems() {
   
   // Test 5.1: View All Completed Work Items
   try {
-    const response = await adminClient.get('/api/work-items?status=COMPLETED');
+    const response = await adminClient.get('/api/work-items?status=completed');
     recordTest('View All Completed Work Items', Array.isArray(response.data));
   } catch (error) {
     recordTest('View All Completed Work Items', false, error);
