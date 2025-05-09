@@ -880,7 +880,94 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
   
   const lowStockItems = getLowStockItems();
   
-  // Add item to order
+  // Add a low stock item to the order
+  const addLowStockItem = (item: any) => {
+    // Check if the item is already in the order
+    const existingItem = orderItems.find(orderItem => orderItem.productId === item.productId);
+    
+    if (existingItem) {
+      // Update the existing item quantity
+      setOrderItems(prev => 
+        prev.map(orderItem => 
+          orderItem.productId === item.productId
+            ? { ...orderItem, quantity: item.quantityToOrder }
+            : orderItem
+        )
+      );
+      
+      toast({
+        title: "Order updated",
+        description: `Updated ${item.productName} quantity to ${item.quantityToOrder}`,
+      });
+    } else {
+      // Add as a new item
+      setOrderItems(prev => [
+        ...prev,
+        {
+          productId: item.productId,
+          quantity: item.quantityToOrder,
+          notes: `Auto-added due to low stock (${item.currentStock}/${item.minStockLevel})`
+        }
+      ]);
+      
+      toast({
+        title: "Item added",
+        description: `Added ${item.productName} to order`,
+      });
+    }
+  };
+  
+  // Add all low stock items to the order at once
+  const addAllLowStockItems = () => {
+    if (lowStockItems.length === 0) return;
+    
+    // Create a map of existing order items by productId for quick lookup
+    const existingItemsMap = new Map(
+      orderItems.map(item => [item.productId, item])
+    );
+    
+    // Process all low stock items
+    const updatedOrderItems = [...orderItems];
+    let addedCount = 0;
+    let updatedCount = 0;
+    
+    lowStockItems.forEach(lowStockItem => {
+      const existingItem = existingItemsMap.get(lowStockItem.productId);
+      
+      if (existingItem) {
+        // Update existing item
+        const itemIndex = updatedOrderItems.findIndex(
+          item => item.productId === lowStockItem.productId
+        );
+        if (itemIndex !== -1) {
+          updatedOrderItems[itemIndex] = {
+            ...updatedOrderItems[itemIndex],
+            quantity: lowStockItem.quantityToOrder
+          };
+          updatedCount++;
+        }
+      } else {
+        // Add new item
+        updatedOrderItems.push({
+          productId: lowStockItem.productId,
+          quantity: lowStockItem.quantityToOrder,
+          notes: `Auto-added due to low stock (${lowStockItem.currentStock}/${lowStockItem.minStockLevel})`
+        });
+        addedCount++;
+      }
+    });
+    
+    // Update the state with all changes at once
+    setOrderItems(updatedOrderItems);
+    
+    // Show toast notification with results
+    toast({
+      title: "Low stock items processed",
+      description: `Added ${addedCount} new items and updated ${updatedCount} existing items`,
+    });
+  };
+  
+  // Add manual item to order
   const addItemToOrder = () => {
     if (!selectedProduct) return;
     
@@ -907,69 +994,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
     });
   };
   
-  // Add low stock item to order
-  const addLowStockItem = (item: { productId: number, productName: string, quantityToOrder: number }) => {
-    setOrderItems(prev => {
-      // Check if item already exists
-      const existingIndex = prev.findIndex(i => i.productId === item.productId);
-      if (existingIndex >= 0) {
-        // Update existing item
-        const updated = [...prev];
-        updated[existingIndex] = {
-          ...updated[existingIndex],
-          quantity: item.quantityToOrder
-        };
-        return updated;
-      } else {
-        // Add new item
-        return [
-          ...prev, 
-          {
-            productId: item.productId,
-            quantity: item.quantityToOrder,
-            notes: "Auto-added from low stock detection"
-          }
-        ];
-      }
-    });
-    
-    toast({
-      title: "Low stock item added",
-      description: `Added ${item.productName} to order`
-    });
-  };
-  
-  // Add all low stock items
-  const addAllLowStockItems = () => {
-    if (!lowStockItems.length) return;
-    
-    const updatedItems = [...orderItems];
-    
-    lowStockItems.forEach(item => {
-      const existingIndex = updatedItems.findIndex(i => i.productId === item.productId);
-      if (existingIndex >= 0) {
-        // Update existing item
-        updatedItems[existingIndex] = {
-          ...updatedItems[existingIndex],
-          quantity: item.quantityToOrder
-        };
-      } else {
-        // Add new item
-        updatedItems.push({
-          productId: item.productId,
-          quantity: item.quantityToOrder,
-          notes: "Auto-added from low stock detection"
-        });
-      }
-    });
-    
-    setOrderItems(updatedItems);
-    
-    toast({
-      title: "Low stock items added",
-      description: `Added ${lowStockItems.length} items to order`
-    });
-  };
+
   
   const submitOrder = async () => {
     setLoading(true);
