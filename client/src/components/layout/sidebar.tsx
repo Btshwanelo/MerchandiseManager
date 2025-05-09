@@ -23,6 +23,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import reimaginedLogo from "../../assets/reimagined-logo.png";
 
 type NavItem = {
   href: string;
@@ -196,9 +197,8 @@ export const Sidebar = ({ className }: SidebarProps) => {
         className
       )}
     >
-      <div className="p-4 border-b border-neutral-200 flex items-center space-x-3">
-        <Package className="h-6 w-6 text-primary" />
-        <h1 className="text-xl font-medium text-foreground">InvenTrack</h1>
+      <div className="p-4 border-b border-neutral-200 flex items-center">
+        <img src={reimaginedLogo} alt="Re-Imagined Excellence Logo" className="h-10" />
       </div>
 
       {/* User profile information */}
