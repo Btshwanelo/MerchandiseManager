@@ -118,7 +118,8 @@ async function testUserLogin() {
     
     const userResponse = await adminClient.get('/api/user');
     console.log('Admin user response:', JSON.stringify(userResponse.data, null, 2));
-    recordTest('Admin Login', userResponse.data && userResponse.data.role === 'ADMIN');
+    // The role field in response is lowercase 'admin' not uppercase 'ADMIN'
+    recordTest('Admin Login', userResponse.data && userResponse.data.role === 'admin');
   } catch (error) {
     console.error('Admin login error details:', error);
     recordTest('Admin Login', false, error);
