@@ -723,7 +723,7 @@ const WorkItemDetailPage = () => {
                                   <TableCell>
                                     {item.product?.name || `Product #${item.productId}`}
                                   </TableCell>
-                                  <TableCell>${item.price.toFixed(2)}</TableCell>
+                                  <TableCell>R{item.price.toFixed(2)}</TableCell>
                                   <TableCell>{item.notes || '-'}</TableCell>
                                 </TableRow>
                               ))}
@@ -768,7 +768,7 @@ const WorkItemDetailPage = () => {
                                   <TableCell>
                                     {item.product?.name || `Product #${item.productId}`}
                                   </TableCell>
-                                  <TableCell>${item.price.toFixed(2)}</TableCell>
+                                  <TableCell>R{item.price.toFixed(2)}</TableCell>
                                   <TableCell>{item.notes || '-'}</TableCell>
                                 </TableRow>
                               ))}
