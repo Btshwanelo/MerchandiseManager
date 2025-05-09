@@ -12,7 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Package, UserPlus, LogIn, Loader2, Key, UserCog, Users } from "lucide-react";
+import { Package, UserPlus, LogIn, Loader2, Key } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -20,14 +20,6 @@ import { z } from "zod";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { insertUserSchema, UserRole } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
-
-// Demo user accounts for quick testing
-const demoPredefinedUsers = [
-  { username: "admin", password: "admin123", role: UserRole.ADMIN },
-  { username: "manager", password: "manager123", role: UserRole.MANAGER },
-  { username: "test", password: "test123", role: UserRole.MERCHANDISER }
-];
-
 
 // Login schema
 const loginSchema = z.object({
@@ -46,8 +38,6 @@ const registerSchema = insertUserSchema.extend({
 });
 
 type RegisterValues = z.infer<typeof registerSchema>;
-
-
 
 const AuthPage = () => {
   const [activeTab, setActiveTab] = useState<string>("login");
@@ -91,23 +81,6 @@ const AuthPage = () => {
     setLoginError(null);
     setRegisterError(null);
   }, [activeTab]);
-
-  const handleLoginWithTestUser = (user: typeof demoPredefinedUsers[0]) => {
-    setLoginError(null);
-    loginMutation.mutate(
-      { username: user.username, password: user.password },
-      {
-        onError: (error) => {
-          setLoginError(error.message || "Login failed. Please check your credentials.");
-          toast({
-            title: "Login failed",
-            description: "There was an error logging in with test account. Please try again.",
-            variant: "destructive",
-          });
-        }
-      }
-    );
-  };
 
   const onLogin = (values: LoginValues) => {
     setLoginError(null);
@@ -239,52 +212,6 @@ const AuthPage = () => {
                     )}
                   </form>
                 </Form>
-                
-                {/* Demo accounts section */}
-                <div className="mt-8">
-                  <div className="relative">
-                    <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-muted" />
-                    </div>
-                    <div className="relative flex justify-center text-xs">
-                      <span className="bg-white px-2 text-muted-foreground">
-                        Quick access demo accounts
-                      </span>
-                    </div>
-                  </div>
-                  
-                  <div className="mt-4 space-y-2">
-                    {demoPredefinedUsers.map((demoUser) => (
-                      <div
-                        key={demoUser.username}
-                        className="flex items-center space-x-2 rounded-md border p-3 text-sm hover:bg-accent transition-colors cursor-pointer"
-                        onClick={() => handleLoginWithTestUser(demoUser)}
-                      >
-                        <div className="p-1.5 rounded-full bg-primary/10">
-                          {demoUser.role === UserRole.ADMIN && <UserCog className="h-4 w-4 text-primary" />}
-                          {demoUser.role === UserRole.MANAGER && <Users className="h-4 w-4 text-primary" />}
-                          {demoUser.role === UserRole.MERCHANDISER && <Package className="h-4 w-4 text-primary" />}
-                        </div>
-                        <div className="flex-1">
-                          <p className="font-medium">{demoUser.role} Account</p>
-                          <p className="text-xs text-muted-foreground mt-0.5">
-                            Username: {demoUser.username}, Password: {demoUser.password}
-                          </p>
-                        </div>
-                        <Button 
-                          variant="ghost" 
-                          size="sm"
-                          disabled={loginMutation.isPending}
-                        >
-                          {loginMutation.isPending && demoUser.username === loginMutation.variables?.username && (
-                            <Loader2 className="h-3 w-3 animate-spin mr-1" />
-                          )}
-                          <LogIn className="h-3.5 w-3.5" />
-                        </Button>
-                      </div>
-                    ))}
-                  </div>
-                </div>
               </TabsContent>
 
               <TabsContent value="register">
