@@ -2334,6 +2334,29 @@ export class DatabaseStorage implements IStorage {
       store
     }));
   }
+  
+  async getActivitiesByUserId(userId: number, limit: number = 10): Promise<(Activity & { product: Product, user: User, store: Store })[]> {
+    const result = await db.select({
+      activity: activities,
+      product: products,
+      user: users,
+      store: stores
+    })
+    .from(activities)
+    .innerJoin(products, eq(activities.productId, products.id))
+    .innerJoin(users, eq(activities.userId, users.id))
+    .innerJoin(stores, eq(activities.storeId, stores.id))
+    .where(eq(activities.userId, userId))
+    .orderBy(desc(activities.timestamp))
+    .limit(limit);
+    
+    return result.map(({ activity, product, user, store }) => ({
+      ...activity,
+      product,
+      user,
+      store
+    }));
+  }
 
   async createActivity(insertActivity: InsertActivity): Promise<Activity> {
     const [activity] = await db.insert(activities).values({

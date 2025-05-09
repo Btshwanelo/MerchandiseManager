@@ -861,6 +861,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get activities" });
     }
   });
+
+  // Get activities by user ID
+  app.get("/api/users/:userId/activities", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
+      
+      // Check if current user has permission to view this user's activities
+      const currentUser = req.user as User;
+      const isAdmin = currentUser.role === UserRole.ADMIN;
+      const isManager = currentUser.role === UserRole.MANAGER;
+      const isSelf = currentUser.id === userId;
+      
+      if (!isAdmin && !isManager && !isSelf) {
+        return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
+      }
+      
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      
+      // Get user activities
+      const activities = await storage.getActivitiesByUserId(userId, limit);
+      res.json(activities);
+    } catch (error) {
+      console.error("Error fetching user activities:", error);
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to fetch user activities" });
+    }
+  });
   
   // Alert routes
   app.get("/api/alerts", async (req, res) => {
@@ -891,6 +923,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(users);
     } catch (error) {
       res.status(500).json({ message: "Failed to get users" });
+    }
+  });
+  
+  // Get assigned stores for a user
+  app.get("/api/users/:userId/stores", isAuthenticated, async (req, res) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      if (isNaN(userId)) {
+        return res.status(400).json({ message: "Invalid user ID format" });
+      }
+      
+      // Check if current user has permission to view this user's assigned stores
+      const currentUser = req.user as User;
+      const isAdmin = currentUser.role === UserRole.ADMIN;
+      const isManager = currentUser.role === UserRole.MANAGER;
+      const isSelf = currentUser.id === userId;
+      
+      if (!isAdmin && !isManager && !isSelf) {
+        return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
+      }
+      
+      // Get user's assigned stores
+      const assignedStores = await storage.getStoreAssignmentsByUserId(userId);
+      res.json(assignedStores);
+    } catch (error) {
+      console.error("Error fetching user assigned stores:", error);
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to fetch user assigned stores" });
     }
   });
   
