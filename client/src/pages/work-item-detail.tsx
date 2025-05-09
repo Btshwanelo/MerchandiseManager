@@ -705,7 +705,7 @@ const WorkItemDetailPage = () => {
                       </>
                     ) : (
                       <div className="text-center py-8 text-muted-foreground">
-                        <ClipboardX className="h-12 w-12 mx-auto mb-4 text-muted" />
+                        <XSquare className="h-12 w-12 mx-auto mb-4 text-muted" />
                         <h3 className="text-lg font-medium mb-2">No Stock Take Data</h3>
                         <p>This work item does not have any stock take data submitted.</p>
                       </div>
@@ -763,92 +763,108 @@ const WorkItemDetailPage = () => {
                   </TabsContent>
                   
                   {/* Competitor Tab */}
-                  {competitorMerchandising && (
-                    <TabsContent value="competitor" className="space-y-4">
-                      <div className="bg-muted p-4 rounded-md">
-                        <h3 className="font-medium mb-2">Competitor Merchandising Info</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-muted-foreground">Date:</span>
-                          <span>{formatDate(competitorMerchandising.date)}</span>
-                          
-                          <span className="text-muted-foreground">Competitor:</span>
-                          <span>{competitorMerchandising.competitorName}</span>
-                          
-                          <span className="text-muted-foreground">Total Items:</span>
-                          <span>{competitorMerchandising.items?.length || 0}</span>
+                  <TabsContent value="competitor" className="space-y-4">
+                    {competitorMerchandising ? (
+                      <>
+                        <div className="bg-muted p-4 rounded-md">
+                          <h3 className="font-medium mb-2">Competitor Merchandising Info</h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span>{formatDate(competitorMerchandising.date)}</span>
+                            
+                            <span className="text-muted-foreground">Competitor:</span>
+                            <span>{competitorMerchandising.competitorName}</span>
+                            
+                            <span className="text-muted-foreground">Total Items:</span>
+                            <span>{competitorMerchandising.items?.length || 0}</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      {competitorMerchandising.items && competitorMerchandising.items.length > 0 && (
-                        <div>
-                          <h3 className="font-medium mb-2">Competitor Products</h3>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Price</TableHead>
-                                <TableHead>Notes</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {competitorMerchandising.items.map((item, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    {item.product?.name || `Product #${item.productId}`}
-                                  </TableCell>
-                                  <TableCell>R{item.price.toFixed(2)}</TableCell>
-                                  <TableCell>{item.notes || '-'}</TableCell>
+                        
+                        {competitorMerchandising.items && competitorMerchandising.items.length > 0 && (
+                          <div>
+                            <h3 className="font-medium mb-2">Competitor Products</h3>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Product</TableHead>
+                                  <TableHead>Price</TableHead>
+                                  <TableHead>Notes</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </TabsContent>
-                  )}
+                              </TableHeader>
+                              <TableBody>
+                                {competitorMerchandising.items.map((item, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      {item.product?.name || `Product #${item.productId}`}
+                                    </TableCell>
+                                    <TableCell>R{item.price.toFixed(2)}</TableCell>
+                                    <TableCell>{item.notes || '-'}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <BarChart className="h-12 w-12 mx-auto mb-4 text-muted" />
+                        <h3 className="text-lg font-medium mb-2">No Competitor Data</h3>
+                        <p>This work item does not have any competitor merchandising data submitted.</p>
+                      </div>
+                    )}
+                  </TabsContent>
                   
                   {/* Order Tab */}
-                  {order && (
-                    <TabsContent value="order" className="space-y-4">
-                      <div className="bg-muted p-4 rounded-md">
-                        <h3 className="font-medium mb-2">Order Info</h3>
-                        <div className="grid grid-cols-2 gap-2 text-sm">
-                          <span className="text-muted-foreground">Date:</span>
-                          <span>{formatDate(order.date)}</span>
-                          
-                          <span className="text-muted-foreground">Status:</span>
-                          <span className="capitalize">{order.status}</span>
-                          
-                          <span className="text-muted-foreground">Total Items:</span>
-                          <span>{order.orderItems?.length || 0}</span>
+                  <TabsContent value="order" className="space-y-4">
+                    {order ? (
+                      <>
+                        <div className="bg-muted p-4 rounded-md">
+                          <h3 className="font-medium mb-2">Order Info</h3>
+                          <div className="grid grid-cols-2 gap-2 text-sm">
+                            <span className="text-muted-foreground">Date:</span>
+                            <span>{formatDate(order.date)}</span>
+                            
+                            <span className="text-muted-foreground">Status:</span>
+                            <span className="capitalize">{order.status}</span>
+                            
+                            <span className="text-muted-foreground">Total Items:</span>
+                            <span>{order.orderItems?.length || 0}</span>
+                          </div>
                         </div>
-                      </div>
-                      
-                      {order.orderItems && order.orderItems.length > 0 && (
-                        <div>
-                          <h3 className="font-medium mb-2">Order Items</h3>
-                          <Table>
-                            <TableHeader>
-                              <TableRow>
-                                <TableHead>Product</TableHead>
-                                <TableHead>Quantity</TableHead>
-                              </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                              {order.orderItems.map((item, index) => (
-                                <TableRow key={index}>
-                                  <TableCell>
-                                    {item.product?.name || `Product #${item.productId}`}
-                                  </TableCell>
-                                  <TableCell>{item.quantity}</TableCell>
+                        
+                        {order.orderItems && order.orderItems.length > 0 && (
+                          <div>
+                            <h3 className="font-medium mb-2">Order Items</h3>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Product</TableHead>
+                                  <TableHead>Quantity</TableHead>
                                 </TableRow>
-                              ))}
-                            </TableBody>
-                          </Table>
-                        </div>
-                      )}
-                    </TabsContent>
-                  )}
+                              </TableHeader>
+                              <TableBody>
+                                {order.orderItems.map((item, index) => (
+                                  <TableRow key={index}>
+                                    <TableCell>
+                                      {item.product?.name || `Product #${item.productId}`}
+                                    </TableCell>
+                                    <TableCell>{item.quantity}</TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                          </div>
+                        )}
+                      </>
+                    ) : (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted" />
+                        <h3 className="text-lg font-medium mb-2">No Order Data</h3>
+                        <p>This work item does not have any order data submitted.</p>
+                      </div>
+                    )}
+                  </TabsContent>
                 </Tabs>
               )}
             </CardContent>
