@@ -283,16 +283,22 @@ async function testWorkItemCompletion() {
         return;
       }
       
-      // Create a test work item
+      // Get admin user info
+      const adminUserResponse = await adminClient.get('/api/user');
+      const adminUser = adminUserResponse.data;
+
+      // Create a test work item - using snake_case as per database
       const workItemData = {
         title: 'Regression Test Work Item',
-        storeId: stores[0].id,
-        userId: merchandiserUser.id,
+        store_id: stores[0].id,
+        user_id: merchandiserUser.id,
         type: 'STOCK_TAKE',
         status: 'ASSIGNED',
-        dueDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
+        due_date: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(), // 1 day from now
         priority: 'MEDIUM',
-        description: 'This is a test work item created for regression testing'
+        description: 'This is a test work item created for regression testing',
+        created_by: adminUser.id,
+        store_assignment_id: null
       };
       
       const createResponse = await adminClient.post('/api/work-items', workItemData);
@@ -322,7 +328,7 @@ async function testWorkItemCompletion() {
     const workItem = workItems[0];
     const completeResponse = await merchandiserClient.patch(`/api/work-items/${workItem.id}`, {
       status: 'COMPLETED',
-      completedAt: new Date().toISOString(),
+      completed_at: new Date().toISOString(),
       notes: 'Completed during regression testing'
     });
     recordTest('Complete Work Item', completeResponse.status === 200);
@@ -372,11 +378,12 @@ async function testNotifications() {
     
     // Create notification for merchandiser
     const notificationData = {
-      userId: merchandiserId,
+      user_id: merchandiserId,  // Using snake_case as per database schema
       title: 'Regression Test Notification',
       message: 'This is a test notification created during regression testing',
-      type: 'GENERAL',
-      status: 'UNREAD'
+      type: 'GENERAL',  // Ensure this matches the allowed types in the backend
+      status: 'UNREAD', // Ensure this matches the allowed statuses in the backend
+      related_item_id: null // This can be null but including it for completeness
     };
     
     const createResponse = await adminClient.post('/api/user-alerts', notificationData);
