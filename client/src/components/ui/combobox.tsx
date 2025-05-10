@@ -107,15 +107,12 @@ export function Combobox({
       </PopoverTrigger>
       <PopoverContent className={cn("p-0", className)} align="start">
         <Command className="w-full" shouldFilter={false}>
-          <div className="flex items-center border-b px-3">
-            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
-            <CommandInput 
-              placeholder={`Search ${placeholder.toLowerCase()}...`}
-              className="h-9 flex-1 border-0 outline-none focus:ring-0"
-              value={inputValue}
-              onValueChange={setInputValue}
-            />
-          </div>
+          <CommandInput 
+            placeholder={`Search ${placeholder.toLowerCase()}...`}
+            className="h-9"
+            value={inputValue}
+            onValueChange={setInputValue}
+          />
           <CommandList>
             {loading ? (
               <CommandEmpty>Loading...</CommandEmpty>
