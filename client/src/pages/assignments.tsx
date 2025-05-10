@@ -159,6 +159,25 @@ const AssignmentsPage = () => {
       dueDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // One week from now
     }
   });
+  
+  // User edit form schema
+  const userEditFormSchema = z.object({
+    name: z.string().min(2, "Name must be at least 2 characters"),
+    email: z.string().email("Invalid email format"),
+    role: z.enum([UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]),
+  });
+
+  type UserEditFormValues = z.infer<typeof userEditFormSchema>;
+  
+  // Form for editing user
+  const userEditForm = useForm<UserEditFormValues>({
+    resolver: zodResolver(userEditFormSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      role: UserRole.MERCHANDISER,
+    }
+  });
 
   // Define expanded types for the store assignments with relations
 type StoreAssignmentWithRelations = StoreAssignment & {
@@ -305,6 +324,35 @@ type StoreAssignmentWithRelations = StoreAssignment & {
       });
     }
   });
+  
+  // Mutation for updating user
+  const updateUserMutation = useMutation({
+    mutationFn: async (userData: UserEditFormValues) => {
+      const response = await apiRequest("PATCH", `/api/users/${selectedUser?.id}`, userData);
+      return await response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User updated",
+        description: "The user has been successfully updated.",
+      });
+      
+      // Invalidate queries to refresh data
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/assignments/active"] });
+      
+      setIsEditUserDialogOpen(false);
+      setSelectedUser(null);
+    },
+    onError: (error) => {
+      toast({
+        variant: "destructive",
+        title: "Failed to update user",
+        description: error instanceof Error ? error.message : "An error occurred",
+      });
+    }
+  });
 
   // Function to fetch work items for an assignment
   const fetchWorkItems = async (assignmentId: number) => {
@@ -407,6 +455,28 @@ type StoreAssignmentWithRelations = StoreAssignment & {
   // Handle cancelling an assignment
   const handleCancelAssignment = (assignment: StoreAssignmentWithRelations) => {
     updateAssignmentStatusMutation.mutate({ id: assignment.id, status: "cancelled" });
+  };
+  
+  // Handle opening the edit user dialog
+  const handleEditUser = (assignment: StoreAssignmentWithRelations) => {
+    if (!assignment.user) return;
+    
+    setSelectedUser(assignment.user);
+    
+    // Reset form with user data
+    userEditForm.reset({
+      name: assignment.user.name,
+      email: assignment.user.email,
+      role: assignment.user.role,
+    });
+    
+    setIsEditUserDialogOpen(true);
+  };
+  
+  // Handle submitting the edit user form
+  const onSubmitEditUser = (values: UserEditFormValues) => {
+    if (!selectedUser) return;
+    updateUserMutation.mutate(values);
   };
 
   // Filter assignments based on search query
