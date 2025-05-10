@@ -77,7 +77,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-start relative",
+            "w-full justify-start relative px-3 py-2 h-auto min-h-10",
             error && "border-red-500",
             triggerClassName
           )}
@@ -86,11 +86,13 @@ export function Combobox({
             if (!disabled) setOpen(!open)
           }}
         >
-          {selectedOption ? (
-            <span className="line-clamp-1 w-full pr-10">{selectedOption.label}</span>
-          ) : (
-            <span className="text-muted-foreground">{placeholder}</span>
-          )}
+          <div className="flex-1 text-left overflow-hidden">
+            {selectedOption ? (
+              <span className="block truncate text-ellipsis overflow-hidden pr-10 w-full">{selectedOption.label}</span>
+            ) : (
+              <span className="text-muted-foreground">{placeholder}</span>
+            )}
+          </div>
           <div className="flex items-center absolute right-3">
             {selectedOption && clearable && (
               <X
