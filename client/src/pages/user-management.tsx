@@ -95,7 +95,8 @@ const UserManagementPage = () => {
   const createUserMutation = useMutation({
     mutationFn: async (values: UserFormValues) => {
       const { confirmPassword, ...userData } = values;
-      const res = await apiRequest("POST", "/api/register", userData);
+      // Use the admin-specific user creation endpoint that doesn't auto-login
+      const res = await apiRequest("POST", "/api/users/create", userData);
       return await res.json();
     },
     onSuccess: () => {

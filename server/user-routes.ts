@@ -31,6 +31,43 @@ function generateSecureToken() {
 }
 
 export function registerUserRoutes(app: Express) {
+  // Create user endpoint for admins/managers that doesn't auto-login
+  app.post("/api/users/create", async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const currentUser = req.user as UserType;
+      
+      // Check if user is admin or manager
+      if (currentUser.role !== UserRole.ADMIN && currentUser.role !== UserRole.MANAGER) {
+        return res.status(403).json({ message: "Forbidden - Insufficient permissions" });
+      }
+      
+      const existingUser = await storage.getUserByUsername(req.body.username);
+      if (existingUser) {
+        return res.status(400).json({ message: "Username already exists" });
+      }
+      
+      const hashedPassword = await hashPassword(req.body.password);
+      
+      const user = await storage.createUser({
+        ...req.body,
+        password: hashedPassword,
+      });
+      
+      // Remove password before sending response
+      const { password, ...userData } = user;
+      res.status(201).json(userData);
+    } catch (error) {
+      if (error instanceof Error) {
+        return res.status(500).json({ message: error.message });
+      }
+      res.status(500).json({ message: "Failed to create user" });
+    }
+  });
+
   // Get users by role (admin/manager only) - specific route with 'role' prefix
   // to avoid conflict with the get user by ID route
   app.get("/api/users/role/:role", checkRole(UserRole.ADMIN, UserRole.MANAGER), async (req, res) => {
