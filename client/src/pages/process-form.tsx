@@ -287,28 +287,28 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         <div className="grid md:grid-cols-12 gap-4 mb-6">
           <div className="md:col-span-8">
             <label className="text-base font-medium mb-2 block">Product</label>
-            <Select 
-              value={selectedProduct?.id?.toString() || ""} 
-              onValueChange={(value) => {
+            <Combobox
+              value={selectedProduct?.id?.toString() || ""}
+              onChange={(value) => {
                 const product = products.find(p => p.id === parseInt(value));
                 if (product) {
                   setSelectedProduct(product);
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id.toString()}>
-                      {product.name} ({product.sku})
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              placeholder="Select a product..."
+              options={
+                products.map((product) => ({
+                  label: `${product.name} (${product.sku})`,
+                  value: product.id.toString()
+                }))
+              }
+              renderItem={(option) => (
+                <div className="flex items-center">
+                  <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {option.label}
+                </div>
+              )}
+            />
           </div>
           
           <div className="md:col-span-2">
@@ -574,28 +574,28 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
         <div className="grid md:grid-cols-12 gap-4 mb-6">
           <div className="md:col-span-7">
             <label className="text-base font-medium mb-2 block">Product</label>
-            <Select 
-              value={selectedProduct?.id?.toString() || ""} 
-              onValueChange={(value) => {
+            <Combobox
+              value={selectedProduct?.id?.toString() || ""}
+              onChange={(value) => {
                 const product = products.find(p => p.id === parseInt(value));
                 if (product) {
                   setSelectedProduct(product);
                 }
               }}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select a product..." />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectGroup>
-                  {products.map((product) => (
-                    <SelectItem key={product.id} value={product.id.toString()}>
-                      {product.name} ({product.sku})
-                    </SelectItem>
-                  ))}
-                </SelectGroup>
-              </SelectContent>
-            </Select>
+              placeholder="Select a product..."
+              options={
+                products.map((product) => ({
+                  label: `${product.name} (${product.sku})`,
+                  value: product.id.toString()
+                }))
+              }
+              renderItem={(option) => (
+                <div className="flex items-center">
+                  <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {option.label}
+                </div>
+              )}
+            />
           </div>
           
           <div className="md:col-span-3">
