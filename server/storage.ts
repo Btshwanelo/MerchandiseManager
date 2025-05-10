@@ -2495,112 +2495,471 @@ export class DatabaseStorage implements IStorage {
   // Reports methods
   
   // Stock Take Reports Data
-  async getStockTakeReportsData(timeframe: string): Promise<{
-    totalStockTakes: number,
-    completedStockTakes: number,
-    stockTakeCompletionRate: number,
-    stockTakesByUser: {userId: number, userName: string, count: number}[],
-    stockTakeTimeline: {date: string, count: number}[],
-  }> {
-    // Get time period filter based on timeframe
-    let dateFilter: Date;
-    const now = new Date();
+  async getStockTakeReportsData(timeframe: string): Promise<any> {
+    // Calculate date range based on timeframe
+    const today = new Date();
+    let startDate = new Date();
     
-    switch(timeframe) {
+    switch (timeframe) {
       case 'week':
-        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        startDate.setDate(today.getDate() - 7);
         break;
       case 'month':
-        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        startDate.setMonth(today.getMonth() - 1);
         break;
       case 'quarter':
-        dateFilter = new Date(now.setMonth(now.getMonth() - 3));
+        startDate.setMonth(today.getMonth() - 3);
         break;
       case 'year':
-        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        startDate.setFullYear(today.getFullYear() - 1);
         break;
       default:
-        dateFilter = new Date(now.setMonth(now.getMonth() - 1)); // Default to 1 month
+        startDate.setMonth(today.getMonth() - 1); // Default to last month
     }
     
-    // Get total stock takes in time period
-    const [{ value: totalStockTakes }] = await db
-      .select({ value: count() })
+    // Query for stock take completion data
+    const stockTakesResult = await db
+      .select({
+        total: count(),
+        completed: count(stockTakes.id).filter(eq(stockTakes.status, 'completed')),
+        pending: count(stockTakes.id).filter(eq(stockTakes.status, 'pending')),
+        canceled: count(stockTakes.id).filter(eq(stockTakes.status, 'canceled'))
+      })
       .from(stockTakes)
-      .where(sql`created_at >= ${dateFilter}`);
+      .where(
+        and(
+          gte(stockTakes.createdAt, startDate),
+          lte(stockTakes.createdAt, today)
+        )
+      );
     
-    // Get completed stock takes in time period
-    const [{ value: completedStockTakes }] = await db
-      .select({ value: count() })
+    // Get stock take by store data
+    const stockTakesByStore = await db
+      .select({
+        storeId: stockTakes.storeId,
+        storeName: stores.name,
+        count: count()
+      })
       .from(stockTakes)
-      .where(and(
-        sql`created_at >= ${dateFilter}`,
-        eq(stockTakes.status, 'completed')
-      ));
+      .leftJoin(stores, eq(stockTakes.storeId, stores.id))
+      .where(
+        and(
+          gte(stockTakes.createdAt, startDate),
+          lte(stockTakes.createdAt, today)
+        )
+      )
+      .groupBy(stockTakes.storeId, stores.name);
     
-    // Calculate completion rate
-    const stockTakeCompletionRate = totalStockTakes > 0 
-      ? Math.round((completedStockTakes / totalStockTakes) * 100) 
-      : 0;
-    
-    // Get stock takes by user
-    const stockTakesByUserResult = await db
+    // Get stock take by user data
+    const stockTakesByUser = await db
       .select({
         userId: stockTakes.userId,
+        userName: users.name,
         count: count()
       })
       .from(stockTakes)
-      .where(sql`created_at >= ${dateFilter}`)
-      .groupBy(stockTakes.userId);
+      .leftJoin(users, eq(stockTakes.userId, users.id))
+      .where(
+        and(
+          gte(stockTakes.createdAt, startDate),
+          lte(stockTakes.createdAt, today)
+        )
+      )
+      .groupBy(stockTakes.userId, users.name);
     
-    // Get user names for each user ID
-    const stockTakesByUser = await Promise.all(
-      stockTakesByUserResult.map(async (item) => {
-        const user = await this.getUser(item.userId);
-        return {
-          userId: item.userId,
-          userName: user?.name || 'Unknown',
-          count: Number(item.count)
-        };
-      })
-    );
-    
-    // Get stock takes timeline (count by day)
-    // This SQL translates the timestamp to a date string like YYYY-MM-DD
-    const stockTakeTimelineResult = await db
+    // Get the count of discrepancies found in stock takes
+    const stockTakeItemsQuery = await db
       .select({
-        date: sql`to_char(created_at, 'YYYY-MM-DD')`,
-        count: count()
+        stockTakeId: stockTakeItems.stockTakeId,
+        discrepancies: count(stockTakeItems.id).filter(
+          sql`${stockTakeItems.expectedQuantity} <> ${stockTakeItems.actualQuantity}`
+        )
       })
-      .from(stockTakes)
-      .where(sql`created_at >= ${dateFilter}`)
-      .groupBy(sql`to_char(created_at, 'YYYY-MM-DD')`)
-      .orderBy(sql`to_char(created_at, 'YYYY-MM-DD')`);
+      .from(stockTakeItems)
+      .innerJoin(stockTakes, eq(stockTakeItems.stockTakeId, stockTakes.id))
+      .where(
+        and(
+          gte(stockTakes.createdAt, startDate),
+          lte(stockTakes.createdAt, today)
+        )
+      )
+      .groupBy(stockTakeItems.stockTakeId);
+      
+    // Calculate total discrepancies
+    let totalDiscrepancies = 0;
+    stockTakeItemsQuery.forEach(item => {
+      totalDiscrepancies += Number(item.discrepancies);
+    });
     
-    const stockTakeTimeline = stockTakeTimelineResult.map(item => ({
-      date: item.date as string,
-      count: Number(item.count)
-    }));
+    // Get timeline data (counts by date)
+    const timelineData = await this.getTimelineData(stockTakes, startDate, today);
     
+    // Compile final report
     return {
-      totalStockTakes,
-      completedStockTakes,
-      stockTakeCompletionRate,
-      stockTakesByUser,
-      stockTakeTimeline
+      summary: stockTakesResult[0],
+      byStore: stockTakesByStore,
+      byUser: stockTakesByUser,
+      discrepancies: { count: totalDiscrepancies },
+      timeline: timelineData,
+      timeframe: timeframe
     };
   }
   
   // Order Reports Data
-  async getOrderReportsData(timeframe: string): Promise<{
-    totalOrders: number,
-    pendingOrders: number,
-    completedOrders: number,
-    ordersByStatus: {status: string, count: number}[],
-    ordersByStore: {storeId: number, storeName: string, count: number}[],
-    topOrderedProducts: {productId: number, productName: string, count: number}[]
-  }> {
-    // Get time period filter based on timeframe
+  async getOrderReportsData(timeframe: string): Promise<any> {
+    // Calculate date range based on timeframe
+    const today = new Date();
+    let startDate = new Date();
+    
+    switch (timeframe) {
+      case 'week':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(today.getMonth() - 3);
+        break;
+      case 'year':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        startDate.setMonth(today.getMonth() - 1); // Default to last month
+    }
+    
+    try {
+      // Query for order summary data
+      const ordersResult = await db
+        .select({
+          total: count(),
+          completed: count(orders.id).filter(eq(orders.status, 'completed')),
+          pending: count(orders.id).filter(eq(orders.status, 'pending')),
+          processing: count(orders.id).filter(eq(orders.status, 'processing')),
+          shipped: count(orders.id).filter(eq(orders.status, 'shipped')),
+          canceled: count(orders.id).filter(eq(orders.status, 'canceled'))
+        })
+        .from(orders)
+        .where(
+          and(
+            gte(orders.createdAt, startDate),
+            lte(orders.createdAt, today)
+          )
+        );
+      
+      // Get orders by store data
+      const ordersByStore = await db
+        .select({
+          storeId: orders.storeId,
+          storeName: stores.name,
+          count: count()
+        })
+        .from(orders)
+        .leftJoin(stores, eq(orders.storeId, stores.id))
+        .where(
+          and(
+            gte(orders.createdAt, startDate),
+            lte(orders.createdAt, today)
+          )
+        )
+        .groupBy(orders.storeId, stores.name);
+      
+      // Get orders by user data
+      const ordersByUser = await db
+        .select({
+          userId: orders.userId,
+          userName: users.name,
+          count: count()
+        })
+        .from(orders)
+        .leftJoin(users, eq(orders.userId, users.id))
+        .where(
+          and(
+            gte(orders.createdAt, startDate),
+            lte(orders.createdAt, today)
+          )
+        )
+        .groupBy(orders.userId, users.name);
+      
+      // Get most ordered products
+      const mostOrderedProducts = await db
+        .select({
+          productId: orderItems.productId,
+          productName: products.name,
+          totalQuantity: sum(orderItems.quantity)
+        })
+        .from(orderItems)
+        .leftJoin(products, eq(orderItems.productId, products.id))
+        .leftJoin(orders, eq(orderItems.orderId, orders.id))
+        .where(
+          and(
+            gte(orders.createdAt, startDate),
+            lte(orders.createdAt, today)
+          )
+        )
+        .groupBy(orderItems.productId, products.name)
+        .orderBy(desc(sum(orderItems.quantity)))
+        .limit(10);
+      
+      // Get timeline data (counts by date)
+      const timelineData = await this.getTimelineData(orders, startDate, today);
+      
+      // Compile final report
+      return {
+        summary: ordersResult[0] || { total: 0, completed: 0, pending: 0, processing: 0, shipped: 0, canceled: 0 },
+        byStore: ordersByStore,
+        byUser: ordersByUser,
+        topProducts: mostOrderedProducts,
+        timeline: timelineData,
+        timeframe: timeframe
+      };
+    } catch (error) {
+      console.error("Error getting order reports data:", error);
+      // Return default structure on error
+      return {
+        summary: { total: 0, completed: 0, pending: 0, processing: 0, shipped: 0, canceled: 0 },
+        byStore: [],
+        byUser: [],
+        topProducts: [],
+        timeline: [],
+        timeframe: timeframe,
+        error: "Failed to retrieve order data"
+      };
+    }
+  }
+  
+  // Competitor Reports Data
+  async getCompetitorReportsData(timeframe: string): Promise<any> {
+    // Calculate date range based on timeframe
+    const today = new Date();
+    let startDate = new Date();
+    
+    switch (timeframe) {
+      case 'week':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(today.getMonth() - 3);
+        break;
+      case 'year':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        startDate.setMonth(today.getMonth() - 1); // Default to last month
+    }
+    
+    try {
+      // Query for competitor data summary
+      const competitorDataResult = await db
+        .select({
+          total: count(),
+          withPromos: count(competitorMerchandising.id).filter(
+            sql`${competitorMerchandising.promoType} IS NOT NULL`
+          )
+        })
+        .from(competitorMerchandising)
+        .where(
+          and(
+            gte(competitorMerchandising.createdAt, startDate),
+            lte(competitorMerchandising.createdAt, today)
+          )
+        );
+      
+      // Get competitor data by brand
+      const dataByBrand = await db
+        .select({
+          brand: competitorMerchandising.brand,
+          count: count(),
+          avgPrice: sql`AVG(${competitorMerchandising.price})` as any
+        })
+        .from(competitorMerchandising)
+        .where(
+          and(
+            gte(competitorMerchandising.createdAt, startDate),
+            lte(competitorMerchandising.createdAt, today),
+            sql`${competitorMerchandising.price} IS NOT NULL`
+          )
+        )
+        .groupBy(competitorMerchandising.brand);
+      
+      // Get competitor data by store
+      const dataByStore = await db
+        .select({
+          storeId: competitorMerchandising.storeId,
+          storeName: stores.name,
+          count: count()
+        })
+        .from(competitorMerchandising)
+        .leftJoin(stores, eq(competitorMerchandising.storeId, stores.id))
+        .where(
+          and(
+            gte(competitorMerchandising.createdAt, startDate),
+            lte(competitorMerchandising.createdAt, today)
+          )
+        )
+        .groupBy(competitorMerchandising.storeId, stores.name);
+      
+      // Get promotion types distribution
+      const promoTypes = await db
+        .select({
+          promoType: competitorMerchandising.promoType,
+          count: count()
+        })
+        .from(competitorMerchandising)
+        .where(
+          and(
+            gte(competitorMerchandising.createdAt, startDate),
+            lte(competitorMerchandising.createdAt, today),
+            sql`${competitorMerchandising.promoType} IS NOT NULL`
+          )
+        )
+        .groupBy(competitorMerchandising.promoType);
+      
+      // Get timeline data (counts by date)
+      const timelineData = await this.getTimelineData(competitorMerchandising, startDate, today);
+      
+      // Compile final report
+      return {
+        summary: competitorDataResult[0] || { total: 0, withPromos: 0 },
+        byBrand: dataByBrand,
+        byStore: dataByStore,
+        promoTypes: promoTypes,
+        timeline: timelineData,
+        timeframe: timeframe
+      };
+    } catch (error) {
+      console.error("Error getting competitor reports data:", error);
+      // Return default structure on error
+      return {
+        summary: { total: 0, withPromos: 0 },
+        byBrand: [],
+        byStore: [],
+        promoTypes: [],
+        timeline: [],
+        timeframe: timeframe,
+        error: "Failed to retrieve competitor data"
+      };
+    }
+  }
+  
+  // Activity Reports Data
+  async getActivityReportsData(timeframe: string): Promise<any> {
+    // Calculate date range based on timeframe
+    const today = new Date();
+    let startDate = new Date();
+    
+    switch (timeframe) {
+      case 'week':
+        startDate.setDate(today.getDate() - 7);
+        break;
+      case 'month':
+        startDate.setMonth(today.getMonth() - 1);
+        break;
+      case 'quarter':
+        startDate.setMonth(today.getMonth() - 3);
+        break;
+      case 'year':
+        startDate.setFullYear(today.getFullYear() - 1);
+        break;
+      default:
+        startDate.setMonth(today.getMonth() - 1); // Default to last month
+    }
+    
+    try {
+      // Get activities by type
+      const activitiesByType = await db
+        .select({
+          actionType: inventory.actionType,
+          count: count()
+        })
+        .from(inventory)
+        .where(
+          and(
+            gte(inventory.timestamp, startDate),
+            lte(inventory.timestamp, today)
+          )
+        )
+        .groupBy(inventory.actionType);
+      
+      // Get activities by user
+      const activitiesByUser = await db
+        .select({
+          userId: inventory.userId,
+          userName: users.name,
+          count: count()
+        })
+        .from(inventory)
+        .leftJoin(users, eq(inventory.userId, users.id))
+        .where(
+          and(
+            gte(inventory.timestamp, startDate),
+            lte(inventory.timestamp, today)
+          )
+        )
+        .groupBy(inventory.userId, users.name);
+      
+      // Get activities by store
+      const activitiesByStore = await db
+        .select({
+          storeId: inventory.storeId,
+          storeName: stores.name,
+          count: count()
+        })
+        .from(inventory)
+        .leftJoin(stores, eq(inventory.storeId, stores.id))
+        .where(
+          and(
+            gte(inventory.timestamp, startDate),
+            lte(inventory.timestamp, today)
+          )
+        )
+        .groupBy(inventory.storeId, stores.name);
+      
+      // Get timeline data (counts by date)
+      const timelineData = await this.getTimelineData(inventory, startDate, today);
+      
+      // Get total activity count
+      const totalActivities = await db
+        .select({
+          count: count()
+        })
+        .from(inventory)
+        .where(
+          and(
+            gte(inventory.timestamp, startDate),
+            lte(inventory.timestamp, today)
+          )
+        );
+      
+      // Compile final report
+      return {
+        total: totalActivities[0]?.count || 0,
+        byType: activitiesByType,
+        byUser: activitiesByUser,
+        byStore: activitiesByStore,
+        timeline: timelineData,
+        timeframe: timeframe
+      };
+    } catch (error) {
+      console.error("Error getting activity reports data:", error);
+      // Return default structure on error
+      return {
+        total: 0,
+        byType: [],
+        byUser: [],
+        byStore: [],
+        timeline: [],
+        timeframe: timeframe,
+        error: "Failed to retrieve activity data"
+      };
+    }
+  }
+  
+  // Helper method to get timeline data for reports
+  private async getTimelineData(table: any, startDate: Date, endDate: Date): Promise<any[]> {
     let dateFilter: Date;
     const now = new Date();
     
