@@ -838,7 +838,7 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                 </div>
 
                 {assignmentForm.watch("workItems")?.map((_, index) => (
-                  <div key={index} className="space-y-4 p-4 border rounded-md relative">
+                  <div key={index} className="flex flex-col h-full p-4 border rounded-md relative">
                     <Button
                       type="button"
                       variant="ghost"
@@ -856,39 +856,43 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                       <X className="h-4 w-4" />
                     </Button>
 
-                    <FormField
-                      control={assignmentForm.control}
-                      name={`workItems.${index}.title`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Title</FormLabel>
-                          <FormControl>
-                            <Input {...field} placeholder="Task title" />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
+                    {/* Content area */}
+                    <div className="space-y-4 flex-grow">
+                      <FormField
+                        control={assignmentForm.control}
+                        name={`workItems.${index}.title`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Title</FormLabel>
+                            <FormControl>
+                              <Input {...field} placeholder="Task title" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={assignmentForm.control}
+                        name={`workItems.${index}.description`}
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Description</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Task description"
+                                value={field.value || ""}
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
                     
-                    <FormField
-                      control={assignmentForm.control}
-                      name={`workItems.${index}.description`}
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>Description</FormLabel>
-                          <FormControl>
-                            <Textarea 
-                              {...field} 
-                              placeholder="Task description"
-                              value={field.value || ""}
-                            />
-                          </FormControl>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    {/* Bottom aligned controls */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
                       <FormField
                         control={assignmentForm.control}
                         name={`workItems.${index}.type`}
