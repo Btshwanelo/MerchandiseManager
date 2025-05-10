@@ -1,5 +1,5 @@
 import * as React from "react"
-import { Check, ChevronsUpDown, X } from "lucide-react"
+import { Check, ChevronsUpDown, X, Search } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
 import {
@@ -8,6 +8,7 @@ import {
   CommandGroup,
   CommandInput,
   CommandItem,
+  CommandList,
 } from "@/components/ui/command"
 import {
   Popover,
@@ -50,9 +51,23 @@ export function Combobox({
   renderItem,
 }: ComboboxProps) {
   const [open, setOpen] = React.useState(false)
-  const [searchQuery, setSearchQuery] = React.useState("")
+  const [inputValue, setInputValue] = React.useState("")
 
   const selectedOption = options.find((option) => option.value === value)
+
+  // Filter options based on input value
+  const filteredOptions = options.filter((option) => {
+    const matchesLabel = option.label.toLowerCase().includes(inputValue.toLowerCase())
+    const matchesValue = option.value.toLowerCase().includes(inputValue.toLowerCase())
+    return matchesLabel || matchesValue
+  })
+
+  // Handle selection
+  const handleSelect = React.useCallback((selectedValue: string) => {
+    onChange(selectedValue === value ? "" : selectedValue)
+    setOpen(false)
+    setInputValue("")
+  }, [onChange, value])
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -67,6 +82,9 @@ export function Combobox({
             triggerClassName
           )}
           disabled={disabled}
+          onClick={() => {
+            if (!disabled) setOpen(!open)
+          }}
         >
           {selectedOption ? (
             <span className="truncate">{selectedOption.label}</span>
@@ -87,49 +105,49 @@ export function Combobox({
           </div>
         </Button>
       </PopoverTrigger>
-      <PopoverContent className={cn("p-0", className)}>
-        <Command className="w-full">
-          <CommandInput 
-            placeholder={`Search ${placeholder.toLowerCase()}...`} 
-            className="h-9"
-            value={searchQuery}
-            onValueChange={setSearchQuery}
-          />
-          <CommandEmpty>
-            {loading ? "Loading..." : emptyMessage}
-          </CommandEmpty>
-          <CommandGroup className="max-h-64 overflow-y-auto">
-            {options
-              .filter((option) => 
-                option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                option.value.toLowerCase().includes(searchQuery.toLowerCase())
-              )
-              .map((option) => (
-                <CommandItem
-                  key={option.value}
-                  value={option.value}
-                  onSelect={() => {
-                    onChange(option.value === value ? "" : option.value)
-                    setOpen(false)
-                    setSearchQuery("")
-                  }}
-                >
-                  {renderItem ? (
-                    renderItem(option)
-                  ) : (
-                    <>
-                      <Check
-                        className={cn(
-                          "mr-2 h-4 w-4",
-                          value === option.value ? "opacity-100" : "opacity-0"
-                        )}
-                      />
-                      {option.label}
-                    </>
-                  )}
-                </CommandItem>
-              ))}
-          </CommandGroup>
+      <PopoverContent className={cn("p-0", className)} align="start">
+        <Command className="w-full" shouldFilter={false}>
+          <div className="flex items-center border-b px-3">
+            <Search className="mr-2 h-4 w-4 shrink-0 opacity-50" />
+            <CommandInput 
+              placeholder={`Search ${placeholder.toLowerCase()}...`}
+              className="h-9 flex-1 border-0 outline-none focus:ring-0"
+              value={inputValue}
+              onValueChange={setInputValue}
+            />
+          </div>
+          <CommandList>
+            {loading ? (
+              <CommandEmpty>Loading...</CommandEmpty>
+            ) : filteredOptions.length === 0 ? (
+              <CommandEmpty>{emptyMessage}</CommandEmpty>
+            ) : (
+              <CommandGroup className="max-h-64 overflow-y-auto">
+                {filteredOptions.map((option) => (
+                  <CommandItem
+                    key={option.value}
+                    value={option.value}
+                    onSelect={handleSelect}
+                    className="cursor-pointer"
+                  >
+                    {renderItem ? (
+                      renderItem(option)
+                    ) : (
+                      <>
+                        <Check
+                          className={cn(
+                            "mr-2 h-4 w-4",
+                            value === option.value ? "opacity-100" : "opacity-0"
+                          )}
+                        />
+                        {option.label}
+                      </>
+                    )}
+                  </CommandItem>
+                ))}
+              </CommandGroup>
+            )}
+          </CommandList>
         </Command>
       </PopoverContent>
     </Popover>
