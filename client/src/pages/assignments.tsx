@@ -78,6 +78,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { format } from "date-fns";
 
@@ -623,38 +624,33 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Merchandiser</FormLabel>
-                      <Select
-                        value={field.value?.toString()}
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a merchandiser" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoadingMerchandisers ? (
-                            <div className="flex items-center justify-center p-2">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Loading merchandisers...
+                      <FormControl>
+                        <Combobox
+                          value={field.value?.toString() || ""}
+                          onChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                          placeholder="Select a merchandiser"
+                          loading={isLoadingMerchandisers}
+                          emptyMessage={
+                            merchandisersError 
+                              ? "Failed to load merchandisers" 
+                              : merchandisers?.length === 0 
+                                ? "No merchandisers available" 
+                                : "No merchandisers found"
+                          }
+                          options={
+                            merchandisers?.map((merchandiser) => ({
+                              label: merchandiser.name,
+                              value: merchandiser.id.toString()
+                            })) || []
+                          }
+                          renderItem={(option) => (
+                            <div className="flex items-center">
+                              <User className="h-4 w-4 mr-2 text-muted-foreground" />
+                              {option.label}
                             </div>
-                          ) : merchandisersError ? (
-                            <div className="p-2 text-destructive">
-                              Failed to load merchandisers
-                            </div>
-                          ) : merchandisers?.length === 0 ? (
-                            <div className="p-2 text-muted-foreground">
-                              No merchandisers available
-                            </div>
-                          ) : (
-                            merchandisers?.map((merchandiser) => (
-                              <SelectItem key={merchandiser.id} value={merchandiser.id.toString()}>
-                                {merchandiser.name}
-                              </SelectItem>
-                            ))
                           )}
-                        </SelectContent>
-                      </Select>
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -666,38 +662,33 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Store</FormLabel>
-                      <Select
-                        value={field.value?.toString()}
-                        onValueChange={(value) => field.onChange(parseInt(value))}
-                      >
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select a store" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {isLoadingStores ? (
-                            <div className="flex items-center justify-center p-2">
-                              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                              Loading stores...
+                      <FormControl>
+                        <Combobox
+                          value={field.value?.toString() || ""}
+                          onChange={(value) => field.onChange(value ? parseInt(value) : undefined)}
+                          placeholder="Select a store"
+                          loading={isLoadingStores}
+                          emptyMessage={
+                            storesError 
+                              ? "Failed to load stores" 
+                              : stores?.length === 0 
+                                ? "No stores available" 
+                                : "No stores found"
+                          }
+                          options={
+                            stores?.map((store) => ({
+                              label: store.name,
+                              value: store.id.toString()
+                            })) || []
+                          }
+                          renderItem={(option) => (
+                            <div className="flex items-center">
+                              <Store className="h-4 w-4 mr-2 text-muted-foreground" />
+                              {option.label}
                             </div>
-                          ) : storesError ? (
-                            <div className="p-2 text-destructive">
-                              Failed to load stores
-                            </div>
-                          ) : stores?.length === 0 ? (
-                            <div className="p-2 text-muted-foreground">
-                              No stores available
-                            </div>
-                          ) : (
-                            stores?.map((store) => (
-                              <SelectItem key={store.id} value={store.id.toString()}>
-                                {store.name}
-                              </SelectItem>
-                            ))
                           )}
-                        </SelectContent>
-                      </Select>
+                        />
+                      </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}

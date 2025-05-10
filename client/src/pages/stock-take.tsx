@@ -15,6 +15,7 @@ import {
   SelectTrigger, 
   SelectValue 
 } from "@/components/ui/select";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { 
   Dialog,
   DialogContent,
@@ -717,28 +718,31 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="col-span-2">
                     <label className="text-sm font-medium mb-2 block">Product</label>
-                    <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a product..." />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isLoadingProducts ? (
-                          <div className="flex items-center justify-center p-2">
-                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                            Loading products...
-                          </div>
-                        ) : (
-                          products?.map((product) => (
-                            <SelectItem key={product.id} value={product.id.toString()}>
-                              <div className="flex items-center">
-                                <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
-                                {product.name} - {product.sku}
-                              </div>
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
+                    <Combobox
+                      value={selectedProduct}
+                      onChange={setSelectedProduct}
+                      placeholder="Select a product..."
+                      loading={isLoadingProducts}
+                      emptyMessage={
+                        isLoadingProducts 
+                          ? "Loading products..." 
+                          : products?.length === 0 
+                            ? "No products available" 
+                            : "No products found"
+                      }
+                      options={
+                        products?.map((product) => ({
+                          label: `${product.name} - ${product.sku}`,
+                          value: product.id.toString()
+                        })) || []
+                      }
+                      renderItem={(option) => (
+                        <div className="flex items-center">
+                          <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
+                          {option.label}
+                        </div>
+                      )}
+                    />
                   </div>
                   
                   <div>
