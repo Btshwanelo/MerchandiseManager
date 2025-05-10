@@ -168,6 +168,21 @@ export const ActivityTable = ({ limit = 5, showAllForAdmin = true }: ActivityTab
     }
   });
 
+  // Create activities variable at the component level for use in pagination
+  let activities: (Activity & { product: any; user: any; store: any })[] = [];
+  let totalCount = 0;
+  
+  // Process data to extract activities and total count
+  if (data) {
+    if ('data' in data && Array.isArray(data.data)) {
+      activities = data.data;
+      totalCount = data.pagination?.total || activities.length;
+    } else if (Array.isArray(data)) {
+      activities = data;
+      totalCount = activities.length;
+    }
+  }
+
   const renderTableBody = () => {
     if (isLoading) {
       return Array(5)
@@ -208,31 +223,8 @@ export const ActivityTable = ({ limit = 5, showAllForAdmin = true }: ActivityTab
         </TableRow>
       );
     }
-
-    // Handle both response formats (array or object with pagination)
-    let activities: (Activity & { product: any; user: any; store: any })[] = [];
-    let totalCount = 0;
     
-    if (!data) {
-      return (
-        <TableRow>
-          <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
-            No recent activities found.
-          </TableCell>
-        </TableRow>
-      );
-    }
-    
-    // Check if the response is paginated or a simple array
-    if ('data' in data && Array.isArray(data.data)) {
-      activities = data.data;
-      totalCount = data.pagination?.total || activities.length;
-    } else if (Array.isArray(data)) {
-      activities = data;
-      totalCount = activities.length;
-    }
-    
-    if (activities.length === 0) {
+    if (!data || activities.length === 0) {
       return (
         <TableRow>
           <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
