@@ -12,7 +12,8 @@ import { useQuery } from "@tanstack/react-query";
 import { PlusCircle, MinusCircle, ArrowLeftRight, PackageSearch, ShoppingBag } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Activity } from "@shared/schema";
+import { Activity, UserRole } from "@shared/schema";
+import { useAuth } from "@/hooks/use-auth";
 import { format } from "date-fns";
 
 interface ActivityItemProps {
@@ -83,7 +84,9 @@ const ActivityItem = ({ activity }: ActivityItemProps) => {
     }
   };
 
-  const formatTimestamp = (timestamp: Date) => {
+  const formatTimestamp = (timestamp: Date | null) => {
+    if (!timestamp) return "Unknown date";
+    
     const now = new Date();
     const activityDate = new Date(timestamp);
     
@@ -138,11 +141,31 @@ const ActivityItem = ({ activity }: ActivityItemProps) => {
   );
 };
 
-export const ActivityTable = () => {
+interface ActivityTableProps {
+  limit?: number;
+  showAllForAdmin?: boolean;
+}
+
+export const ActivityTable = ({ limit = 5, showAllForAdmin = true }: ActivityTableProps) => {
+  const { user } = useAuth();
+  const isAdmin = user?.role === UserRole.ADMIN;
+  
+  // Use the appropriate endpoint based on user role
+  const endpoint = isAdmin && showAllForAdmin ? "/api/activities/all" : "/api/activities/recent";
+  const queryParams = isAdmin && showAllForAdmin ? `?limit=${limit}` : `?limit=${limit}`;
+  
   const { data, isLoading, error } = useQuery<
-    (Activity & { product: any; user: any; store: any })[]
+    (Activity & { product: any; user: any; store: any })[] | 
+    { data: (Activity & { product: any; user: any; store: any })[], pagination: any }
   >({
-    queryKey: ["/api/activities/recent"],
+    queryKey: [endpoint, limit],
+    queryFn: async () => {
+      const response = await fetch(`${endpoint}${queryParams}`);
+      if (!response.ok) {
+        throw new Error('Failed to load activities');
+      }
+      return response.json();
+    }
   });
 
   const renderTableBody = () => {
@@ -186,7 +209,30 @@ export const ActivityTable = () => {
       );
     }
 
-    if (!data || data.length === 0) {
+    // Handle both response formats (array or object with pagination)
+    let activities: (Activity & { product: any; user: any; store: any })[] = [];
+    let totalCount = 0;
+    
+    if (!data) {
+      return (
+        <TableRow>
+          <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
+            No recent activities found.
+          </TableCell>
+        </TableRow>
+      );
+    }
+    
+    // Check if the response is paginated or a simple array
+    if ('data' in data && Array.isArray(data.data)) {
+      activities = data.data;
+      totalCount = data.pagination?.total || activities.length;
+    } else if (Array.isArray(data)) {
+      activities = data;
+      totalCount = activities.length;
+    }
+    
+    if (activities.length === 0) {
       return (
         <TableRow>
           <TableCell colSpan={6} className="text-center text-muted-foreground py-4">
@@ -196,83 +242,8 @@ export const ActivityTable = () => {
       );
     }
 
-    // Sample data for now - in a real app we'd map through the API data
-    // Using sample data until API is connected
-    const sampleData = [
-      {
-        id: 1,
-        actionType: "add",
-        productId: 1,
-        shelfId: 1,
-        storeId: 1,
-        userId: 1,
-        quantity: 10,
-        status: "completed",
-        timestamp: new Date(new Date().setHours(new Date().getHours() - 1)),
-        product: { id: 1, name: "Organic Apples 5lb Bag" },
-        user: { id: 1, name: "Sarah Johnson" },
-        store: { id: 8, name: "Store #08 - Produce Section" }
-      },
-      {
-        id: 2,
-        actionType: "remove",
-        productId: 2,
-        shelfId: 2,
-        storeId: 2,
-        userId: 2,
-        quantity: 5,
-        status: "completed",
-        timestamp: new Date(new Date().setHours(new Date().getHours() - 3)),
-        product: { id: 2, name: "Premium Coffee Beans" },
-        user: { id: 2, name: "Miguel Rodriguez" },
-        store: { id: 23, name: "Store #23 - Main Shelf" }
-      },
-      {
-        id: 3,
-        actionType: "transfer",
-        productId: 3,
-        shelfId: 3,
-        storeId: 3,
-        userId: 3,
-        fromShelfId: 12,
-        toShelfId: 15,
-        quantity: 8,
-        status: "in_progress",
-        timestamp: new Date(new Date().setDate(new Date().getDate() - 1)),
-        product: { id: 3, name: "Whole Grain Bread" },
-        user: { id: 3, name: "David Chen" },
-        store: { id: 12, name: "Store #12" }
-      },
-      {
-        id: 4,
-        actionType: "adjust",
-        productId: 4,
-        shelfId: 4,
-        storeId: 4,
-        userId: 4,
-        quantity: 2,
-        status: "completed",
-        timestamp: new Date(new Date().setDate(new Date().getDate() - 1)),
-        product: { id: 4, name: "Almond Milk 32oz" },
-        user: { id: 4, name: "Emily Taylor" },
-        store: { id: 5, name: "Store #05 - Dairy Section" }
-      },
-      {
-        id: 5,
-        actionType: "new_product",
-        productId: 5,
-        storeId: 5,
-        userId: 5,
-        status: "completed",
-        timestamp: new Date(new Date().setDate(new Date().getDate() - 3)),
-        product: { id: 5, name: "Organic Honey 12oz" },
-        user: { id: 5, name: "John Smith" },
-        store: { id: 8, name: "Store #08 - End Cap" }
-      }
-    ];
-
-    return sampleData.map((activity) => (
-      <ActivityItem key={activity.id} activity={activity as any} />
+    return activities.map((activity) => (
+      <ActivityItem key={activity.id} activity={activity} />
     ));
   };
 
@@ -295,59 +266,69 @@ export const ActivityTable = () => {
       </div>
 
       <div className="p-4 border-t flex items-center justify-between">
-        <p className="text-sm text-muted-foreground">Showing 5 of 132 activities</p>
+        <p className="text-sm text-muted-foreground">
+          Showing {activities?.length || 0} of {totalCount} activities
+        </p>
 
-        <div className="flex items-center space-x-2">
-          <Button variant="outline" size="icon" disabled>
-            <span className="sr-only">Previous</span>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
+        {isAdmin && showAllForAdmin && (
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="icon" disabled>
+              <span className="sr-only">Previous</span>
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M15 19l-7-7 7-7"
+                ></path>
+              </svg>
+            </Button>
+
+            <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
+              1
+            </Button>
+            <Button variant="outline" size="sm">
+              2
+            </Button>
+            <Button variant="outline" size="sm">
+              3
+            </Button>
+            {totalCount > 15 && <span className="text-muted-foreground">...</span>}
+            {totalCount > 15 && (
+              <Button variant="outline" size="sm">
+                {Math.ceil(totalCount / limit)}
+              </Button>
+            )}
+
+            <Button 
+              variant="outline" 
+              size="icon"
+              disabled={activities?.length < limit}
             >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M15 19l-7-7 7-7"
-              ></path>
-            </svg>
-          </Button>
-
-          <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
-            1
-          </Button>
-          <Button variant="outline" size="sm">
-            2
-          </Button>
-          <Button variant="outline" size="sm">
-            3
-          </Button>
-          <span className="text-muted-foreground">...</span>
-          <Button variant="outline" size="sm">
-            27
-          </Button>
-
-          <Button variant="outline" size="icon">
-            <span className="sr-only">Next</span>
-            <svg
-              className="h-4 w-4"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-              xmlns="http://www.w3.org/2000/svg"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth="2"
-                d="M9 5l7 7-7 7"
-              ></path>
-            </svg>
-          </Button>
-        </div>
+              <span className="sr-only">Next</span>
+              <svg
+                className="h-4 w-4"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+                xmlns="http://www.w3.org/2000/svg"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth="2"
+                  d="M9 5l7 7-7 7"
+                ></path>
+              </svg>
+            </Button>
+          </div>
+        )}
       </div>
     </Card>
   );
