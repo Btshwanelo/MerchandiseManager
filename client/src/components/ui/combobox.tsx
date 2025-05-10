@@ -77,7 +77,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-between",
+            "w-full justify-start relative",
             error && "border-red-500",
             triggerClassName
           )}
@@ -87,11 +87,11 @@ export function Combobox({
           }}
         >
           {selectedOption ? (
-            <span className="truncate max-w-[70vw] md:max-w-[calc(100%-2rem)]">{selectedOption.label}</span>
+            <span className="line-clamp-1 w-full pr-10">{selectedOption.label}</span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}
-          <div className="flex items-center">
+          <div className="flex items-center absolute right-3">
             {selectedOption && clearable && (
               <X
                 className="mr-1 h-4 w-4 shrink-0 opacity-50 hover:opacity-100"
@@ -101,7 +101,7 @@ export function Combobox({
                 }}
               />
             )}
-            <ChevronsUpDown className="ml-1 h-4 w-4 shrink-0 opacity-50" />
+            <ChevronsUpDown className="h-4 w-4 shrink-0 opacity-50" />
           </div>
         </Button>
       </PopoverTrigger>
