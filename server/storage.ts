@@ -191,6 +191,12 @@ export interface IStorage {
     date: Date;
   }): Promise<any>;
   
+  // Report methods
+  getStockTakeReportsData(timeframe: string): Promise<any>;
+  getOrderReportsData(timeframe: string): Promise<any>;
+  getCompetitorReportsData(timeframe: string): Promise<any>;
+  getActivityReportsData(timeframe: string): Promise<any>;
+  
   // Session store for authentication
   sessionStore: any; // Express session store
 }
