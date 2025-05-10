@@ -51,7 +51,23 @@ const AuthPage = () => {
     setLoginError(null);
     loginMutation.mutate(values, {
       onError: (error) => {
-        setLoginError(error.message || "Login failed. Please check your credentials.");
+        // Extract and format the error message
+        let errorMessage = "Login failed. Please check your credentials.";
+        
+        if (error.message) {
+          // Try to extract the message from the error
+          if (error.message.includes("401:")) {
+            // Remove status code from error message
+            errorMessage = error.message.replace("401: ", "");
+          } else if (error.message.includes("400:")) {
+            // Remove status code from error message
+            errorMessage = error.message.replace("400: ", "");
+          } else {
+            errorMessage = error.message;
+          }
+        }
+        
+        setLoginError(errorMessage);
       }
     });
   };
@@ -163,8 +179,18 @@ const AuthPage = () => {
                 </Button>
                 
                 {loginError && (
-                  <div className="mt-4 p-3 bg-destructive/15 border border-destructive text-destructive rounded">
-                    {loginError}
+                  <div className="mt-4 p-4 bg-destructive/15 border border-destructive text-destructive rounded flex items-start">
+                    <div className="mr-2 mt-0.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                        <circle cx="12" cy="12" r="10" />
+                        <line x1="12" y1="8" x2="12" y2="12" />
+                        <line x1="12" y1="16" x2="12.01" y2="16" />
+                      </svg>
+                    </div>
+                    <div className="flex-1">
+                      <div className="font-medium mb-1">Login Failed</div>
+                      <div className="text-sm">{loginError}</div>
+                    </div>
                   </div>
                 )}
               </form>
