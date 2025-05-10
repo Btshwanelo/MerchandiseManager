@@ -262,7 +262,8 @@ export const ActivityTable = ({ limit = 5, showAllForAdmin = true }: ActivityTab
           Showing {activities?.length || 0} of {totalCount} activities
         </p>
 
-        {isAdmin && showAllForAdmin && (
+        {/* Only show pagination on the full activities page, not the dashboard */}
+        {false && isAdmin && showAllForAdmin && totalCount > limit && (
           <div className="flex items-center space-x-2">
             <Button variant="outline" size="icon" disabled>
               <span className="sr-only">Previous</span>
@@ -285,19 +286,7 @@ export const ActivityTable = ({ limit = 5, showAllForAdmin = true }: ActivityTab
             <Button variant="outline" size="sm" className="bg-primary text-primary-foreground">
               1
             </Button>
-            <Button variant="outline" size="sm">
-              2
-            </Button>
-            <Button variant="outline" size="sm">
-              3
-            </Button>
-            {totalCount > 15 && <span className="text-muted-foreground">...</span>}
-            {totalCount > 15 && (
-              <Button variant="outline" size="sm">
-                {Math.ceil(totalCount / limit)}
-              </Button>
-            )}
-
+            
             <Button 
               variant="outline" 
               size="icon"
