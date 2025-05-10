@@ -87,7 +87,7 @@ export function Combobox({
           }}
         >
           {selectedOption ? (
-            <span className="truncate">{selectedOption.label}</span>
+            <span className="truncate max-w-[70vw] md:max-w-[calc(100%-2rem)]">{selectedOption.label}</span>
           ) : (
             <span className="text-muted-foreground">{placeholder}</span>
           )}

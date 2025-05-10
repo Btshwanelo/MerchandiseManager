@@ -1680,19 +1680,20 @@ const ProcessForm = () => {
           </div>
           
           {/* Mobile only stepper - Shows only current step */}
-          <div className="mb-6 md:hidden">
-            <div className="flex flex-col items-center">
+          <div className="mb-6 md:hidden w-full">
+            <div className="flex flex-col items-center w-full">
               {activeStep === 'stock-take' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
                   <h3 className="font-medium text-[#7ccd57]">Stock Take</h3>
-                  <p className="text-sm text-muted-foreground text-center">Step 1 of 4: Stock taking at shelf or Store</p>
+                  <p className="text-sm text-muted-foreground text-center">Step 1 of
+ 4: Stock taking at shelf or Store</p>
                 </>
               )}
               
               {activeStep === 'merchandising' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
                   <h3 className="font-medium text-[#7ccd57]">Merchandising</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 2 of 4: Promotions for any of our products</p>
                 </>
@@ -1700,7 +1701,7 @@ const ProcessForm = () => {
               
               {activeStep === 'competitor-analysis' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
                   <h3 className="font-medium text-[#7ccd57]">Competitor Promotions</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 3 of 4: Any promotions from competitors</p>
                 </>
@@ -1708,7 +1709,7 @@ const ProcessForm = () => {
               
               {activeStep === 'order-placement' && (
                 <>
-                  <div className="h-2 w-32 rounded-full mb-2 bg-[#7ccd57]"></div>
+                  <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
                   <h3 className="font-medium text-[#7ccd57]">Orders</h3>
                   <p className="text-sm text-muted-foreground text-center">Step 4 of 4: Orders of stock that is depleted</p>
                 </>
