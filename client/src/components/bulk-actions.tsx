@@ -146,7 +146,10 @@ export function BulkActions<T>({
             </DropdownMenuTrigger>
             <DropdownMenuContent align="start">
               {onDelete && (
-                <DropdownMenuItem onClick={openDeleteConfirmation}>
+                <DropdownMenuItem 
+                  onClick={openDeleteConfirmation}
+                  className="text-foreground hover:text-foreground/80"
+                >
                   <Trash className="mr-2 h-4 w-4" />
                   Delete
                 </DropdownMenuItem>
@@ -186,7 +189,11 @@ export function BulkActions<T>({
             <DialogClose asChild>
               <Button variant="outline">Cancel</Button>
             </DialogClose>
-            <Button variant="destructive" onClick={handleDelete}>
+            <Button 
+              variant="ghost" 
+              className="text-foreground hover:bg-transparent hover:text-foreground/80" 
+              onClick={handleDelete}
+            >
               Yes, Delete {selectedCount} {selectedCount === 1 ? 'Item' : 'Items'}
             </Button>
           </DialogFooter>

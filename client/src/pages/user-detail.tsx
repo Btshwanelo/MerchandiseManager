@@ -298,7 +298,7 @@ const UserDetailPage = () => {
             </Button>
           )}
           {canDelete && (
-            <Button variant="destructive" onClick={() => setDeleteUserDialogOpen(true)}>
+            <Button variant="ghost" className="text-foreground hover:bg-transparent hover:text-foreground/80" onClick={() => setDeleteUserDialogOpen(true)}>
               <Trash2 className="h-4 w-4 mr-2" />
               Delete User
             </Button>
@@ -634,7 +634,7 @@ const UserDetailPage = () => {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="text-foreground bg-transparent hover:bg-transparent hover:text-foreground/80 border-0"
               onClick={handleDeleteUser}
               disabled={deleteUserMutation.isPending}
             >
