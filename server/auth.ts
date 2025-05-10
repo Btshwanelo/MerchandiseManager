@@ -109,7 +109,7 @@ export function setupAuth(app: Express) {
         
         // Then check password
         if (!(await comparePasswords(password, user.password))) {
-          return done(null, false, { message: "Incorrect password. Please try again." });
+          return done(null, false, { message: "Incorrect. Please try again." });
         }
         
         // Success case

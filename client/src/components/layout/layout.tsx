@@ -24,8 +24,8 @@ const Layout = ({ children }: LayoutProps) => {
         {/* Header */}
         <Header onMobileMenuToggle={toggleSidebar} />
 
-        {/* Main content */}
-        <main className="flex-1 overflow-y-auto p-6">
+        {/* Main content - with extra padding at bottom for mobile navigation */}
+        <main className="flex-1 overflow-y-auto p-6 pb-24 md:pb-6">
           {children}
         </main>
 
