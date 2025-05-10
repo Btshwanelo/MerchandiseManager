@@ -2312,6 +2312,34 @@ export class DatabaseStorage implements IStorage {
   async getAllActivities(): Promise<Activity[]> {
     return db.select().from(activities).orderBy(desc(activities.timestamp));
   }
+  
+  async getActivitiesCount(): Promise<number> {
+    const [result] = await db.select({ count: count() }).from(activities);
+    return Number(result.count);
+  }
+  
+  async getAllActivitiesWithRelations(limit: number = 10, offset: number = 0): Promise<(Activity & { product: Product, user: User, store: Store })[]> {
+    const result = await db.select({
+      activity: activities,
+      product: products,
+      user: users,
+      store: stores
+    })
+    .from(activities)
+    .innerJoin(products, eq(activities.productId, products.id))
+    .innerJoin(users, eq(activities.userId, users.id))
+    .innerJoin(stores, eq(activities.storeId, stores.id))
+    .orderBy(desc(activities.timestamp))
+    .limit(limit)
+    .offset(offset);
+    
+    return result.map(({ activity, product, user, store }) => ({
+      ...activity,
+      product,
+      user,
+      store
+    }));
+  }
 
   async getRecentActivities(limit: number): Promise<(Activity & { product: Product, user: User, store: Store })[]> {
     const result = await db.select({

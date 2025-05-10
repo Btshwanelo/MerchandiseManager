@@ -861,6 +861,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to get activities" });
     }
   });
+  
+  // Get all activities - paginated for efficient loading
+  app.get("/api/activities/all", isAuthenticated, checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const page = req.query.page ? parseInt(req.query.page as string) : 1;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const offset = (page - 1) * limit;
+      
+      // Get total count for pagination
+      const totalActivities = await storage.getActivitiesCount();
+      
+      // Get activities with related data
+      const activities = await storage.getAllActivitiesWithRelations(limit, offset);
+      
+      res.json({
+        data: activities,
+        pagination: {
+          total: totalActivities,
+          page,
+          limit,
+          totalPages: Math.ceil(totalActivities / limit)
+        }
+      });
+    } catch (error) {
+      console.error("Error fetching all activities:", error);
+      res.status(500).json({ message: "Failed to get activities" });
+    }
+  });
 
   // Get activities by user ID
   app.get("/api/users/:userId/activities", isAuthenticated, async (req, res) => {

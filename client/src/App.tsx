@@ -20,6 +20,7 @@ import UserImport from "@/pages/user-import";
 import Settings from "@/pages/settings";
 import AuthPage from "@/pages/auth-page";
 import Changelog from "@/pages/changelog";
+import AllActivities from "@/pages/all-activities";
 import Layout from "@/components/layout/layout";
 import { ThemeProvider } from "next-themes";
 import { UserRole } from "@shared/schema";
@@ -314,6 +315,17 @@ function Router() {
         component={() => (
           <Layout>
             <WorkItemDetail />
+          </Layout>
+        )} 
+      />
+      
+      {/* System Activity Routes - Admin Only */}
+      <ProtectedRoute 
+        path="/all-activities" 
+        roles={[UserRole.ADMIN]}
+        component={() => (
+          <Layout>
+            <AllActivities />
           </Layout>
         )} 
       />
