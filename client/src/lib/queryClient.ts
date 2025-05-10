@@ -30,7 +30,12 @@ async function throwIfResNotOk(res: Response) {
     if (res.status === 401) {
       (error as any).isAuthError = true;
       (error as any).type = 'unauthorized';
-      (error as any).message = 'Your session has expired. Please log in again.';
+      
+      // Don't override custom error messages from login endpoint
+      const isLoginEndpoint = res.url.endsWith('/api/login');
+      if (!isLoginEndpoint) {
+        (error as any).message = 'Your session has expired. Please log in again.';
+      }
     } else if (res.status === 403) {
       (error as any).isAuthError = true;
       (error as any).type = 'forbidden';
