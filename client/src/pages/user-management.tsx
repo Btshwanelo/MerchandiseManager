@@ -60,10 +60,11 @@ const UserManagementPage = () => {
   const { user: currentUser } = useAuth();
   const [searchQuery, setSearchQuery] = useState("");
   const [userFormOpen, setUserFormOpen] = useState(false);
+  const [editUserFormOpen, setEditUserFormOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [selectedUsers, setSelectedUsers] = useState<User[]>([]);
 
-  // Extended user schema with validations
+  // Extended user schema with validations for new user
   const userFormSchema = insertUserSchema.extend({
     password: z.string().min(6, "Password must be at least 6 characters"),
     confirmPassword: z.string().min(1, "Please confirm your password"),
@@ -72,7 +73,15 @@ const UserManagementPage = () => {
     path: ["confirmPassword"],
   });
 
+  // Edit user schema (no password required)
+  const editUserSchema = insertUserSchema
+    .omit({ password: true })
+    .extend({
+      id: z.number(),
+    });
+
   type UserFormValues = z.infer<typeof userFormSchema>;
+  type EditUserFormValues = z.infer<typeof editUserSchema>;
 
   // Form setup
   const form = useForm<UserFormValues>({
@@ -83,6 +92,18 @@ const UserManagementPage = () => {
       email: "",
       password: "",
       confirmPassword: "",
+      role: UserRole.MERCHANDISER,
+    },
+  });
+  
+  // Edit user form setup
+  const editForm = useForm<EditUserFormValues>({
+    resolver: zodResolver(editUserSchema),
+    defaultValues: {
+      id: 0,
+      username: "",
+      name: "",
+      email: "",
       role: UserRole.MERCHANDISER,
     },
   });
@@ -117,6 +138,31 @@ const UserManagementPage = () => {
       });
     },
   });
+  
+  // Update user mutation
+  const updateUserMutation = useMutation({
+    mutationFn: async (values: EditUserFormValues) => {
+      const { id, ...updateData } = values;
+      const res = await apiRequest("PATCH", `/api/users/${id}`, updateData);
+      return await res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/users"] });
+      setEditUserFormOpen(false);
+      editForm.reset();
+      toast({
+        title: "User updated",
+        description: "The user has been successfully updated.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Failed to update user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
 
   const onSubmit = (values: UserFormValues) => {
     // Remove confirmPassword before sending
@@ -135,6 +181,22 @@ const UserManagementPage = () => {
       role: UserRole.MERCHANDISER,
     });
     setUserFormOpen(true);
+  };
+  
+  const handleEditUser = (user: User) => {
+    setSelectedUser(user);
+    editForm.reset({
+      id: user.id,
+      username: user.username,
+      name: user.name,
+      email: user.email,
+      role: user.role,
+    });
+    setEditUserFormOpen(true);
+  };
+  
+  const onEditSubmit = (values: EditUserFormValues) => {
+    updateUserMutation.mutate(values);
   };
   
   // Bulk delete mutation
@@ -328,6 +390,12 @@ const UserManagementPage = () => {
                               {currentUser?.role === UserRole.ADMIN && (
                                 <>
                                   <DropdownMenuSeparator />
+                                  <DropdownMenuItem 
+                                    onClick={() => handleEditUser(user)}
+                                  >
+                                    <UserCog className="h-4 w-4 mr-2" />
+                                    Edit User
+                                  </DropdownMenuItem>
                                   <Link href={`/users`}>
                                     <DropdownMenuItem>
                                       <UserPlus className="h-4 w-4 mr-2" />
