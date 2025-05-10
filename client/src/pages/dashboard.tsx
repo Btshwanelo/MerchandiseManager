@@ -239,7 +239,11 @@ const Dashboard = () => {
       <section>
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-xl font-medium text-foreground">Recent Activity</h3>
-          <button className="text-sm text-primary">View All Activities</button>
+          {user?.role === UserRole.ADMIN && (
+            <Link href="/all-activities">
+              <button className="text-sm text-primary hover:underline">View All Activities</button>
+            </Link>
+          )}
         </div>
         
         <ActivityTable />

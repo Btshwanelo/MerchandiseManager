@@ -18,6 +18,7 @@ import {
   FileSpreadsheet,
   ShoppingCart,
   Laptop,
+  Activity,
   ClipboardList,
   Calendar
 } from "lucide-react";
@@ -163,6 +164,13 @@ const navigationItems: NavItem[] = [
     href: "/users",
     label: "User Management",
     icon: <Users className="h-5 w-5" />,
+    roles: [UserRole.ADMIN],
+    section: "admin"
+  },
+  {
+    href: "/all-activities",
+    label: "System Activities",
+    icon: <Activity className="h-5 w-5" />,
     roles: [UserRole.ADMIN],
     section: "admin"
   },
