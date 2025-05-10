@@ -493,6 +493,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Reports routes for activity-based reports
+  
+  // Stock Take Reports - completion rate, counts
+  app.get("/api/reports/stock-takes", isAuthenticated, async (req, res) => {
+    try {
+      const timeframe = req.query.timeframe as string || 'month'; // week, month, quarter, year
+      const stockTakeStats = await storage.getStockTakeReportsData(timeframe);
+      res.json(stockTakeStats);
+    } catch (error) {
+      console.error("Error getting stock take reports:", error);
+      res.status(500).json({ message: "Failed to load stock take reports" });
+    }
+  });
+  
+  // Order Reports - orders placed, status, etc.
+  app.get("/api/reports/orders", isAuthenticated, async (req, res) => {
+    try {
+      const timeframe = req.query.timeframe as string || 'month'; // week, month, quarter, year
+      const orderStats = await storage.getOrderReportsData(timeframe);
+      res.json(orderStats);
+    } catch (error) {
+      console.error("Error getting order reports:", error);
+      res.status(500).json({ message: "Failed to load order reports" });
+    }
+  });
+  
+  // Competitor Analysis Reports - number of competitors, price points, etc.
+  app.get("/api/reports/competitors", isAuthenticated, async (req, res) => {
+    try {
+      const timeframe = req.query.timeframe as string || 'month'; // week, month, quarter, year
+      const competitorStats = await storage.getCompetitorReportsData(timeframe);
+      res.json(competitorStats);
+    } catch (error) {
+      console.error("Error getting competitor reports:", error);
+      res.status(500).json({ message: "Failed to load competitor reports" });
+    }
+  });
+  
+  // Activity Summary Reports - all types of activities summarized
+  app.get("/api/reports/activities", isAuthenticated, async (req, res) => {
+    try {
+      const timeframe = req.query.timeframe as string || 'month'; // week, month, quarter, year
+      const activityStats = await storage.getActivityReportsData(timeframe);
+      res.json(activityStats);
+    } catch (error) {
+      console.error("Error getting activity reports:", error);
+      res.status(500).json({ message: "Failed to load activity reports" });
+    }
+  });
+  
   // Product routes
   app.get("/api/products", async (req, res) => {
     try {

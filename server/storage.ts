@@ -1,12 +1,15 @@
 import {
   users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, userAlerts,
+  orders, orderItems, competitorMerchandising, 
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
   type Alert, type InsertAlert, type StockTake, type InsertStockTake, 
   type StockTakeItem, type InsertStockTakeItem, type StoreAssignment, type InsertStoreAssignment,
   type WorkItem, type InsertWorkItem, WorkItemStatus, AlertStatus,
-  type UserAlert, type InsertUserAlert
+  type UserAlert, type InsertUserAlert,
+  type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
+  type CompetitorMerchandising, type InsertCompetitorMerchandising
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -2480,6 +2483,428 @@ export class DatabaseStorage implements IStorage {
       lowStockItems,
       activeStores,
       inventoryValue
+    };
+  }
+  
+  // Reports methods
+  
+  // Stock Take Reports Data
+  async getStockTakeReportsData(timeframe: string): Promise<{
+    totalStockTakes: number,
+    completedStockTakes: number,
+    stockTakeCompletionRate: number,
+    stockTakesByUser: {userId: number, userName: string, count: number}[],
+    stockTakeTimeline: {date: string, count: number}[],
+  }> {
+    // Get time period filter based on timeframe
+    let dateFilter: Date;
+    const now = new Date();
+    
+    switch(timeframe) {
+      case 'week':
+        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'quarter':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 3));
+        break;
+      case 'year':
+        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      default:
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1)); // Default to 1 month
+    }
+    
+    // Get total stock takes in time period
+    const [{ value: totalStockTakes }] = await db
+      .select({ value: count() })
+      .from(stockTakes)
+      .where(sql`created_at >= ${dateFilter}`);
+    
+    // Get completed stock takes in time period
+    const [{ value: completedStockTakes }] = await db
+      .select({ value: count() })
+      .from(stockTakes)
+      .where(and(
+        sql`created_at >= ${dateFilter}`,
+        eq(stockTakes.status, 'completed')
+      ));
+    
+    // Calculate completion rate
+    const stockTakeCompletionRate = totalStockTakes > 0 
+      ? Math.round((completedStockTakes / totalStockTakes) * 100) 
+      : 0;
+    
+    // Get stock takes by user
+    const stockTakesByUserResult = await db
+      .select({
+        userId: stockTakes.userId,
+        count: count()
+      })
+      .from(stockTakes)
+      .where(sql`created_at >= ${dateFilter}`)
+      .groupBy(stockTakes.userId);
+    
+    // Get user names for each user ID
+    const stockTakesByUser = await Promise.all(
+      stockTakesByUserResult.map(async (item) => {
+        const user = await this.getUser(item.userId);
+        return {
+          userId: item.userId,
+          userName: user?.name || 'Unknown',
+          count: Number(item.count)
+        };
+      })
+    );
+    
+    // Get stock takes timeline (count by day)
+    // This SQL translates the timestamp to a date string like YYYY-MM-DD
+    const stockTakeTimelineResult = await db
+      .select({
+        date: sql`to_char(created_at, 'YYYY-MM-DD')`,
+        count: count()
+      })
+      .from(stockTakes)
+      .where(sql`created_at >= ${dateFilter}`)
+      .groupBy(sql`to_char(created_at, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(created_at, 'YYYY-MM-DD')`);
+    
+    const stockTakeTimeline = stockTakeTimelineResult.map(item => ({
+      date: item.date as string,
+      count: Number(item.count)
+    }));
+    
+    return {
+      totalStockTakes,
+      completedStockTakes,
+      stockTakeCompletionRate,
+      stockTakesByUser,
+      stockTakeTimeline
+    };
+  }
+  
+  // Order Reports Data
+  async getOrderReportsData(timeframe: string): Promise<{
+    totalOrders: number,
+    pendingOrders: number,
+    completedOrders: number,
+    ordersByStatus: {status: string, count: number}[],
+    ordersByStore: {storeId: number, storeName: string, count: number}[],
+    topOrderedProducts: {productId: number, productName: string, count: number}[]
+  }> {
+    // Get time period filter based on timeframe
+    let dateFilter: Date;
+    const now = new Date();
+    
+    switch(timeframe) {
+      case 'week':
+        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'quarter':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 3));
+        break;
+      case 'year':
+        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      default:
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1)); // Default to 1 month
+    }
+    
+    // Get total orders in time period
+    const [{ value: totalOrders }] = await db
+      .select({ value: count() })
+      .from(orders)
+      .where(sql`date >= ${dateFilter}`);
+    
+    // Get pending orders
+    const [{ value: pendingOrders }] = await db
+      .select({ value: count() })
+      .from(orders)
+      .where(and(
+        sql`date >= ${dateFilter}`,
+        eq(orders.status, 'pending')
+      ));
+    
+    // Get completed orders
+    const [{ value: completedOrders }] = await db
+      .select({ value: count() })
+      .from(orders)
+      .where(and(
+        sql`date >= ${dateFilter}`,
+        eq(orders.status, 'completed')
+      ));
+    
+    // Get orders by status
+    const ordersByStatusResult = await db
+      .select({
+        status: orders.status,
+        count: count()
+      })
+      .from(orders)
+      .where(sql`date >= ${dateFilter}`)
+      .groupBy(orders.status);
+    
+    const ordersByStatus = ordersByStatusResult.map(item => ({
+      status: item.status,
+      count: Number(item.count)
+    }));
+    
+    // Get orders by store
+    const ordersByStoreResult = await db
+      .select({
+        storeId: orders.storeId,
+        count: count()
+      })
+      .from(orders)
+      .where(sql`date >= ${dateFilter}`)
+      .groupBy(orders.storeId);
+    
+    const ordersByStore = await Promise.all(
+      ordersByStoreResult.map(async (item) => {
+        const store = await this.getStore(item.storeId);
+        return {
+          storeId: item.storeId,
+          storeName: store?.name || 'Unknown',
+          count: Number(item.count)
+        };
+      })
+    );
+    
+    // Get top ordered products
+    const topOrderedProductsResult = await db
+      .select({
+        productId: orderItems.productId,
+        count: count()
+      })
+      .from(orderItems)
+      .innerJoin(orders, eq(orderItems.orderId, orders.id))
+      .where(sql`orders.date >= ${dateFilter}`)
+      .groupBy(orderItems.productId)
+      .orderBy(sql`count(*) DESC`)
+      .limit(10);
+    
+    const topOrderedProducts = await Promise.all(
+      topOrderedProductsResult.map(async (item) => {
+        const product = await this.getProduct(item.productId);
+        return {
+          productId: item.productId,
+          productName: product?.name || 'Unknown',
+          count: Number(item.count)
+        };
+      })
+    );
+    
+    return {
+      totalOrders,
+      pendingOrders,
+      completedOrders,
+      ordersByStatus,
+      ordersByStore,
+      topOrderedProducts
+    };
+  }
+  
+  // Competitor Analysis Reports Data
+  async getCompetitorReportsData(timeframe: string): Promise<{
+    totalCompetitors: number,
+    competitorsByBrand: {brand: string, count: number}[],
+    priceComparisons: {
+      productId: number,
+      productName: string,
+      ourPrice: number,
+      competitorAvgPrice: number,
+      priceDifference: number
+    }[]
+  }> {
+    // Get time period filter based on timeframe
+    let dateFilter: Date;
+    const now = new Date();
+    
+    switch(timeframe) {
+      case 'week':
+        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'quarter':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 3));
+        break;
+      case 'year':
+        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      default:
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1)); // Default to 1 month
+    }
+    
+    // Get unique competitor brands
+    const competitorBrands = await db
+      .select({
+        brand: competitorMerchandising.brand
+      })
+      .from(competitorMerchandising)
+      .where(sql`date >= ${dateFilter}`)
+      .groupBy(competitorMerchandising.brand);
+    
+    const totalCompetitors = competitorBrands.length;
+    
+    // Get competitor counts by brand
+    const competitorsByBrandResult = await db
+      .select({
+        brand: competitorMerchandising.brand,
+        count: count()
+      })
+      .from(competitorMerchandising)
+      .where(sql`date >= ${dateFilter}`)
+      .groupBy(competitorMerchandising.brand)
+      .orderBy(sql`count(*) DESC`);
+    
+    const competitorsByBrand = competitorsByBrandResult.map(item => ({
+      brand: item.brand,
+      count: Number(item.count)
+    }));
+    
+    // Price comparisons are a bit harder since we don't have a direct mapping between
+    // our products and competitor products. This is a simplified approach.
+    // In a real implementation, we would need a more sophisticated product matching system.
+    const priceComparisons: {
+      productId: number,
+      productName: string,
+      ourPrice: number,
+      competitorAvgPrice: number,
+      priceDifference: number
+    }[] = [];
+    
+    // For now, we'll return placeholder data
+    // In a real implementation, we would query for actual competitor pricing data
+    // and compare it with our own product pricing
+    
+    return {
+      totalCompetitors,
+      competitorsByBrand,
+      priceComparisons
+    };
+  }
+  
+  // Activity Summary Reports
+  async getActivityReportsData(timeframe: string): Promise<{
+    totalActivities: number,
+    activitiesByType: {type: string, count: number}[],
+    activitiesByUser: {userId: number, userName: string, count: number}[],
+    activitiesByStore: {storeId: number, storeName: string, count: number}[],
+    activityTimeline: {date: string, count: number}[]
+  }> {
+    // Get time period filter based on timeframe
+    let dateFilter: Date;
+    const now = new Date();
+    
+    switch(timeframe) {
+      case 'week':
+        dateFilter = new Date(now.setDate(now.getDate() - 7));
+        break;
+      case 'month':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1));
+        break;
+      case 'quarter':
+        dateFilter = new Date(now.setMonth(now.getMonth() - 3));
+        break;
+      case 'year':
+        dateFilter = new Date(now.setFullYear(now.getFullYear() - 1));
+        break;
+      default:
+        dateFilter = new Date(now.setMonth(now.getMonth() - 1)); // Default to 1 month
+    }
+    
+    // Get total activities in time period
+    const [{ value: totalActivities }] = await db
+      .select({ value: count() })
+      .from(activities)
+      .where(sql`timestamp >= ${dateFilter}`);
+    
+    // Get activities by type
+    const activitiesByTypeResult = await db
+      .select({
+        type: activities.actionType,
+        count: count()
+      })
+      .from(activities)
+      .where(sql`timestamp >= ${dateFilter}`)
+      .groupBy(activities.actionType);
+    
+    const activitiesByType = activitiesByTypeResult.map(item => ({
+      type: item.type,
+      count: Number(item.count)
+    }));
+    
+    // Get activities by user
+    const activitiesByUserResult = await db
+      .select({
+        userId: activities.userId,
+        count: count()
+      })
+      .from(activities)
+      .where(sql`timestamp >= ${dateFilter}`)
+      .groupBy(activities.userId);
+    
+    const activitiesByUser = await Promise.all(
+      activitiesByUserResult.map(async (item) => {
+        const user = await this.getUser(item.userId);
+        return {
+          userId: item.userId,
+          userName: user?.name || 'Unknown',
+          count: Number(item.count)
+        };
+      })
+    );
+    
+    // Get activities by store
+    const activitiesByStoreResult = await db
+      .select({
+        storeId: activities.storeId,
+        count: count()
+      })
+      .from(activities)
+      .where(sql`timestamp >= ${dateFilter}`)
+      .groupBy(activities.storeId);
+    
+    const activitiesByStore = await Promise.all(
+      activitiesByStoreResult.map(async (item) => {
+        const store = await this.getStore(item.storeId);
+        return {
+          storeId: item.storeId,
+          storeName: store?.name || 'Unknown',
+          count: Number(item.count)
+        };
+      })
+    );
+    
+    // Get activity timeline (count by day)
+    const activityTimelineResult = await db
+      .select({
+        date: sql`to_char(timestamp, 'YYYY-MM-DD')`,
+        count: count()
+      })
+      .from(activities)
+      .where(sql`timestamp >= ${dateFilter}`)
+      .groupBy(sql`to_char(timestamp, 'YYYY-MM-DD')`)
+      .orderBy(sql`to_char(timestamp, 'YYYY-MM-DD')`);
+    
+    const activityTimeline = activityTimelineResult.map(item => ({
+      date: item.date as string,
+      count: Number(item.count)
+    }));
+    
+    return {
+      totalActivities,
+      activitiesByType,
+      activitiesByUser,
+      activitiesByStore,
+      activityTimeline
     };
   }
   
