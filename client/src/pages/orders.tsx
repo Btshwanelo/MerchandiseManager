@@ -28,7 +28,7 @@ import {
   TableHeader, 
   TableRow 
 } from "@/components/ui/table";
-import { Combobox } from "@/components/ui/combobox";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 import { 
   Loader2, 
   Store, 
@@ -260,7 +260,7 @@ const OrdersPage = () => {
                         value: store.id.toString()
                       })) || []
                     }
-                    renderItem={(option) => (
+                    renderItem={(option: ComboboxOption) => (
                       <div className="flex items-center">
                         <Store className="h-4 w-4 mr-2 text-muted-foreground" />
                         {option.label}
