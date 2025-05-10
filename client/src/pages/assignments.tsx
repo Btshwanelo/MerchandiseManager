@@ -58,7 +58,9 @@ import {
   Pencil,
   Trash,
   Calendar,
-  ExternalLink
+  ExternalLink,
+  UserCog,
+  Mail
 } from "lucide-react";
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -101,8 +103,10 @@ const AssignmentsPage = () => {
   const [isCreateWorkItemDialogOpen, setIsCreateWorkItemDialogOpen] = useState<boolean>(false);
   const [selectedAssignment, setSelectedAssignment] = useState<StoreAssignmentWithRelations | null>(null);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState<boolean>(false);
+  const [isEditUserDialogOpen, setIsEditUserDialogOpen] = useState<boolean>(false);
   const [selectedTab, setSelectedTab] = useState<string>("active");
   const [workItems, setWorkItems] = useState<WorkItem[]>([]);
+  const [selectedUser, setSelectedUser] = useState<UserType | null>(null);
   
   // Add form schema for store assignment with work items
   const assignmentFormSchema = insertStoreAssignmentSchema.extend({
