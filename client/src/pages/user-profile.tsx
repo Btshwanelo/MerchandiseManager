@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { PasswordInput } from "@/components/ui/password-input";
 import { 
   Dialog,
   DialogContent,
@@ -309,7 +310,7 @@ const UserProfilePage = () => {
                   <FormItem>
                     <FormLabel>Current Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter current password" {...field} />
+                      <PasswordInput placeholder="Enter current password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -323,7 +324,7 @@ const UserProfilePage = () => {
                   <FormItem>
                     <FormLabel>New Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Enter new password" {...field} />
+                      <PasswordInput placeholder="Enter new password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -337,7 +338,7 @@ const UserProfilePage = () => {
                   <FormItem>
                     <FormLabel>Confirm New Password</FormLabel>
                     <FormControl>
-                      <Input type="password" placeholder="Confirm new password" {...field} />
+                      <PasswordInput placeholder="Confirm new password" {...field} />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
