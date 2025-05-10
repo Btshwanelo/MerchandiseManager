@@ -27,6 +27,7 @@ import {
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Combobox, ComboboxOption } from "@/components/ui/combobox";
 
 // Hooks and Utilities
 import { useToast } from "@/hooks/use-toast";

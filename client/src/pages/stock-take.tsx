@@ -657,28 +657,31 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               <CardContent className="space-y-4">
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Select Store</label>
-                  <Select value={selectedStore} onValueChange={setSelectedStore}>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a store..." />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingStores ? (
-                        <div className="flex items-center justify-center p-2">
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Loading stores...
-                        </div>
-                      ) : (
-                        stores?.map((store) => (
-                          <SelectItem key={store.id} value={store.id.toString()}>
-                            <div className="flex items-center">
-                              <Store className="h-4 w-4 mr-2 text-muted-foreground" />
-                              {store.name} - {store.location}
-                            </div>
-                          </SelectItem>
-                        ))
-                      )}
-                    </SelectContent>
-                  </Select>
+                  <Combobox
+                    value={selectedStore}
+                    onChange={setSelectedStore}
+                    placeholder="Select a store..."
+                    loading={isLoadingStores}
+                    emptyMessage={
+                      isLoadingStores 
+                        ? "Loading stores..." 
+                        : stores?.length === 0 
+                          ? "No stores available" 
+                          : "No stores found"
+                    }
+                    options={
+                      stores?.map((store) => ({
+                        label: `${store.name} - ${store.location || ''}`,
+                        value: store.id.toString()
+                      })) || []
+                    }
+                    renderItem={(option) => (
+                      <div className="flex items-center">
+                        <Store className="h-4 w-4 mr-2 text-muted-foreground" />
+                        {option.label}
+                      </div>
+                    )}
+                  />
                 </div>
 
                 <div className="space-y-2">
