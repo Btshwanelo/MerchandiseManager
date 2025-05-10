@@ -166,13 +166,14 @@ const navigationItems: NavItem[] = [
     roles: [UserRole.ADMIN],
     section: "admin"
   },
-  {
-    href: "/settings",
-    label: "Settings",
-    icon: <Settings className="h-5 w-5" />,
-    roles: [UserRole.ADMIN],
-    section: "admin"
-  },
+  // Settings hidden as requested
+  // {
+  //   href: "/settings",
+  //   label: "Settings",
+  //   icon: <Settings className="h-5 w-5" />,
+  //   roles: [UserRole.ADMIN],
+  //   section: "admin"
+  // },
 ];
 
 interface SidebarProps {
