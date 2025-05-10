@@ -99,31 +99,36 @@ export function Combobox({
             {loading ? "Loading..." : emptyMessage}
           </CommandEmpty>
           <CommandGroup className="max-h-64 overflow-y-auto">
-            {options.map((option) => (
-              <CommandItem
-                key={option.value}
-                value={option.value}
-                onSelect={() => {
-                  onChange(option.value === value ? "" : option.value)
-                  setOpen(false)
-                  setSearchQuery("")
-                }}
-              >
-                {renderItem ? (
-                  renderItem(option)
-                ) : (
-                  <>
-                    <Check
-                      className={cn(
-                        "mr-2 h-4 w-4",
-                        value === option.value ? "opacity-100" : "opacity-0"
-                      )}
-                    />
-                    {option.label}
-                  </>
-                )}
-              </CommandItem>
-            ))}
+            {options
+              .filter((option) => 
+                option.label.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                option.value.toLowerCase().includes(searchQuery.toLowerCase())
+              )
+              .map((option) => (
+                <CommandItem
+                  key={option.value}
+                  value={option.value}
+                  onSelect={() => {
+                    onChange(option.value === value ? "" : option.value)
+                    setOpen(false)
+                    setSearchQuery("")
+                  }}
+                >
+                  {renderItem ? (
+                    renderItem(option)
+                  ) : (
+                    <>
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          value === option.value ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {option.label}
+                    </>
+                  )}
+                </CommandItem>
+              ))}
           </CommandGroup>
         </Command>
       </PopoverContent>
