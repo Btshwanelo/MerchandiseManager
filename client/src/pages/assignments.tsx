@@ -467,7 +467,7 @@ type StoreAssignmentWithRelations = StoreAssignment & {
     userEditForm.reset({
       name: assignment.user.name,
       email: assignment.user.email,
-      role: assignment.user.role,
+      role: assignment.user.role as UserRole, // Explicit cast to UserRole
     });
     
     setIsEditUserDialogOpen(true);
@@ -655,18 +655,33 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                           )}
                           
                           {isAdmin && (
-                            <Tooltip>
-                              <TooltipTrigger asChild>
-                                <Button
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleOpenDeleteDialog(assignment)}
-                                >
-                                  <Trash className="h-4 w-4" />
-                                </Button>
-                              </TooltipTrigger>
-                              <TooltipContent>Delete Assignment</TooltipContent>
-                            </Tooltip>
+                            <>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleEditUser(assignment)}
+                                  >
+                                    <UserCog className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Edit User</TooltipContent>
+                              </Tooltip>
+                              
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleOpenDeleteDialog(assignment)}
+                                  >
+                                    <Trash className="h-4 w-4" />
+                                  </Button>
+                                </TooltipTrigger>
+                                <TooltipContent>Delete Assignment</TooltipContent>
+                              </Tooltip>
+                            </>
                           )}
                         </div>
                       </TableCell>
