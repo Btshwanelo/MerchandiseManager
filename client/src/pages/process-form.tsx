@@ -22,7 +22,8 @@ import { Badge } from "@/components/ui/badge";
 import { 
   Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, 
   CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera, QrCode, 
-  ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw
+  ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw,
+  Package
 } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -1176,21 +1177,28 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
         <h3 className="font-semibold text-lg">Add Items Manually</h3>
         <div className="flex gap-2">
           <div className="flex-1">
-            <Select
-              onValueChange={(value) => setSelectedProduct(products.find(p => p.id === parseInt(value)) || null)}
-              value={selectedProduct?.id.toString() || ""}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Select product" />
-              </SelectTrigger>
-              <SelectContent>
-                {products.map((product) => (
-                  <SelectItem key={product.id} value={product.id.toString()}>
-                    {product.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <Combobox
+              value={selectedProduct?.id?.toString() || ""}
+              onChange={(value) => {
+                const product = products.find(p => p.id === parseInt(value));
+                if (product) {
+                  setSelectedProduct(product);
+                }
+              }}
+              placeholder="Select a product..."
+              options={
+                products.map((product) => ({
+                  label: `${product.name} (${product.sku})`,
+                  value: product.id.toString()
+                }))
+              }
+              renderItem={(option) => (
+                <div className="flex items-center">
+                  <Package className="h-4 w-4 mr-2 text-muted-foreground" />
+                  {option.label}
+                </div>
+              )}
+            />
           </div>
           <div className="w-24">
             <Input
