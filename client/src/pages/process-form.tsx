@@ -90,18 +90,7 @@ interface WorkItem {
   updatedAt: string;
 }
 
-interface StockTake {
-  id: number;
-  storeId: number;
-  userId: number;
-  comment: string | null;
-  status: string; // draft, submitted, completed
-  pictures: string[] | null;
-  date: Date | null;
-  lastEditedBy: number | null;
-  lastEditedAt: Date | null;
-  auditComment: string | null;
-}
+// Using StockTake from shared schema instead of defining it locally
 
 interface StoreAssignment {
   id: number;
@@ -341,8 +330,16 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         <div className="flex items-center">
           <span className="font-medium text-muted-foreground mr-2">Status:</span>
           <Badge 
-            variant={stockTakeStatus === 'completed' ? 'default' : 'outline'} 
-            className="capitalize"
+            variant={
+              stockTakeStatus === 'completed' ? 'default' :
+              stockTakeStatus === 'submitted' ? 'secondary' : 
+              'outline'
+            } 
+            className={`capitalize ${
+              stockTakeStatus === 'completed' ? 'bg-green-100 text-green-800 hover:bg-green-100' : 
+              stockTakeStatus === 'submitted' ? 'bg-blue-100 text-blue-800 hover:bg-blue-100' : 
+              'bg-gray-100 text-gray-800 hover:bg-gray-100'
+            }`}
           >
             {stockTakeStatus || 'draft'}
           </Badge>
