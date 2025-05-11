@@ -1,4 +1,9 @@
 import React, { useState, useEffect, useCallback } from "react";
+
+// Helper function to truncate product names to prevent UI expansion
+const truncateProductName = (name: string, maxLength = 25) => {
+  return name.length > maxLength ? `${name.substring(0, maxLength)}...` : name;
+};
 import { useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { 
