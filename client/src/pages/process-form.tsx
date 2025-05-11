@@ -107,6 +107,8 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
+  // Add state for individual image uploads (8 placeholders)
+  const [shelfImages, setShelfImages] = useState<Array<string | null>>(Array(8).fill(null));
   const [comments, setComments] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<string>("0");
@@ -136,11 +138,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   const submitStockTake = async () => {
     setLoading(true);
     try {
+      // Combine the individual shelf images with any legacy pictures
+      const allImages = [
+        ...shelfImages.filter(Boolean), // Filter out null values
+        ...pictures.filter(pic => !shelfImages.includes(pic)) // Add any pictures not in shelfImages
+      ];
+      
       // Create or update stock take
       const stockTakeData = {
         storeId,
         comment: comments,
-        pictures,
+        pictures: allImages,
         status: "submitted", // Submit immediately
         items: JSON.stringify(stockData), // Convert to string as expected by server
         workItemId // Include workItemId so server can mark it as completed
@@ -184,6 +192,36 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         newPictures.push(files[i].name);
       }
       setPictures(newPictures);
+    }
+  };
+  
+  // Handle individual shelf image upload
+  const handleShelfImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
+    const files = event.target.files;
+    if (files && files.length > 0) {
+      // Create a new copy of the shelf images array
+      const newShelfImages = [...shelfImages];
+      // Store the file name (in a real app, this would be the file URL after upload)
+      newShelfImages[index] = files[0].name;
+      setShelfImages(newShelfImages);
+      
+      // Also add to the pictures array for backward compatibility
+      setPictures(prev => [...prev, files[0].name]);
+    }
+  };
+  
+  // Handle image removal
+  const handleRemoveShelfImage = (index: number) => {
+    const newShelfImages = [...shelfImages];
+    // Get the image name that's being removed
+    const removedImage = newShelfImages[index];
+    // Set the slot to null
+    newShelfImages[index] = null;
+    setShelfImages(newShelfImages);
+    
+    // Also remove from pictures array if it exists
+    if (removedImage) {
+      setPictures(prev => prev.filter(pic => pic !== removedImage));
     }
   };
   
@@ -376,21 +414,74 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         )}
       </div>
       
-      {/* Comments and Pictures Section */}
-      <div className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="pictures">Upload Pictures</Label>
-          <Input id="pictures" type="file" multiple onChange={handleFileUpload} />
-          {pictures.length > 0 && (
-            <div className="mt-2">
-              <p className="text-sm font-medium">Selected files:</p>
-              <ul className="list-disc pl-5 text-sm">
-                {pictures.map((pic, index) => (
-                  <li key={index}>{pic}</li>
-                ))}
-              </ul>
-            </div>
-          )}
+      {/* Shelf Images Grid and Comments Section */}
+      <div className="space-y-6">
+        <div className="space-y-3">
+          <Label className="text-base font-medium">Upload Shelf Photos (up to 8)</Label>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {/* Generate 8 image upload placeholders in a grid */}
+            {Array.from({ length: 8 }).map((_, index) => (
+              <div 
+                key={index} 
+                className="relative border rounded-md overflow-hidden aspect-square flex flex-col items-center justify-center bg-muted/30"
+              >
+                {shelfImages[index] ? (
+                  // Show the image if uploaded
+                  <div className="w-full h-full relative group">
+                    {/* In a real app, this would be an actual image */}
+                    <div className="w-full h-full bg-muted flex items-center justify-center">
+                      <img
+                        src="#" // Placeholder, would be actual image URL in prod
+                        alt={`Shelf image ${index + 1}`}
+                        className="object-cover w-full h-full"
+                        // Use Image component with empty src for demo
+                        onError={(e) => {
+                          e.currentTarget.src = "";
+                          e.currentTarget.style.display = "none";
+                        }}
+                      />
+                      <span className="text-sm text-center px-2 text-muted-foreground">
+                        {shelfImages[index]}
+                      </span>
+                    </div>
+                    
+                    {/* Remove button overlay */}
+                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                      <Button 
+                        variant="destructive" 
+                        size="sm"
+                        onClick={() => handleRemoveShelfImage(index)}
+                      >
+                        <Trash className="h-4 w-4 mr-1" />
+                        Remove
+                      </Button>
+                    </div>
+                  </div>
+                ) : (
+                  // Show upload option if no image
+                  <>
+                    <label 
+                      htmlFor={`shelf-image-${index}`}
+                      className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-muted/50 transition-colors p-4"
+                    >
+                      <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
+                      <span className="text-xs text-center text-muted-foreground">
+                        {`Photo ${index + 1}`}
+                      </span>
+                      <input
+                        type="file"
+                        id={`shelf-image-${index}`}
+                        accept="image/*"
+                        className="hidden"
+                        onChange={(e) => handleShelfImageUpload(index, e)}
+                      />
+                    </label>
+                  </>
+                )}
+              </div>
+            ))}
+          </div>
+          <p className="text-sm text-muted-foreground">Upload photos of the shelf to document the stock take</p>
         </div>
         
         <div className="space-y-2">
