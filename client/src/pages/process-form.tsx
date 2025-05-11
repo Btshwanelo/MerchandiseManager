@@ -44,11 +44,11 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 type StockTakeSectionProps = {
   storeId: number;
   workItemId: number;
-  workItem?: WorkItem; // Add workItem prop to check completion status
   navigate: (to: string) => void;
   setActiveStep: (step: string) => void;
   setLowStockItems?: (items: Array<{product: Product, quantity: number, location: string}>) => void;
   setShowLowStockAlert?: (show: boolean) => void;
+  workItem?: WorkItem; // Add workItem prop to check completion status
 };
 
 type MerchandisingSectionProps = {
@@ -114,7 +114,7 @@ interface StoreAssignment {
 }
 
 // Component for Stock Take section
-const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLowStockItems, setShowLowStockAlert }: StockTakeSectionProps) => {
+const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLowStockItems, setShowLowStockAlert, workItem }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
@@ -126,25 +126,13 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
   
-  // Fetch the work item to check its status
-  const { data: workItemData } = useQuery<WorkItem>({
-    queryKey: ['/api/work-items', workItemId],
-    enabled: !!workItemId,
-  });
-  
   // Flag to indicate if we're in read-only mode (completed work item)
-  const isReadOnly = workItemData?.status === WorkItemStatus.COMPLETED;
+  const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;
   
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
-  });
-  
-  // Fetch store assignment to get stockTakeType
-  const { data: workItem } = useQuery<WorkItem>({
-    queryKey: ['/api/work-items', workItemId],
-    enabled: !!workItemId,
   });
   
   // Fetch existing stock take for this store and work item
@@ -213,7 +201,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     }
   }, [stockTake, isReadOnly, toast]);
   
-  // Fetch store assignment to get stockTakeType
+  // Fetch store assignment to get stockTakeType using prop workItem
   const { data: storeAssignment } = useQuery<StoreAssignment>({
     queryKey: ['/api/assignments', workItem?.storeAssignmentId],
     enabled: !!workItem?.storeAssignmentId,
@@ -539,36 +527,75 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               <ShoppingCart className="h-16 w-16 text-muted-foreground" />
             </div>
             <h3 className="text-xl font-medium text-muted-foreground mb-2">No Products Added</h3>
-            <p className="text-muted-foreground">Add products to your stock take using the form above.</p>
+            <p className="text-muted-foreground">
+              {isReadOnly 
+                ? "No products were recorded in this stock take." 
+                : "Add products to your stock take using the form above."}
+            </p>
           </div>
         ) : (
-          <div className="space-y-4">
-            {addedProducts.map(item => (
-              <div key={item?.product.id} className="bg-card border rounded-lg p-4">
-                <div className="mb-2">
-                  <h3 className="font-semibold">{item?.product.name}</h3>
-                  <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
-                </div>
-                
-                <div className="grid gap-3">
-                  {/* Show shelf quantity if applicable */}
-                  {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Shelf quantity:</span>
-                      <span className="font-medium">{item?.shelfQuantity}</span>
-                    </div>
-                  )}
-                  
-                  {/* Show back store quantity if applicable */}
-                  {(stockTakeType === 'store' || stockTakeType === 'both') && (
-                    <div className="flex justify-between items-center">
-                      <span className="text-sm font-medium">Back store quantity:</span>
-                      <span className="font-medium">{item?.backStoreQuantity}</span>
-                    </div>
-                  )}
-                </div>
+          <div className={`space-y-4 ${isReadOnly ? 'mt-6' : ''}`}>
+            {/* Enhanced read-only header when viewing completed items */}
+            {isReadOnly && (
+              <div className="mb-4">
+                <h3 className="text-lg font-semibold mb-2">Recorded Inventory Items</h3>
+                <p className="text-sm text-muted-foreground mb-4">
+                  Below is a summary of all products counted during this stock take.
+                </p>
               </div>
-            ))}
+            )}
+            
+            {/* Product list - enhanced for read-only mode */}
+            <div className={isReadOnly ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
+              {addedProducts.map(item => (
+                <div 
+                  key={item?.product.id} 
+                  className={`bg-card border rounded-lg p-4 ${isReadOnly ? 'hover:shadow-md transition-shadow' : ''}`}
+                >
+                  <div className="mb-2">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{item?.product.name}</h3>
+                      {isReadOnly && (
+                        <Badge variant="outline" className="ml-2">
+                          {item?.product.id}
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
+                  </div>
+                  
+                  <div className="grid gap-3">
+                    {/* Show shelf quantity if applicable */}
+                    {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Shelf quantity:</span>
+                        <Badge variant={isReadOnly ? "secondary" : "outline"} className="font-medium">
+                          {item?.shelfQuantity}
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {/* Show back store quantity if applicable */}
+                    {(stockTakeType === 'store' || stockTakeType === 'both') && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Back store quantity:</span>
+                        <Badge variant={isReadOnly ? "secondary" : "outline"} className="font-medium">
+                          {item?.backStoreQuantity}
+                        </Badge>
+                      </div>
+                    )}
+                    
+                    {/* Show min stock level in read-only view */}
+                    {isReadOnly && (
+                      <div className="flex justify-between items-center">
+                        <span className="text-sm font-medium">Min stock level:</span>
+                        <span className="font-medium">{item?.product.minStockLevel}</span>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              ))}
+            </div>
           </div>
         )}
       </div>
@@ -2053,6 +2080,7 @@ const ProcessForm = () => {
                   setActiveStep={setActiveStep}
                   setLowStockItems={setLowStockItems}
                   setShowLowStockAlert={setShowLowStockAlert}
+                  workItem={workItem}
                 />
               )}
               
