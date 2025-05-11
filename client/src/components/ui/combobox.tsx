@@ -77,7 +77,7 @@ export function Combobox({
           role="combobox"
           aria-expanded={open}
           className={cn(
-            "w-full justify-start relative px-3 py-2 h-auto min-h-10",
+            "w-full justify-start relative px-3 py-2 h-auto min-h-10 text-ellipsis whitespace-nowrap overflow-hidden",
             error && "border-red-500",
             triggerClassName
           )}
@@ -88,7 +88,7 @@ export function Combobox({
         >
           <div className="flex-1 text-left overflow-hidden">
             {selectedOption ? (
-              <span className="block truncate text-ellipsis overflow-hidden pr-10 w-full">{selectedOption.label}</span>
+              <span className="block truncate text-ellipsis overflow-hidden pr-10 w-full max-w-[300px]">{selectedOption.label}</span>
             ) : (
               <span className="text-muted-foreground">{placeholder}</span>
             )}
