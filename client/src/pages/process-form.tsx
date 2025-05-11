@@ -41,6 +41,8 @@ type StockTakeSectionProps = {
   workItemId: number;
   navigate: (to: string) => void;
   setActiveStep: (step: string) => void;
+  setLowStockItems?: (items: Array<{product: Product, quantity: number, location: string}>) => void;
+  setShowLowStockAlert?: (show: boolean) => void;
 };
 
 type MerchandisingSectionProps = {
@@ -62,6 +64,7 @@ type OrderPlacementSectionProps = {
   workItemId: number;
   navigate: (to: string) => void;
   setActiveStep: (step: string) => void;
+  lowStockItems?: Array<{product: Product, quantity: number, location: string}>;
 };
 
 // Interfaces matching schema.ts
@@ -105,7 +108,7 @@ interface StoreAssignment {
 }
 
 // Component for Stock Take section
-const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: StockTakeSectionProps) => {
+const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLowStockItems, setShowLowStockAlert }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
@@ -180,6 +183,16 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
       
       // Update local status
       setStockTakeStatus("submitted");
+      
+      // Check for low stock items
+      const lowItems = detectLowStockItems();
+      
+      // If there are low stock items, update the parent state and show alert
+      if (lowItems.length > 0 && setLowStockItems && setShowLowStockAlert) {
+        console.log("Low stock items detected:", lowItems);
+        setLowStockItems(lowItems);
+        setShowLowStockAlert(true);
+      }
       
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
@@ -318,6 +331,27 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         backStoreQuantity: backStoreItem?.quantity || 0
       };
     }).filter(Boolean);
+  };
+  
+  // Function to detect products with low stock (below threshold)
+  const detectLowStockItems = () => {
+    const lowItems: Array<{product: Product, quantity: number, location: string}> = [];
+    
+    stockData.forEach(item => {
+      const product = products.find(p => p.id === item.productId);
+      if (!product) return;
+      
+      // Check if the current quantity is below the minimum stock level threshold
+      if (item.quantity < product.minStockLevel) {
+        lowItems.push({
+          product,
+          quantity: item.quantity,
+          location: item.location
+        });
+      }
+    });
+    
+    return lowItems;
   };
   
   // Get products that have been added to the stock take
