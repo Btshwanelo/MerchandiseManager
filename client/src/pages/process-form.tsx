@@ -112,6 +112,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   const [comments, setComments] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<string>("0");
+  const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
   
   // Fetch products
@@ -124,6 +125,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   const { data: workItem } = useQuery<WorkItem>({
     queryKey: ['/api/work-items', workItemId],
     enabled: !!workItemId,
+  });
+  
+  // Fetch existing stock take for this store and work item
+  const { data: stockTake } = useQuery<StockTake>({
+    queryKey: ['/api/stock-takes/by-work-item', workItemId],
+    enabled: !!workItemId && !!storeId,
+    onSuccess: (data) => {
+      if (data?.status) {
+        setStockTakeStatus(data.status);
+      }
+    }
   });
   
   // Fetch store assignment to get stockTakeType
