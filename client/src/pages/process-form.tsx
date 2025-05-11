@@ -1508,6 +1508,8 @@ const ProcessForm = () => {
   const { user } = useAuth();
   const { toast } = useToast();
   const [activeStep, setActiveStep] = useState<string>("stock-take");
+  const [lowStockItems, setLowStockItems] = useState<Array<{product: Product, quantity: number, location: string}>>([]);
+  const [showLowStockAlert, setShowLowStockAlert] = useState(false);
   
   // Fetch work item data
   const { 
