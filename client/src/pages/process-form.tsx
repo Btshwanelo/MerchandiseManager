@@ -550,26 +550,36 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               {addedProducts.map(item => (
                 <div 
                   key={item?.product.id} 
-                  className={`bg-card border rounded-lg p-4 ${isReadOnly ? 'hover:shadow-md transition-shadow' : ''}`}
+                  className={`${isReadOnly ? 'bg-white border border-gray-200 shadow-sm hover:shadow-md transition-shadow' : 'bg-card border'} rounded-lg p-4`}
                 >
-                  <div className="mb-2">
+                  <div className="mb-3">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold">{item?.product.name}</h3>
+                      <h3 className="font-semibold text-base">{item?.product.name}</h3>
                       {isReadOnly && (
-                        <Badge variant="outline" className="ml-2">
-                          {item?.product.id}
+                        <Badge variant="outline" className="ml-2 bg-blue-50 text-blue-700 border-blue-200">
+                          #{item?.product.sku}
                         </Badge>
                       )}
                     </div>
-                    <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
+                    {!isReadOnly && (
+                      <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
+                    )}
                   </div>
                   
                   <div className="grid gap-3">
                     {/* Show shelf quantity if applicable */}
                     {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Shelf quantity:</span>
-                        <Badge variant={isReadOnly ? "secondary" : "outline"} className="font-medium">
+                      <div className="flex justify-between items-center p-2 rounded-md bg-gray-50 border border-gray-100">
+                        <div className="flex items-center">
+                          <Tag className="h-4 w-4 text-blue-500 mr-2" />
+                          <span className="text-sm font-medium">Shelf quantity:</span>
+                        </div>
+                        <Badge variant={isReadOnly ? "secondary" : "outline"} className={`font-medium ${
+                          isReadOnly && item?.shelfQuantity !== undefined && item?.product?.minStockLevel !== undefined && 
+                          item.shelfQuantity < item.product.minStockLevel 
+                            ? 'bg-red-100 text-red-700 hover:bg-red-100' 
+                            : ''
+                        }`}>
                           {item?.shelfQuantity}
                         </Badge>
                       </div>
@@ -577,9 +587,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                     
                     {/* Show back store quantity if applicable */}
                     {(stockTakeType === 'store' || stockTakeType === 'both') && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Back store quantity:</span>
-                        <Badge variant={isReadOnly ? "secondary" : "outline"} className="font-medium">
+                      <div className="flex justify-between items-center p-2 rounded-md bg-gray-50 border border-gray-100">
+                        <div className="flex items-center">
+                          <Package className="h-4 w-4 text-purple-500 mr-2" />
+                          <span className="text-sm font-medium">Back store:</span>
+                        </div>
+                        <Badge variant={isReadOnly ? "secondary" : "outline"} className={`font-medium ${
+                          isReadOnly && item?.backStoreQuantity !== undefined && item?.product?.minStockLevel !== undefined && 
+                          item.backStoreQuantity < item.product.minStockLevel 
+                            ? 'bg-red-100 text-red-700 hover:bg-red-100' 
+                            : ''
+                        }`}>
                           {item?.backStoreQuantity}
                         </Badge>
                       </div>
@@ -587,9 +605,14 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                     
                     {/* Show min stock level in read-only view */}
                     {isReadOnly && (
-                      <div className="flex justify-between items-center">
-                        <span className="text-sm font-medium">Min stock level:</span>
-                        <span className="font-medium">{item?.product.minStockLevel}</span>
+                      <div className="flex justify-between items-center p-2 rounded-md bg-yellow-50 border border-yellow-100">
+                        <div className="flex items-center">
+                          <AlertTriangle className="h-4 w-4 text-yellow-500 mr-2" />
+                          <span className="text-sm font-medium">Min stock level:</span>
+                        </div>
+                        <Badge variant="outline" className="font-medium bg-yellow-100 text-yellow-700 border-yellow-200">
+                          {item?.product.minStockLevel}
+                        </Badge>
                       </div>
                     )}
                   </div>
@@ -711,12 +734,27 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
             /* Enhanced read-only comment display */
             <div>
               {!comments || comments.trim() === '' ? (
-                <div className="bg-muted/50 rounded-lg p-4 text-center">
-                  <p className="text-muted-foreground">No comments were provided for this stock take.</p>
+                <div className="bg-muted/50 rounded-lg p-6 text-center">
+                  <div className="flex justify-center mb-3">
+                    <ClipboardList className="h-10 w-10 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-medium mb-1">No Comments</h3>
+                  <p className="text-muted-foreground">No additional comments were provided for this stock take.</p>
                 </div>
               ) : (
-                <div className="bg-muted/30 rounded-lg p-4 border">
-                  <div className="prose prose-sm max-w-none">
+                <div className="bg-white rounded-lg p-4 border shadow-sm">
+                  <div className="flex items-start mb-3">
+                    <div className="bg-blue-100 p-2 rounded-full mr-3">
+                      <ClipboardList className="h-5 w-5 text-blue-600" />
+                    </div>
+                    <div>
+                      <h4 className="font-medium text-blue-800">Submitted Notes</h4>
+                      <p className="text-xs text-muted-foreground">
+                        {stockTake?.date ? new Date(stockTake.date).toLocaleDateString() : 'Date not available'}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="prose prose-sm max-w-none ml-12 p-3 bg-gray-50 rounded-md border border-gray-100">
                     {comments.split('\n').map((line, i) => (
                       <p key={i} className={line.trim() === '' ? 'my-2' : 'mb-2'}>
                         {line}
