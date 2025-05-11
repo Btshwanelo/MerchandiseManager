@@ -1070,8 +1070,8 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
   
   const systemLowStockItems = getInventoryLowStockItems();
   
-  // Add a low stock item to the order
-  const addLowStockItem = (item: any) => {
+  // Add a system-detected low stock item to the order
+  const addSystemLowStockItem = (item: any) => {
     // Check if the item is already in the order
     const existingItem = orderItems.find(orderItem => orderItem.productId === item.productId);
     
@@ -1328,14 +1328,14 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           )}
         </div>
         
-        {lowStockItems.length === 0 ? (
+        {systemLowStockItems.length === 0 ? (
           <div className="text-center p-4 bg-muted rounded-md">
             <ShoppingBasket className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
             <p className="text-sm text-muted-foreground">No low stock items detected.</p>
           </div>
         ) : (
           <div className="space-y-2">
-            {lowStockItems.map((item) => (
+            {systemLowStockItems.map((item) => (
               <div key={item.productId} className="flex justify-between items-center p-3 border rounded-md">
                 <div>
                   <p className="font-medium">{item.productName}</p>
@@ -1348,7 +1348,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
                   </div>
                 </div>
                 <Button 
-                  onClick={() => addLowStockItem(item)} 
+                  onClick={() => addSystemLowStockItem(item)} 
                   variant="outline" 
                   size="sm"
                 >
