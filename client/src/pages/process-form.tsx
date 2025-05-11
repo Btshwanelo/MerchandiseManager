@@ -90,6 +90,19 @@ interface WorkItem {
   updatedAt: string;
 }
 
+interface StockTake {
+  id: number;
+  storeId: number;
+  userId: number;
+  comment: string | null;
+  status: string; // draft, submitted, completed
+  pictures: string[] | null;
+  date: Date | null;
+  lastEditedBy: number | null;
+  lastEditedAt: Date | null;
+  auditComment: string | null;
+}
+
 interface StoreAssignment {
   id: number;
   userId: number;
@@ -131,12 +144,14 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   const { data: stockTake } = useQuery<StockTake>({
     queryKey: ['/api/stock-takes/by-work-item', workItemId],
     enabled: !!workItemId && !!storeId,
-    onSuccess: (data) => {
-      if (data?.status) {
-        setStockTakeStatus(data.status);
-      }
-    }
   });
+  
+  // Update status when stock take data changes
+  useEffect(() => {
+    if (stockTake?.status) {
+      setStockTakeStatus(stockTake.status);
+    }
+  }, [stockTake]);
   
   // Fetch store assignment to get stockTakeType
   const { data: storeAssignment } = useQuery<StoreAssignment>({
@@ -174,9 +189,13 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
         description: "Your stock take has been submitted successfully",
       });
       
+      // Update local status
+      setStockTakeStatus("submitted");
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stores', storeId, 'stock-takes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-takes/by-work-item', workItemId] });
       
       // Move to the next step in the process form instead of navigating away
       setTimeout(() => {
@@ -317,8 +336,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   
   return (
     <div className="space-y-6">
-      {/* Stock Take Type Badge */}
-      <div className="flex justify-end">
+      {/* Status and Stock Take Type Badges */}
+      <div className="flex justify-between items-center bg-muted/30 p-4 rounded-lg">
+        <div className="flex items-center">
+          <span className="font-medium text-muted-foreground mr-2">Status:</span>
+          <Badge 
+            variant={stockTakeStatus === 'completed' ? 'default' : 'outline'} 
+            className="capitalize"
+          >
+            {stockTakeStatus || 'draft'}
+          </Badge>
+        </div>
         <Badge variant="outline" className="ml-2">
           {stockTakeType === 'shelf' 
             ? 'Shelf Only' 
