@@ -988,7 +988,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
 };
 
 // Component for Order Placement section
-const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }: OrderPlacementSectionProps) => {
+const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, lowStockItems = [] }: OrderPlacementSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [notes, setNotes] = useState("");
   const [pictures, setPictures] = useState<string[]>([]);
@@ -1010,6 +1010,32 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
     enabled: !!storeId,
   });
   
+  // Process low stock items from parent component when the component mounts
+  useEffect(() => {
+    if (lowStockItems && lowStockItems.length > 0) {
+      // Process automatically when coming from stock take with detected low stock items
+      const newOrderItems = lowStockItems.map(item => ({
+        productId: item.product.id,
+        quantity: Math.max(item.product.minStockLevel - item.quantity, 1), // Order enough to reach min threshold
+        notes: `Auto-added from stock take - ${item.location} (Current: ${item.quantity}, Min: ${item.product.minStockLevel})`
+      }));
+      
+      setOrderItems(prevItems => {
+        // Merge with any existing items, avoiding duplicates
+        const existingProductIds = prevItems.map(item => item.productId);
+        const uniqueNewItems = newOrderItems.filter(item => !existingProductIds.includes(item.productId));
+        return [...prevItems, ...uniqueNewItems];
+      });
+      
+      if (newOrderItems.length > 0) {
+        toast({
+          title: "Low stock items added",
+          description: `${newOrderItems.length} item(s) automatically added from stock take`,
+        });
+      }
+    }
+  }, [lowStockItems, toast]);
+  
   const { data: stockTakeItems = [] } = useQuery<StockTakeItem[]>({
     queryKey: ['/api/stock-take-items'],
     enabled: stockTakes.length > 0,
@@ -1021,8 +1047,8 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
     enabled: !!storeId,
   });
   
-  // Helper function to identify items below threshold
-  const getLowStockItems = useCallback(() => {
+  // Helper function to identify items below threshold from inventory data
+  const getInventoryLowStockItems = useCallback(() => {
     if (!products.length || !inventory.length) return [];
     
     return inventory
@@ -1042,7 +1068,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep }:
       });
   }, [products, inventory]);
   
-  const lowStockItems = getLowStockItems();
+  const inventoryLowStockItems = getInventoryLowStockItems();
   
   // Add a low stock item to the order
   const addLowStockItem = (item: any) => {
