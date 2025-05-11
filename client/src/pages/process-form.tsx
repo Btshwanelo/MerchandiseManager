@@ -1936,7 +1936,9 @@ const ProcessForm = () => {
                   storeId={storeId} 
                   workItemId={workItemId} 
                   navigate={navigate} 
-                  setActiveStep={setActiveStep} 
+                  setActiveStep={setActiveStep}
+                  setLowStockItems={setLowStockItems}
+                  setShowLowStockAlert={setShowLowStockAlert}
                 />
               )}
               
@@ -1964,6 +1966,7 @@ const ProcessForm = () => {
                   workItemId={workItemId} 
                   navigate={navigate} 
                   setActiveStep={setActiveStep}
+                  lowStockItems={lowStockItems}
                 />
               )}
               
@@ -2062,6 +2065,55 @@ const ProcessForm = () => {
               }}
             >
               Yes, Cancel Task
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      
+      {/* Low Stock Alert Dialog */}
+      <Dialog open={showLowStockAlert} onOpenChange={setShowLowStockAlert}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-amber-600">
+              <AlertTriangle className="h-5 w-5" />
+              Low Stock Alert
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-2">
+            <p className="mb-3">
+              The following items are below the minimum stock level threshold:
+            </p>
+            <div className="max-h-[200px] overflow-y-auto border rounded-md p-2">
+              {lowStockItems.map((item, index) => (
+                <div key={`${item.product.id}-${item.location}-${index}`} className="flex justify-between items-center p-2 border-b last:border-b-0">
+                  <div>
+                    <p className="font-medium">{item.product.name}</p>
+                    <p className="text-sm text-muted-foreground">
+                      {item.location === 'shelf' ? 'Shelf' : 'Back Store'} - Current: <span className="text-destructive font-medium">{item.quantity}</span> / Min: {item.product.minStockLevel}
+                    </p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            <Button 
+              variant="outline" 
+              onClick={() => setShowLowStockAlert(false)}
+              className="sm:order-1"
+            >
+              Dismiss
+            </Button>
+            <Button 
+              onClick={() => {
+                setShowLowStockAlert(false);
+                // Navigate to the order placement step
+                setActiveStep("order-placement");
+              }}
+              className="w-full sm:w-auto gap-2"
+            >
+              <ShoppingCart className="h-4 w-4" />
+              Place Order Now
             </Button>
           </DialogFooter>
         </DialogContent>
