@@ -44,6 +44,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 type StockTakeSectionProps = {
   storeId: number;
   workItemId: number;
+  workItem?: WorkItem; // Add workItem prop to check completion status
   navigate: (to: string) => void;
   setActiveStep: (step: string) => void;
   setLowStockItems?: (items: Array<{product: Product, quantity: number, location: string}>) => void;
@@ -125,6 +126,15 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
   
+  // Fetch the work item to check its status
+  const { data: workItemData } = useQuery<WorkItem>({
+    queryKey: ['/api/work-items', workItemId],
+    enabled: !!workItemId,
+  });
+  
+  // Flag to indicate if we're in read-only mode (completed work item)
+  const isReadOnly = workItemData?.status === WorkItemStatus.COMPLETED;
+  
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
@@ -143,12 +153,65 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     enabled: !!workItemId && !!storeId,
   });
   
-  // Update status when stock take data changes
+  // Update state with stock take data when available
   useEffect(() => {
-    if (stockTake?.status) {
-      setStockTakeStatus(stockTake.status);
+    if (stockTake) {
+      // Update status
+      if (stockTake.status) {
+        setStockTakeStatus(stockTake.status);
+      }
+      
+      // For completed work items, populate all data from the saved stock take
+      if (isReadOnly && stockTake) {
+        try {
+          // Parse stock take items from stockTake data (using any as a workaround for type issues)
+          const anyStockTake = stockTake as any;
+          
+          if (anyStockTake.items) {
+            // Handle both string and array formats
+            const parsedItems = typeof anyStockTake.items === 'string' 
+              ? JSON.parse(anyStockTake.items) 
+              : anyStockTake.items;
+              
+            if (Array.isArray(parsedItems)) {
+              setStockData(parsedItems);
+            }
+          }
+          
+          // Set pictures if available
+          if (stockTake.pictures) {
+            // Handle both array and string formats
+            const pics = Array.isArray(stockTake.pictures) 
+              ? stockTake.pictures 
+              : typeof stockTake.pictures === 'string' 
+                ? JSON.parse(stockTake.pictures as string) 
+                : [];
+            
+            setPictures(pics);
+            
+            // Also populate shelfImages from pictures for the grid display
+            const newShelfImages = Array(8).fill(null);
+            pics.forEach((pic: string, index: number) => {
+              if (index < 8) newShelfImages[index] = pic;
+            });
+            setShelfImages(newShelfImages);
+          }
+          
+          // Set comments if available
+          if (stockTake.comment) {
+            setComments(stockTake.comment);
+          }
+        } catch (e) {
+          console.error("Error parsing stock take data:", e);
+          toast({
+            title: "Data Display Error",
+            description: "There was an error parsing the completed stock take data.",
+            variant: "destructive"
+          });
+        }
+      }
     }
-  }, [stockTake]);
+  }, [stockTake, isReadOnly, toast]);
   
   // Fetch store assignment to get stockTakeType
   const { data: storeAssignment } = useQuery<StoreAssignment>({
@@ -400,53 +463,73 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
         </div>
         
         <div className="grid md:grid-cols-12 gap-4 mb-6">
-          <div className="md:col-span-8">
-            <label className="text-base font-medium mb-2 block">Product</label>
-            <Combobox
-              value={selectedProduct?.id?.toString() || ""}
-              onChange={(value) => {
-                const product = products.find(p => p.id === parseInt(value));
-                if (product) {
-                  setSelectedProduct(product);
-                }
-              }}
-              placeholder="Select a product..."
-              options={
-                products.map((product) => ({
-                  label: `${product.name} (${product.sku})`,
-                  value: product.id.toString()
-                }))
-              }
-              renderItem={(option: ComboboxOption) => (
-                <div className="flex items-center">
-                  <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
-                  <span className="truncate">{option.label}</span>
+          {isReadOnly ? (
+            // Read-only mode shows a message instead of the product selector
+            <div className="md:col-span-12">
+              <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+                <div className="flex">
+                  <AlertTriangle className="h-5 w-5 text-yellow-600 mr-3 flex-shrink-0" />
+                  <div>
+                    <h3 className="font-medium text-yellow-800">Completed Stock Take</h3>
+                    <p className="text-sm text-yellow-700">
+                      This stock take has been completed and cannot be modified. Below is a summary of the recorded inventory.
+                    </p>
+                  </div>
                 </div>
-              )}
-            />
-          </div>
-          
-          <div className="md:col-span-2">
-            <label className="text-base font-medium mb-2 block">Quantity</label>
-            <Input
-              type="number"
-              min="0"
-              value={quantity}
-              onChange={(e) => setQuantity(e.target.value)}
-              className="h-10"
-            />
-          </div>
-          
-          <div className="md:col-span-2 flex items-end">
-            <Button 
-              className="w-full h-10"
-              disabled={!selectedProduct} 
-              onClick={handleAddProduct}
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Add
-            </Button>
-          </div>
+              </div>
+            </div>
+          ) : (
+            // Normal editable mode with product selector
+            <>
+              <div className="md:col-span-8">
+                <label className="text-base font-medium mb-2 block">Product</label>
+                <Combobox
+                  value={selectedProduct?.id?.toString() || ""}
+                  onChange={(value) => {
+                    const product = products.find(p => p.id === parseInt(value));
+                    if (product) {
+                      setSelectedProduct(product);
+                    }
+                  }}
+                  placeholder="Select a product..."
+                  options={
+                    products.map((product) => ({
+                      label: `${product.name} (${product.sku})`,
+                      value: product.id.toString()
+                    }))
+                  }
+                  renderItem={(option: ComboboxOption) => (
+                    <div className="flex items-center">
+                      <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
+                      <span className="truncate">{option.label}</span>
+                    </div>
+                  )}
+                />
+              </div>
+              
+              <div className="md:col-span-2">
+                <label className="text-base font-medium mb-2 block">Quantity</label>
+                <Input
+                  type="number"
+                  min="0"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="h-10"
+                />
+              </div>
+              
+              <div className="md:col-span-2 flex items-end">
+                <Button 
+                  className="w-full h-10"
+                  disabled={!selectedProduct} 
+                  onClick={handleAddProduct}
+                >
+                  <Plus className="h-5 w-5 mr-2" />
+                  Add
+                </Button>
+              </div>
+            </>
+          )}
         </div>
         
         {/* No Products State */}
