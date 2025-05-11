@@ -1068,7 +1068,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       });
   }, [products, inventory]);
   
-  const inventoryLowStockItems = getInventoryLowStockItems();
+  const systemLowStockItems = getInventoryLowStockItems();
   
   // Add a low stock item to the order
   const addLowStockItem = (item: any) => {
@@ -1107,9 +1107,9 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
     }
   };
   
-  // Add all low stock items to the order at once
-  const addAllLowStockItems = () => {
-    if (lowStockItems.length === 0) return;
+  // Add all system-detected low stock items to the order at once
+  const addAllSystemLowStockItems = () => {
+    if (systemLowStockItems.length === 0) return;
     
     // Create a map of existing order items by productId for quick lookup
     const existingItemsMap = new Map(
@@ -1121,7 +1121,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
     let addedCount = 0;
     let updatedCount = 0;
     
-    lowStockItems.forEach(lowStockItem => {
+    systemLowStockItems.forEach(lowStockItem => {
       const existingItem = existingItemsMap.get(lowStockItem.productId);
       
       if (existingItem) {
@@ -1317,9 +1317,9 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       <div className="space-y-4">
         <div className="flex justify-between items-center mb-2">
           <h3 className="font-semibold text-lg">Low Stock Items</h3>
-          {lowStockItems.length > 0 && (
+          {systemLowStockItems.length > 0 && (
             <Button 
-              onClick={addAllLowStockItems} 
+              onClick={addAllSystemLowStockItems} 
               variant="secondary" 
               size="sm"
             >
