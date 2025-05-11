@@ -28,7 +28,7 @@ import {
   Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, 
   CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera, QrCode, 
   ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw,
-  Package, ArrowRight
+  Package, ArrowRight, Image as ImageIcon, Maximize2, Upload, X
 } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -602,93 +602,165 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       
       {/* Shelf Images Grid and Comments Section */}
       <div className="space-y-6">
-        <div className="space-y-3">
-          <Label className="text-base font-medium">Upload Shelf Photos (up to 8)</Label>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            {/* Generate 8 image upload placeholders in a grid */}
-            {Array.from({ length: 8 }).map((_, index) => (
-              <div 
-                key={index} 
-                className="relative border rounded-md overflow-hidden aspect-square flex flex-col items-center justify-center bg-muted/30"
-              >
-                {shelfImages[index] ? (
-                  // Show the image if uploaded
-                  <div className="w-full h-full relative group">
-                    {/* In a real app, this would be an actual image */}
-                    <div className="w-full h-full bg-muted flex items-center justify-center">
-                      <img
-                        src="#" // Placeholder, would be actual image URL in prod
-                        alt={`Shelf image ${index + 1}`}
-                        className="object-cover w-full h-full"
-                        // Use Image component with empty src for demo
-                        onError={(e) => {
-                          e.currentTarget.src = "";
-                          e.currentTarget.style.display = "none";
-                        }}
-                      />
-                      <span className="text-sm text-center px-2 text-muted-foreground">
-                        {shelfImages[index]}
-                      </span>
-                    </div>
-                    
-                    {/* Remove button overlay */}
-                    <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-                      <Button 
-                        variant="destructive" 
-                        size="sm"
-                        onClick={() => handleRemoveShelfImage(index)}
-                      >
-                        <Trash className="h-4 w-4 mr-1" />
-                        Remove
-                      </Button>
-                    </div>
-                  </div>
-                ) : (
-                  // Show upload option if no image
-                  <>
-                    <label 
-                      htmlFor={`shelf-image-${index}`}
-                      className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-muted/50 transition-colors p-4"
-                    >
-                      <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
-                      <span className="text-xs text-center text-muted-foreground">
-                        {`Photo ${index + 1}`}
-                      </span>
-                      <input
-                        type="file"
-                        id={`shelf-image-${index}`}
-                        accept="image/*"
-                        className="hidden"
-                        onChange={(e) => handleShelfImageUpload(index, e)}
-                      />
-                    </label>
-                  </>
-                )}
-              </div>
-            ))}
+        <div className="bg-card border rounded-lg p-6">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+            <h2 className="text-2xl font-bold">Shelf Images</h2>
+            {isReadOnly && shelfImages.filter(Boolean).length > 0 && (
+              <Badge variant="outline" className="bg-muted">
+                {shelfImages.filter(Boolean).length} {shelfImages.filter(Boolean).length === 1 ? 'image' : 'images'}
+              </Badge>
+            )}
           </div>
-          <p className="text-sm text-muted-foreground">Upload photos of the shelf to document the stock take</p>
+          
+          {isReadOnly ? (
+            // Read-only mode for shelf images
+            <div>
+              {shelfImages.filter(Boolean).length === 0 ? (
+                <div className="bg-muted/50 rounded-lg p-8 text-center">
+                  <div className="flex justify-center mb-4">
+                    <ImageIcon className="h-16 w-16 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-xl font-medium text-muted-foreground mb-2">No Images</h3>
+                  <p className="text-muted-foreground">No shelf images were uploaded for this stock take.</p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                  {shelfImages.filter(Boolean).map((image, index) => (
+                    <div key={index} className="group relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow">
+                      <div className="w-full h-full bg-muted flex items-center justify-center">
+                        {/* In a real app, this would show the actual image */}
+                        <span className="text-sm text-center px-2 text-muted-foreground">
+                          {image}
+                        </span>
+                      </div>
+                      <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
+                        Image {index + 1}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+          ) : (
+            // Editable mode for shelf images
+            <div className="space-y-3">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {/* Generate 8 image upload placeholders in a grid */}
+                {Array.from({ length: 8 }).map((_, index) => (
+                  <div 
+                    key={index} 
+                    className="relative border rounded-md overflow-hidden aspect-square flex flex-col items-center justify-center bg-muted/30"
+                  >
+                    {shelfImages[index] ? (
+                      // Show the image if uploaded
+                      <div className="w-full h-full relative group">
+                        {/* In a real app, this would be an actual image */}
+                        <div className="w-full h-full bg-muted flex items-center justify-center">
+                          <span className="text-sm text-center px-2 text-muted-foreground">
+                            {shelfImages[index]}
+                          </span>
+                        </div>
+                        
+                        {/* Remove button overlay */}
+                        <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                          <Button 
+                            variant="destructive" 
+                            size="sm"
+                            onClick={() => handleRemoveShelfImage(index)}
+                          >
+                            <Trash className="h-4 w-4 mr-1" />
+                            Remove
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      // Show upload option if no image
+                      <>
+                        <label 
+                          htmlFor={`shelf-image-${index}`}
+                          className="flex flex-col items-center justify-center w-full h-full cursor-pointer hover:bg-muted/50 transition-colors p-4"
+                        >
+                          <Camera className="h-8 w-8 mb-2 text-muted-foreground" />
+                          <span className="text-xs text-center text-muted-foreground">
+                            {`Photo ${index + 1}`}
+                          </span>
+                          <input
+                            type="file"
+                            id={`shelf-image-${index}`}
+                            accept="image/*"
+                            className="hidden"
+                            onChange={(e) => handleShelfImageUpload(index, e)}
+                          />
+                        </label>
+                      </>
+                    )}
+                  </div>
+                ))}
+              </div>
+              <p className="text-sm text-muted-foreground">Upload photos of the shelf to document the stock take</p>
+            </div>
+          )}
         </div>
         
-        <div className="space-y-2">
-          <Label htmlFor="comments">Comments</Label>
-          <Textarea 
-            id="comments" 
-            placeholder="Add any additional notes..." 
-            value={comments}
-            onChange={(e) => setComments(e.target.value)}
-          />
+        <div className="bg-card border rounded-lg p-6">
+          <h2 className="text-2xl font-bold mb-4">
+            {isReadOnly ? 'Merchandiser Comments' : 'Comments'}
+          </h2>
+          
+          {isReadOnly ? (
+            /* Enhanced read-only comment display */
+            <div>
+              {!comments || comments.trim() === '' ? (
+                <div className="bg-muted/50 rounded-lg p-4 text-center">
+                  <p className="text-muted-foreground">No comments were provided for this stock take.</p>
+                </div>
+              ) : (
+                <div className="bg-muted/30 rounded-lg p-4 border">
+                  <div className="prose prose-sm max-w-none">
+                    {comments.split('\n').map((line, i) => (
+                      <p key={i} className={line.trim() === '' ? 'my-2' : 'mb-2'}>
+                        {line}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          ) : (
+            /* Editable comments */
+            <Textarea 
+              id="comments" 
+              placeholder="Add any additional notes or observations here..."
+              className="min-h-[120px]"
+              value={comments}
+              onChange={(e) => setComments(e.target.value)}
+            />
+          )}
         </div>
       </div>
       
-      <Button 
-        onClick={submitStockTake} 
-        disabled={loading || stockData.length === 0}
-        className="w-full"
-      >
-        {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
-        Submit Stock Take
-      </Button>
+      {!isReadOnly && (
+        <Button 
+          onClick={submitStockTake} 
+          disabled={loading || stockData.length === 0}
+          className="w-full"
+        >
+          {loading ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <ClipboardList className="mr-2 h-4 w-4" />}
+          Submit Stock Take
+        </Button>
+      )}
+      
+      {isReadOnly && (
+        <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
+          <div className="flex justify-center mb-2">
+            <CheckCircle className="h-6 w-6 text-green-600" />
+          </div>
+          <h3 className="font-medium text-green-800 mb-1">Stock Take Completed</h3>
+          <p className="text-sm text-green-700">
+            This stock take has been submitted and completed. No further changes can be made.
+          </p>
+        </div>
+      )}
     </div>
   );
 };
