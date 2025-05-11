@@ -137,7 +137,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   
   // Fetch existing stock take for this store and work item
   const { data: stockTake } = useQuery<StockTake>({
-    queryKey: ['/api/stock-takes/by-work-item', workItemId?.toString()],
+    queryKey: [`/api/stock-takes/by-work-item/${workItemId}`],
     enabled: !!workItemId && !!storeId,
   });
   
@@ -1386,7 +1386,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         // Skip order creation, but still mark the work item as completed
         try {
           // Call the API to mark the work item as completed
-          await apiRequest("PATCH", `/api/work-items/${workItemId}`, { 
+          await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
             status: WorkItemStatus.COMPLETED 
           });
           
@@ -1450,7 +1450,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       // Mark the work item as completed and move to the success step
       try {
         // Call the API to mark the work item as completed
-        await apiRequest("PATCH", `/api/work-items/${workItemId}`, { 
+        await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
           status: WorkItemStatus.COMPLETED 
         });
         
@@ -1818,7 +1818,7 @@ const ProcessForm = () => {
   // Complete work item mutation
   const completeWorkItemMutation = useMutation({
     mutationFn: async ({ id }: { id: number }) => {
-      const res = await apiRequest("PATCH", `/api/work-items/${id}`, { 
+      const res = await apiRequest("PUT", `/api/work-items/${id}/status`, { 
         status: WorkItemStatus.COMPLETED 
       });
       return await res.json();
