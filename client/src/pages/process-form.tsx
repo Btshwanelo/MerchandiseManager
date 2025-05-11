@@ -131,7 +131,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep }: Stoc
   
   // Fetch existing stock take for this store and work item
   const { data: stockTake } = useQuery<StockTake>({
-    queryKey: ['/api/stock-takes/by-work-item', workItemId],
+    queryKey: ['/api/stock-takes/by-work-item', workItemId?.toString()],
     enabled: !!workItemId && !!storeId,
   });
   
@@ -1729,6 +1729,18 @@ const ProcessForm = () => {
     <div className="container mx-auto py-2 px-2 sm:py-4 sm:px-4">
       <Card>
         <CardHeader>
+          {/* Mobile Back Button - Above Title */}
+          <div className="mb-2 sm:hidden">
+            <Button 
+              variant="outline" 
+              onClick={() => navigate("/my-assignments")}
+              size="sm"
+              className="w-full"
+            >
+              Back to Assignments
+            </Button>
+          </div>
+          
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">Process Form</CardTitle>
@@ -1736,12 +1748,16 @@ const ProcessForm = () => {
                 Store: {store.name} | {store.location}
               </CardDescription>
             </div>
-            <Button 
-              variant="outline" 
-              onClick={() => navigate("/my-assignments")}
-            >
-              Back to Assignments
-            </Button>
+            
+            {/* Desktop Back Button - Right Side */}
+            <div className="hidden sm:block">
+              <Button 
+                variant="outline" 
+                onClick={() => navigate("/my-assignments")}
+              >
+                Back to Assignments
+              </Button>
+            </div>
           </div>
         </CardHeader>
         <CardContent>
