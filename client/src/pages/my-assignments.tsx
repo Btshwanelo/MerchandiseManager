@@ -44,6 +44,7 @@ import {
   CalendarDays,
   ChevronLeft,
   ChevronRight,
+  Eye,
   Info,
   ArrowUpDown,
   Building2,
@@ -549,7 +550,11 @@ const MyAssignmentsPage = () => {
                           {completedItems.map((item) => (
                             <TableRow key={item.id}>
                               <TableCell className="font-medium">
-                                <div>{item.title}</div>
+                                <div className="cursor-pointer hover:text-primary"
+                                     onClick={() => handleWorkItemClick(item)}>
+                                  {item.title}
+                                  <Badge variant="outline" className="ml-2 bg-green-50 text-green-700">View Summary</Badge>
+                                </div>
                                 <div className="text-xs text-muted-foreground mt-1 line-clamp-1">
                                   {item.description}
                                 </div>
@@ -722,7 +727,7 @@ const MyAssignmentsPage = () => {
                         >
                           <div className="flex items-center mb-2">
                             <div className="w-12">
-                              <input type="checkbox" className="rounded" checked disabled />
+                              <CheckCircle2 className="h-5 w-5 text-green-600" />
                             </div>
                             <div className="flex-1 font-medium">
                               {item.title}
@@ -735,15 +740,18 @@ const MyAssignmentsPage = () => {
                               )}
                             </div>
                           </div>
-                          <div className="flex justify-end mt-2">
+                          <div className="flex justify-between items-center mt-2 ml-12">
+                            <div className="text-xs text-muted-foreground line-clamp-1">
+                              {item.description}
+                            </div>
                             <Button
                               variant="secondary"
                               size="sm"
                               onClick={() => handleWorkItemClick(item)}
-                              className="flex items-center"
+                              className="flex items-center bg-green-50 text-green-700 hover:bg-green-100"
                             >
-                              <CheckCircle2 className="mr-1 h-4 w-4" />
-                              View Details
+                              <Eye className="mr-1 h-4 w-4" />
+                              View Summary
                             </Button>
                           </div>
                         </div>
