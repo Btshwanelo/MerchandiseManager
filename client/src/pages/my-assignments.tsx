@@ -321,12 +321,13 @@ const MyAssignmentsPage = () => {
   return (
     <div className="container py-6 max-w-screen-xl">
       <div className="flex flex-col mb-6">
+        {/* Mobile-only back button above title */}
+        <div className="md:hidden mb-2">
+          <Button variant="ghost" size="sm" className="px-0">
+            <ChevronLeft className="h-4 w-4 mr-1" /> Back
+          </Button>
+        </div>
         <div className="flex items-center justify-between mb-2">
-          <div className="flex items-center md:hidden mb-2">
-            <Button variant="ghost" size="sm" className="mr-2">
-              <ChevronLeft className="h-4 w-4" /> Back
-            </Button>
-          </div>
           <div>
             <h1 className="text-3xl font-bold">Work Items</h1>
             <p className="text-muted-foreground">Work that has been assigned to you</p>
