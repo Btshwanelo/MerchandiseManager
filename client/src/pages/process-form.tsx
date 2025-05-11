@@ -23,7 +23,7 @@ import {
   Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, 
   CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera, QrCode, 
   ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw,
-  Package
+  Package, ArrowRight
 } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -2133,13 +2133,13 @@ const ProcessForm = () => {
             <Button 
               onClick={() => {
                 setShowLowStockAlert(false);
-                // Navigate to the order placement step
-                setActiveStep("order-placement");
+                // Continue to the next step (merchandising) in the workflow
+                setActiveStep("merchandising");
               }}
               className="w-full sm:w-auto gap-2"
             >
-              <ShoppingCart className="h-4 w-4" />
-              Place Order Now
+              <ArrowRight className="h-4 w-4" />
+              Continue to Next Step
             </Button>
           </DialogFooter>
         </DialogContent>
