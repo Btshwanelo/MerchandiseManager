@@ -420,7 +420,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               renderItem={(option: ComboboxOption) => (
                 <div className="flex items-center">
                   <ShoppingCart className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </div>
               )}
             />
@@ -760,7 +760,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
               renderItem={(option: ComboboxOption) => (
                 <div className="flex items-center">
                   <Tag className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </div>
               )}
             />
@@ -1388,7 +1388,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
               renderItem={(option: ComboboxOption) => (
                 <div className="flex items-center">
                   <Package className="h-4 w-4 mr-2 text-muted-foreground" />
-                  {option.label}
+                  <span className="truncate">{option.label}</span>
                 </div>
               )}
             />

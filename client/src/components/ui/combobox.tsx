@@ -139,7 +139,7 @@ export function Combobox({
                             value === option.value ? "opacity-100" : "opacity-0"
                           )}
                         />
-                        {option.label}
+                        <span className="truncate">{option.label}</span>
                       </>
                     )}
                   </CommandItem>
