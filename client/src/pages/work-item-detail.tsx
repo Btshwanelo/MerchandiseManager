@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation, useRoute } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import { AdminDataOverview } from "@/components/admin/admin-data-overview";
 import { 
   Card, 
   CardContent, 
@@ -52,7 +53,7 @@ import {
   Info,
   MessageSquare,
   ClipboardCheck,
-  Image as ImageIcon,
+  ImageIcon,
   ThumbsUp,
   ThumbsDown,
   ShoppingCart,
@@ -557,29 +558,22 @@ const WorkItemDetailPage = () => {
                       <span>{workItem.creator?.name || `Admin #${workItem.createdBy}`}</span>
                     </div>
                   </div>
-                  
-                  <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Created At</h3>
-                    <div className="flex items-center">
-                      <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{formatDate(workItem.createdAt)}</span>
-                    </div>
-                  </div>
                 </div>
               </div>
-
+              
               {workItem.notes && (
-                <div className="pt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Notes</h3>
-                  <div className="bg-muted p-4 rounded-md">
-                    {workItem.notes}
+                <div>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-1">Notes</h3>
+                  <div className="p-3 bg-muted/50 rounded-md">
+                    <p>{workItem.notes}</p>
                   </div>
                 </div>
               )}
             </CardContent>
-            <CardFooter className="flex justify-end space-x-2">
-              <Button
-                variant="outline"
+            <CardFooter>
+              <Button 
+                variant="outline" 
+                className="ml-auto"
                 onClick={() => handleAdminAction(workItem.status)}
               >
                 <Edit className="h-4 w-4 mr-2" />
@@ -609,273 +603,14 @@ const WorkItemDetailPage = () => {
                   <p>No process data found for this work item.</p>
                 </div>
               ) : (
-                <Tabs 
-                  defaultValue={
-                    stockTake 
-                      ? "stock-take" 
-                      : merchandising 
-                        ? "merchandising" 
-                        : competitorMerchandising 
-                          ? "competitor" 
-                          : "order"
-                  } 
-                  className="w-full"
-                >
-                  <TabsList className="mb-4">
-                    {/* Always show Stock Take tab */}
-                    <TabsTrigger value="stock-take">
-                      <ClipboardCheck className="h-4 w-4 mr-2" />
-                      Stock Take
-                    </TabsTrigger>
-                    
-                    {/* Always show Merchandising tab */}
-                    <TabsTrigger value="merchandising">
-                      <Store className="h-4 w-4 mr-2" />
-                      Merchandising
-                    </TabsTrigger>
-                    
-                    {/* Always show Competitor Analysis tab */}
-                    <TabsTrigger value="competitor">
-                      <BarChart className="h-4 w-4 mr-2" />
-                      Competitor
-                    </TabsTrigger>
-                    
-                    {/* Always show Order tab */}
-                    <TabsTrigger value="order">
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Order
-                    </TabsTrigger>
-                  </TabsList>
-                  
-                  {/* Stock Take Tab */}
-                  <TabsContent value="stock-take" className="space-y-4">
-                    {stockTake ? (
-                      <>
-                        <div className="bg-muted p-4 rounded-md">
-                          <h3 className="font-medium mb-2">Stock Take Info</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span>{formatDate(stockTake.date)}</span>
-                            
-                            <span className="text-muted-foreground">Status:</span>
-                            <span className="capitalize">{stockTake.status}</span>
-                            
-                            <span className="text-muted-foreground">Total Items:</span>
-                            <span>{stockTake.items?.length || 0}</span>
-                          </div>
-                        </div>
-                        
-                        {stockTake.comment && (
-                          <div className="bg-muted p-4 rounded-md">
-                            <h3 className="font-medium mb-2">Merchandiser Comment</h3>
-                            <p className="text-sm">{stockTake.comment}</p>
-                          </div>
-                        )}
-                        
-                        {stockTake.items && stockTake.items.length > 0 && (
-                          <div>
-                            <h3 className="font-medium mb-2">Stock Take Items</h3>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Product</TableHead>
-                                  <TableHead>Quantity</TableHead>
-                                  <TableHead>Location</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {stockTake.items.map((item, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>
-                                      {item.product?.name || `Product #${item.productId}`}
-                                    </TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                    <TableCell className="capitalize">
-                                      {item.location.replace('_', ' ')}
-                                    </TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                        
-                        {stockTake.pictures && stockTake.pictures.length > 0 && (
-                          <div>
-                            <h3 className="font-medium mb-2">Pictures</h3>
-                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
-                              {stockTake.pictures.map((pic, index) => (
-                                <div key={index} className="aspect-square bg-muted rounded-md flex items-center justify-center">
-                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                                </div>
-                              ))}
-                            </div>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <XSquare className="h-12 w-12 mx-auto mb-4 text-muted" />
-                        <h3 className="text-lg font-medium mb-2">No Stock Take Data</h3>
-                        <p>This work item does not have any stock take data submitted.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  {/* Merchandising Tab */}
-                  <TabsContent value="merchandising" className="space-y-4">
-                    {merchandising ? (
-                      <>
-                        <div className="bg-muted p-4 rounded-md">
-                          <h3 className="font-medium mb-2">Merchandising Info</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span>{formatDate(merchandising.date)}</span>
-                            
-                            <span className="text-muted-foreground">Total Items:</span>
-                            <span>{merchandising.merchandisingItems?.length || 0}</span>
-                          </div>
-                        </div>
-                        
-                        {merchandising.merchandisingItems && merchandising.merchandisingItems.length > 0 && (
-                          <div>
-                            <h3 className="font-medium mb-2">Merchandising Items</h3>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Product</TableHead>
-                                  <TableHead>Price</TableHead>
-                                  <TableHead>Notes</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {merchandising.merchandisingItems.map((item, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>
-                                      {item.product?.name || `Product #${item.productId}`}
-                                    </TableCell>
-                                    <TableCell>R{item.price.toFixed(2)}</TableCell>
-                                    <TableCell>{item.notes || '-'}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Store className="h-12 w-12 mx-auto mb-4 text-muted" />
-                        <h3 className="text-lg font-medium mb-2">No Merchandising Data</h3>
-                        <p>This work item does not have any merchandising data submitted.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  {/* Competitor Tab */}
-                  <TabsContent value="competitor" className="space-y-4">
-                    {competitorMerchandising ? (
-                      <>
-                        <div className="bg-muted p-4 rounded-md">
-                          <h3 className="font-medium mb-2">Competitor Merchandising Info</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span>{formatDate(competitorMerchandising.date)}</span>
-                            
-                            <span className="text-muted-foreground">Competitor:</span>
-                            <span>{competitorMerchandising.competitorName}</span>
-                            
-                            <span className="text-muted-foreground">Total Items:</span>
-                            <span>{competitorMerchandising.items?.length || 0}</span>
-                          </div>
-                        </div>
-                        
-                        {competitorMerchandising.items && competitorMerchandising.items.length > 0 && (
-                          <div>
-                            <h3 className="font-medium mb-2">Competitor Products</h3>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Product</TableHead>
-                                  <TableHead>Price</TableHead>
-                                  <TableHead>Notes</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {competitorMerchandising.items.map((item, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>
-                                      {item.product?.name || `Product #${item.productId}`}
-                                    </TableCell>
-                                    <TableCell>R{item.price.toFixed(2)}</TableCell>
-                                    <TableCell>{item.notes || '-'}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <BarChart className="h-12 w-12 mx-auto mb-4 text-muted" />
-                        <h3 className="text-lg font-medium mb-2">No Competitor Data</h3>
-                        <p>This work item does not have any competitor merchandising data submitted.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                  
-                  {/* Order Tab */}
-                  <TabsContent value="order" className="space-y-4">
-                    {order ? (
-                      <>
-                        <div className="bg-muted p-4 rounded-md">
-                          <h3 className="font-medium mb-2">Order Info</h3>
-                          <div className="grid grid-cols-2 gap-2 text-sm">
-                            <span className="text-muted-foreground">Date:</span>
-                            <span>{formatDate(order.date)}</span>
-                            
-                            <span className="text-muted-foreground">Status:</span>
-                            <span className="capitalize">{order.status}</span>
-                            
-                            <span className="text-muted-foreground">Total Items:</span>
-                            <span>{order.orderItems?.length || 0}</span>
-                          </div>
-                        </div>
-                        
-                        {order.orderItems && order.orderItems.length > 0 && (
-                          <div>
-                            <h3 className="font-medium mb-2">Order Items</h3>
-                            <Table>
-                              <TableHeader>
-                                <TableRow>
-                                  <TableHead>Product</TableHead>
-                                  <TableHead>Quantity</TableHead>
-                                </TableRow>
-                              </TableHeader>
-                              <TableBody>
-                                {order.orderItems.map((item, index) => (
-                                  <TableRow key={index}>
-                                    <TableCell>
-                                      {item.product?.name || `Product #${item.productId}`}
-                                    </TableCell>
-                                    <TableCell>{item.quantity}</TableCell>
-                                  </TableRow>
-                                ))}
-                              </TableBody>
-                            </Table>
-                          </div>
-                        )}
-                      </>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <ShoppingCart className="h-12 w-12 mx-auto mb-4 text-muted" />
-                        <h3 className="text-lg font-medium mb-2">No Order Data</h3>
-                        <p>This work item does not have any order data submitted.</p>
-                      </div>
-                    )}
-                  </TabsContent>
-                </Tabs>
+                // Using AdminDataOverview component to handle all data display including images
+                <AdminDataOverview
+                  stockTake={stockTake}
+                  merchandisingData={merchandising}
+                  competitorData={competitorMerchandising}
+                  orderData={order}
+                  auditTrail={auditTrail}
+                />
               )}
             </CardContent>
           </Card>
@@ -887,7 +622,7 @@ const WorkItemDetailPage = () => {
             <CardHeader>
               <CardTitle>Audit Trail</CardTitle>
               <CardDescription>
-                History of changes and comments for this work item
+                History of changes to this work item
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -895,60 +630,48 @@ const WorkItemDetailPage = () => {
                 <div className="flex items-center justify-center py-8">
                   <Loader2 className="h-8 w-8 animate-spin text-primary" />
                 </div>
-              ) : !auditTrail || auditTrail.length === 0 ? (
+              ) : auditTrail.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
-                  <p>No audit trail found for this work item.</p>
+                  <p>No audit trail available for this work item.</p>
                 </div>
               ) : (
-                <div className="space-y-6">
-                  <div className="relative">
-                    <div className="absolute top-0 bottom-0 left-4 w-0.5 bg-muted"></div>
-                    <ul className="space-y-6">
-                      {auditTrail.map((entry, index) => (
-                        <li key={index} className="relative pl-10">
-                          <div className="absolute left-0 rounded-full h-8 w-8 flex items-center justify-center bg-muted">
-                            {entry.action === 'created' && <Plus className="h-4 w-4 text-green-500" />}
-                            {entry.action === 'updated' && <Edit className="h-4 w-4 text-amber-500" />}
-                            {entry.action === 'completed' && <Check className="h-4 w-4 text-green-500" />}
-                            {entry.action === 'commented' && <MessageSquare className="h-4 w-4 text-blue-500" />}
-                            {entry.action === 'approved' && <ThumbsUp className="h-4 w-4 text-green-500" />}
-                            {entry.action === 'rejected' && <ThumbsDown className="h-4 w-4 text-red-500" />}
-                          </div>
-                          <div className="bg-card border rounded-lg p-4 shadow-sm">
-                            <div className="flex justify-between items-start mb-2">
-                              <div>
-                                <span className="font-medium capitalize">{entry.action}</span>
-                                <span className="text-muted-foreground ml-2 text-sm">
-                                  by {entry.user?.name || `User #${entry.userId}`}
+                <div className="space-y-4">
+                  <div className="border rounded-md overflow-hidden">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Date</TableHead>
+                          <TableHead>User</TableHead>
+                          <TableHead>Action</TableHead>
+                          <TableHead>Comment</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {auditTrail.map((entry, index) => (
+                          <TableRow key={entry.id || index}>
+                            <TableCell>
+                              {formatDate(entry.timestamp)}
+                            </TableCell>
+                            <TableCell>
+                              {entry.user?.name || `User #${entry.userId}`}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="outline" className="capitalize">
+                                {entry.action.replace(/_/g, ' ').toLowerCase()}
+                              </Badge>
+                              {entry.previousStatus && entry.newStatus && (
+                                <span className="text-xs ml-2 text-muted-foreground">
+                                  {entry.previousStatus} → {entry.newStatus}
                                 </span>
-                              </div>
-                              <div className="text-sm text-muted-foreground">
-                                {formatDate(entry.timestamp)}
-                              </div>
-                            </div>
-                            
-                            {entry.previousStatus && entry.newStatus && (
-                              <div className="text-sm mb-2">
-                                <span className="text-muted-foreground">Status changed from </span>
-                                <Badge variant="outline" className="mr-1 capitalize">
-                                  {entry.previousStatus}
-                                </Badge>
-                                <span className="text-muted-foreground">to </span>
-                                <Badge variant={getStatusBadgeVariant(entry.newStatus)} className="capitalize">
-                                  {entry.newStatus}
-                                </Badge>
-                              </div>
-                            )}
-                            
-                            {entry.comment && (
-                              <div className="bg-muted p-3 rounded-md mt-2 text-sm">
-                                {entry.comment}
-                              </div>
-                            )}
-                          </div>
-                        </li>
-                      ))}
-                    </ul>
+                              )}
+                            </TableCell>
+                            <TableCell>
+                              {entry.comment || 'No comment provided'}
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
                   </div>
                 </div>
               )}
@@ -957,40 +680,30 @@ const WorkItemDetailPage = () => {
         </TabsContent>
       </Tabs>
 
-      {/* Audit Comment Dialog */}
+      {/* Admin Comment Dialog */}
       <Dialog open={auditCommentDialogOpen} onOpenChange={setAuditCommentDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Add Admin Comment</DialogTitle>
           </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <label htmlFor="auditComment" className="text-sm font-medium">
-                Comment
-              </label>
-              <Textarea
-                id="auditComment"
-                placeholder="Enter a comment explaining your changes"
-                value={auditComment}
-                onChange={(e) => setAuditComment(e.target.value)}
-                rows={4}
-              />
+          <div className="py-4">
+            <div className="mb-4">
               <p className="text-sm text-muted-foreground">
-                Your comment will be recorded in the audit trail.
+                Please provide a comment explaining your changes or actions. This will be recorded in the audit trail.
               </p>
             </div>
+            <Textarea 
+              placeholder="Enter your comment here..."
+              value={auditComment}
+              onChange={(e) => setAuditComment(e.target.value)}
+              className="min-h-[100px]"
+            />
           </div>
           <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAuditCommentDialogOpen(false)}
-            >
+            <Button variant="outline" onClick={() => setAuditCommentDialogOpen(false)}>
               Cancel
             </Button>
-            <Button 
-              onClick={submitEdit}
-              disabled={editWorkItemMutation.isPending}
-            >
+            <Button onClick={submitEdit} disabled={editWorkItemMutation.isPending}>
               {editWorkItemMutation.isPending ? (
                 <>
                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />

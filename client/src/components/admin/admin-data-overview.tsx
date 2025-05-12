@@ -140,7 +140,26 @@ export function AdminDataOverview({
                               onClick={() => window.open(image, '_blank')}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                {image ? (
+                                  <img 
+                                    src={image} 
+                                    alt={`Shelf image ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      // When image fails to load, show the icon instead
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        const icon = parent.querySelector('.fallback-icon');
+                                        if (icon) {
+                                          (icon as HTMLElement).style.display = 'block';
+                                        }
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
                               </div>
                               <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center cursor-pointer">
                                 <span className="sr-only">View Image</span>
@@ -237,7 +256,26 @@ export function AdminDataOverview({
                               onClick={() => window.open(image, '_blank')}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                {image ? (
+                                  <img 
+                                    src={image} 
+                                    alt={`Promotion image ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      // When image fails to load, show the icon instead
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        const icon = parent.querySelector('.fallback-icon');
+                                        if (icon) {
+                                          (icon as HTMLElement).style.display = 'block';
+                                        }
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
                               </div>
                               <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center cursor-pointer">
                                 <span className="sr-only">View Image</span>
@@ -340,7 +378,26 @@ export function AdminDataOverview({
                               onClick={() => window.open(image, '_blank')}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                {image ? (
+                                  <img 
+                                    src={image} 
+                                    alt={`Competitor image ${index + 1}`} 
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      // When image fails to load, show the icon instead
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        const icon = parent.querySelector('.fallback-icon');
+                                        if (icon) {
+                                          (icon as HTMLElement).style.display = 'block';
+                                        }
+                                      }
+                                    }}
+                                  />
+                                ) : null}
+                                <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
                               </div>
                               <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center cursor-pointer">
                                 <span className="sr-only">View Image</span>
