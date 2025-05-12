@@ -78,7 +78,7 @@ interface PromotionItem {
   notes?: string;
 }
 
-interface StockTakeItem {
+interface StockTakeDataItem {
   id: number;
   stockTakeId: number;
   productId: number;
@@ -98,7 +98,7 @@ interface StockTakeData {
   lastEditedBy: number | null;
   lastEditedAt: string | null;
   auditComment: string | null;
-  items?: StockTakeItem[];
+  items?: StockTakeDataItem[];
 }
 
 interface MerchandisingItem {
@@ -185,7 +185,7 @@ interface WorkItem {
   updatedAt: string;
 }
 
-// Using StockTake from shared schema instead of defining it locally
+// Using custom interfaces to match schema
 
 interface StoreAssignment {
   id: number;
@@ -225,7 +225,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   });
   
   // Fetch existing stock take for this store and work item
-  const { data: stockTake } = useQuery<StockTakeData>({
+  const { data: stockTake, isLoading: isLoadingStockTake } = useQuery<StockTakeData>({
     queryKey: [`/api/stock-takes/by-work-item/${workItemId}`],
     enabled: !!workItemId && !!storeId,
   });
@@ -1745,7 +1745,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
   });
   
   // Get stock take data to identify low stock items
-  const { data: stockTakes = [] } = useQuery<StockTake[]>({
+  const { data: stockTakes = [] } = useQuery<StockTakeData[]>({
     queryKey: ['/api/stock-takes'],
     enabled: !!storeId,
   });
@@ -1776,7 +1776,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
     }
   }, [lowStockItems, toast]);
   
-  const { data: stockTakeItems = [] } = useQuery<StockTakeItem[]>({
+  const { data: stockTakeItems = [] } = useQuery<StockTakeDataItem[]>({
     queryKey: ['/api/stock-take-items'],
     enabled: stockTakes.length > 0,
   });
