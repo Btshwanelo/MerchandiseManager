@@ -1445,23 +1445,29 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Find and update any related work items for this store and user
+      // Find and update ONLY the current work item
       try {
-        // Find work items of type 'stock_take' for this store assigned to this user with status not completed
-        const userWorkItems = await storage.getWorkItemsByUserId(req.user!.id);
-        const relatedWorkItems = userWorkItems.filter(wi => 
-          wi.storeId === storeId && 
-          wi.type === 'stock_take' && 
-          wi.status !== 'completed'
-        );
-        
-        // Update the status of any related work items to completed
-        for (const workItem of relatedWorkItems) {
-          console.log(`Completing work item ${workItem.id} as part of stock take submission`);
-          await storage.completeWorkItem(workItem.id);
+        // Get the current work item's ID from the request
+        const workItemId = parseInt(req.body.workItemId);
+        if (!isNaN(workItemId)) {
+          const workItem = await storage.getWorkItemById(workItemId);
+          
+          // Only update if the work item exists, belongs to this user, and isn't already completed
+          if (workItem && 
+              workItem.userId === req.user!.id && 
+              workItem.storeId === storeId && 
+              workItem.type === 'stock_take' && 
+              workItem.status !== 'completed') {
+            
+            console.log(`Completing work item ${workItemId} as part of stock take submission`);
+            await storage.completeWorkItem(workItemId);
+            console.log(`Updated work item ${workItemId} to completed status`);
+          } else {
+            console.log(`Work item ${workItemId} not updated: either not found, not owned by this user, or already completed`);
+          }
+        } else {
+          console.log("No valid work item ID provided in the request");
         }
-        
-        console.log(`Updated ${relatedWorkItems.length} work items to completed status`);
       } catch (workItemError) {
         console.error("Error updating related work items:", workItemError);
         // Don't fail the whole request if this part fails, just log the error
