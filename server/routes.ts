@@ -422,9 +422,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
         
         // Record an activity for the completed work item
+        // Need to include a dummy product ID since it's a required field
         await storage.createActivity({
           userId: req.user!.id,
           storeId: validatedData.storeId,
+          productId: 1, // Use a default product ID since it's required but not relevant for this activity type
           actionType: "competitor-merchandising-complete",
           notes: `Completed competitor merchandising data for brand: ${validatedData.brand}`,
           status: "completed"
