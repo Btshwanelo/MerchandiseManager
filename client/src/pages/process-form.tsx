@@ -964,9 +964,10 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       )}
       
       {/* Admin Data Overview section - Only visible to admins */}
-      {isReadOnly && user?.role === "admin" && stockTake && (
+      {isReadOnly && user?.role === "admin" && (
         <div className="mt-8 border-t pt-8">
           <h2 className="text-2xl font-bold mb-6 text-primary">Admin Data Overview</h2>
+          <p className="text-sm text-muted-foreground mb-4">Comprehensive view of all data submitted by the merchandiser for this work item.</p>
           
           <div className="space-y-6">
             {/* Tabs for different data types */}
@@ -1099,8 +1100,12 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   </CardHeader>
                   <CardContent>
                     {!merchandisingData ? (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <p>No merchandising data available for this work item.</p>
+                      <div className="text-center py-12 px-4">
+                        <Tag className="h-16 w-16 mx-auto text-muted-foreground opacity-20 mb-4" />
+                        <h3 className="text-lg font-medium text-muted-foreground mb-1">No Merchandising Data</h3>
+                        <p className="text-sm text-muted-foreground max-w-md mx-auto">
+                          This work item does not have any merchandising data submitted by the merchandiser.
+                        </p>
                       </div>
                     ) : (
                       <div className="space-y-4">
