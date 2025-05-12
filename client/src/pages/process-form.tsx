@@ -11,8 +11,6 @@ import {
   WorkItemStatus, 
   WorkItemType,
   StockTakeType, 
-  StockTake, 
-  StockTakeItem, 
   Inventory
 } from "@shared/schema";
 
@@ -80,6 +78,94 @@ interface PromotionItem {
   notes?: string;
 }
 
+interface StockTakeItem {
+  id: number;
+  stockTakeId: number;
+  productId: number;
+  quantity: number;
+  location: string;
+  product?: Product;
+}
+
+interface StockTakeData {
+  id: number;
+  storeId: number;
+  userId: number;
+  date: string | null;
+  comment: string | null;
+  pictures: string[] | null;
+  status: string;
+  lastEditedBy: number | null;
+  lastEditedAt: string | null;
+  auditComment: string | null;
+  items?: StockTakeItem[];
+}
+
+interface MerchandisingItem {
+  product?: Product;
+  price: number;
+  notes?: string;
+}
+
+interface MerchandisingData {
+  id?: number;
+  storeId?: number;
+  workItemId?: number;
+  userId?: number;
+  createdAt?: string;
+  comment?: string;
+  promotionPictures?: string[];
+  items?: MerchandisingItem[];
+}
+
+interface CompetitorItem {
+  productName: string;
+  brand: string;
+  price: number;
+  notes?: string;
+}
+
+interface CompetitorData {
+  id?: number;
+  storeId?: number;
+  workItemId?: number;
+  userId?: number;
+  competitorName?: string;
+  createdAt?: string;
+  generalNotes?: string;
+  pictures?: string[];
+  items?: CompetitorItem[];
+}
+
+interface OrderItem {
+  product?: Product;
+  quantity: number;
+}
+
+interface OrderData {
+  id?: number;
+  storeId?: number;
+  workItemId?: number;
+  userId?: number;
+  orderDate?: string;
+  status?: string;
+  notes?: string;
+  items?: OrderItem[];
+}
+
+interface AuditEntry {
+  id: number;
+  userId: number;
+  action: string;
+  details: string;
+  timestamp: string;
+  user?: {
+    id: number;
+    name: string;
+    username: string;
+  };
+}
+
 interface WorkItem {
   id: number;
   title: string;
@@ -139,31 +225,31 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   });
   
   // Fetch existing stock take for this store and work item
-  const { data: stockTake } = useQuery<StockTake>({
+  const { data: stockTake } = useQuery<StockTakeData>({
     queryKey: [`/api/stock-takes/by-work-item/${workItemId}`],
     enabled: !!workItemId && !!storeId,
   });
   
   // Fetch merchandising data if available
-  const { data: merchandisingData } = useQuery({
+  const { data: merchandisingData } = useQuery<MerchandisingData>({
     queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
   
   // Fetch competitor data if available
-  const { data: competitorData } = useQuery({
+  const { data: competitorData } = useQuery<CompetitorData>({
     queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
   
   // Fetch order data if available
-  const { data: orderData } = useQuery({
+  const { data: orderData } = useQuery<OrderData>({
     queryKey: [`/api/orders/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
   
   // Fetch audit trail for admin users
-  const { data: auditTrail = [] } = useQuery({
+  const { data: auditTrail = [] } = useQuery<AuditEntry[]>({
     queryKey: [`/api/work-items/${workItemId}/audit`],
     enabled: !!workItemId && isReadOnly && user?.role === "admin",
   });
@@ -877,15 +963,356 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
         </div>
       )}
       
-      {/* Admin Data Overview - Only visible to admins */}
-      {isReadOnly && user?.role === "admin" && (
-        <AdminDataOverview 
-          stockTake={stockTake}
-          merchandisingData={merchandisingData}
-          competitorData={competitorData}
-          orderData={orderData}
-          auditTrail={auditTrail || []}
-        />
+      {/* Admin Data Overview section - Only visible to admins */}
+      {isReadOnly && user?.role === "admin" && stockTake && (
+        <div className="mt-8 border-t pt-8">
+          <h2 className="text-2xl font-bold mb-6 text-primary">Admin Data Overview</h2>
+          
+          <div className="space-y-6">
+            {/* Tabs for different data types */}
+            <Tabs defaultValue="stock-take" className="w-full">
+              <TabsList className="w-full grid grid-cols-2 md:grid-cols-4 lg:flex">
+                <TabsTrigger value="stock-take" className="flex items-center gap-2">
+                  <ClipboardList className="h-4 w-4" />
+                  <span>Stock Take</span>
+                </TabsTrigger>
+                <TabsTrigger value="merchandising" className="flex items-center gap-2">
+                  <Tag className="h-4 w-4" />
+                  <span>Merchandising</span>
+                </TabsTrigger>
+                <TabsTrigger value="competitor" className="flex items-center gap-2">
+                  <BarChart className="h-4 w-4" />
+                  <span>Competitor Data</span>
+                </TabsTrigger>
+                <TabsTrigger value="order" className="flex items-center gap-2">
+                  <ShoppingCart className="h-4 w-4" />
+                  <span>Order Data</span>
+                </TabsTrigger>
+              </TabsList>
+              
+              {/* Stock Take Data Tab */}
+              <TabsContent value="stock-take" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <ClipboardList className="h-5 w-5 mr-2 text-primary" />
+                      Stock Take Details
+                    </CardTitle>
+                    <CardDescription>
+                      Inventory data submitted by merchandiser
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Submitted Date</h3>
+                          <p>{stockTake.date ? new Date(stockTake.date).toLocaleString() : 'Not available'}</p>
+                        </div>
+                        <div>
+                          <h3 className="text-sm font-medium mb-1">Status</h3>
+                          <Badge variant={stockTake.status === 'completed' ? 'success' : 'default'}>
+                            {stockTake.status}
+                          </Badge>
+                        </div>
+                      </div>
+                      
+                      {stockTake.items && stockTake.items.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Inventory Items ({stockTake.items.length})</h3>
+                          <div className="border rounded-md overflow-hidden">
+                            <table className="min-w-full divide-y divide-border">
+                              <thead className="bg-muted">
+                                <tr>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">SKU</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Location</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Quantity</th>
+                                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Min Level</th>
+                                </tr>
+                              </thead>
+                              <tbody className="bg-card divide-y divide-border">
+                                {stockTake.items.map((item: any) => (
+                                  <tr key={item.id}>
+                                    <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
+                                    <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <Badge variant="outline" className="capitalize">
+                                        {item.location?.replace('_', ' ') || item.location}
+                                      </Badge>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">
+                                      <span className={(item.quantity && item.product?.minStockLevel && item.quantity < item.product.minStockLevel) ? 'text-red-600 font-medium' : ''}>
+                                        {item.quantity}
+                                      </span>
+                                    </td>
+                                    <td className="px-4 py-3 text-sm">{item.product?.minStockLevel || 'N/A'}</td>
+                                  </tr>
+                                ))}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                      
+                      {/* Show shelf images if available */}
+                      {stockTake.pictures && stockTake.pictures.length > 0 && (
+                        <div>
+                          <h3 className="text-sm font-medium mb-2">Shelf Images ({stockTake.pictures.length})</h3>
+                          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                            {stockTake.pictures.map((image: string, index: number) => (
+                              <div 
+                                key={index} 
+                                className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                                onClick={() => window.open(image, '_blank')}
+                              >
+                                <div className="w-full h-full bg-muted/50 flex items-center justify-center">
+                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                                <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center">
+                                  <span className="sr-only">View Image</span>
+                                </div>
+                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
+                                  Image {index + 1}
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Merchandising Data Tab */}
+              <TabsContent value="merchandising" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <Tag className="h-5 w-5 mr-2 text-primary" />
+                      Merchandising Details
+                    </CardTitle>
+                    <CardDescription>
+                      Merchandising data submitted by merchandiser
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!merchandisingData ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No merchandising data available for this work item.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Created Date</h3>
+                            <p>{merchandisingData.createdAt ? new Date(merchandisingData.createdAt).toLocaleString() : 'Not available'}</p>
+                          </div>
+                        </div>
+                        
+                        {merchandisingData.items && merchandisingData.items.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Promotional Items</h3>
+                            <div className="border rounded-md overflow-hidden">
+                              <table className="min-w-full divide-y divide-border">
+                                <thead className="bg-muted">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-card divide-y divide-border">
+                                  {merchandisingData.items.map((item: any, index: number) => (
+                                    <tr key={index}>
+                                      <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
+                                      <td className="px-4 py-3 text-sm">R {item.price?.toFixed(2) || '0.00'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.notes || 'No notes'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {merchandisingData.comment && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
+                            <div className="border rounded-md p-4 bg-muted/30">
+                              <p>{merchandisingData.comment}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Competitor Data Tab */}
+              <TabsContent value="competitor" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <BarChart className="h-5 w-5 mr-2 text-primary" />
+                      Competitor Analysis
+                    </CardTitle>
+                    <CardDescription>
+                      Competitor data submitted by merchandiser
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!competitorData ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No competitor analysis data available for this work item.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Created Date</h3>
+                            <p>{competitorData.createdAt ? new Date(competitorData.createdAt).toLocaleString() : 'Not available'}</p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Competitor Name</h3>
+                            <p>{competitorData.competitorName || 'Not specified'}</p>
+                          </div>
+                        </div>
+                        
+                        {competitorData.items && competitorData.items.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Competitor Products</h3>
+                            <div className="border rounded-md overflow-hidden">
+                              <table className="min-w-full divide-y divide-border">
+                                <thead className="bg-muted">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product Name</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Brand</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-card divide-y divide-border">
+                                  {competitorData.items.map((item: any, index: number) => (
+                                    <tr key={index}>
+                                      <td className="px-4 py-3 text-sm">{item.productName || 'Unnamed Product'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.brand || 'Unknown'}</td>
+                                      <td className="px-4 py-3 text-sm">R {item.price?.toFixed(2) || '0.00'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.notes || 'No notes'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {competitorData.generalNotes && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">General Observations</h3>
+                            <div className="border rounded-md p-4 bg-muted/30">
+                              <p>{competitorData.generalNotes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+              
+              {/* Order Data Tab */}
+              <TabsContent value="order" className="mt-4">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center">
+                      <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
+                      Order Details
+                    </CardTitle>
+                    <CardDescription>
+                      Order data submitted by merchandiser
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    {!orderData ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <p>No order data available for this work item.</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-4">
+                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Order Date</h3>
+                            <p>{orderData.orderDate ? new Date(orderData.orderDate).toLocaleString() : 'Not available'}</p>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Status</h3>
+                            <Badge variant={
+                              orderData.status === 'completed' 
+                                ? 'success' 
+                                : orderData.status === 'rejected' 
+                                  ? 'destructive' 
+                                  : 'default'
+                            }>
+                              {orderData.status}
+                            </Badge>
+                          </div>
+                          <div>
+                            <h3 className="text-sm font-medium mb-1">Total Items</h3>
+                            <p>{orderData.items?.length || 0}</p>
+                          </div>
+                        </div>
+                        
+                        {orderData.items && orderData.items.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Ordered Items</h3>
+                            <div className="border rounded-md overflow-hidden">
+                              <table className="min-w-full divide-y divide-border">
+                                <thead className="bg-muted">
+                                  <tr>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">SKU</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Quantity</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit Price</th>
+                                    <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="bg-card divide-y divide-border">
+                                  {orderData.items.map((item: any, index: number) => (
+                                    <tr key={index}>
+                                      <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.quantity}</td>
+                                      <td className="px-4 py-3 text-sm">R {item.product?.price ? (item.product.price / 100).toFixed(2) : '0.00'}</td>
+                                      <td className="px-4 py-3 text-sm font-medium">
+                                        R {item.product?.price && item.quantity ? ((item.product.price * item.quantity) / 100).toFixed(2) : '0.00'}
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                            </div>
+                          </div>
+                        )}
+                        
+                        {orderData.notes && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Order Notes</h3>
+                            <div className="border rounded-md p-4 bg-muted/30">
+                              <p>{orderData.notes}</p>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
+          </div>
+        </div>
       )}
     </div>
   );
@@ -2465,233 +2892,6 @@ const ProcessForm = () => {
   );
 };
 
-// Admin Data Overview Component
-const AdminDataOverview = ({ 
-  stockTake, 
-  merchandisingData, 
-  competitorData, 
-  orderData,
-  auditTrail = []
-}: {
-  stockTake: any;
-  merchandisingData: any;
-  competitorData: any;
-  orderData: any;
-  auditTrail?: any[];
-}) => {
-  return (
-    <div className="mt-8 border-t pt-8">
-      <h2 className="text-2xl font-bold mb-6 text-primary">Admin Data Overview</h2>
-      
-      <div className="space-y-6">
-        {/* Tabs for different data types */}
-        <Tabs defaultValue="stock-take" className="w-full">
-          <TabsList className="w-full grid grid-cols-2 md:grid-cols-4 lg:flex">
-            <TabsTrigger value="stock-take" className="flex items-center gap-2">
-              <ClipboardList className="h-4 w-4" />
-              <span>Stock Take</span>
-            </TabsTrigger>
-            <TabsTrigger value="merchandising" className="flex items-center gap-2">
-              <Tag className="h-4 w-4" />
-              <span>Merchandising</span>
-            </TabsTrigger>
-            <TabsTrigger value="competitor" className="flex items-center gap-2">
-              <BarChart className="h-4 w-4" />
-              <span>Competitor Data</span>
-            </TabsTrigger>
-            <TabsTrigger value="order" className="flex items-center gap-2">
-              <ShoppingCart className="h-4 w-4" />
-              <span>Order Data</span>
-            </TabsTrigger>
-          </TabsList>
-          
-          {/* Stock Take Data Tab */}
-          <TabsContent value="stock-take" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ClipboardList className="h-5 w-5 mr-2 text-primary" />
-                  Stock Take Details
-                </CardTitle>
-                <CardDescription>
-                  Inventory data submitted by merchandiser
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!stockTake ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No stock take data available for this work item.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                      <div>
-                        <h3 className="text-sm font-medium mb-1">Submitted Date</h3>
-                        <p>{stockTake.date ? new Date(stockTake.date).toLocaleString() : 'Not available'}</p>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium mb-1">Status</h3>
-                        <Badge variant={stockTake.status === 'completed' ? 'success' : 'default'}>
-                          {stockTake.status}
-                        </Badge>
-                      </div>
-                    </div>
-                    
-                    <div>
-                      <h3 className="text-sm font-medium mb-2">Inventory Items ({stockTake.items?.length || 0})</h3>
-                      <div className="border rounded-md overflow-hidden">
-                        <table className="min-w-full divide-y divide-border">
-                          <thead className="bg-muted">
-                            <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Product</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">SKU</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Location</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Quantity</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground">Min Level</th>
-                            </tr>
-                          </thead>
-                          <tbody className="bg-card divide-y divide-border">
-                            {stockTake?.items?.map((item: any) => (
-                              <tr key={item.id}>
-                                <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
-                                <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
-                                <td className="px-4 py-3 text-sm">
-                                  <Badge variant="outline" className="capitalize">
-                                    {item.location?.replace('_', ' ')}
-                                  </Badge>
-                                </td>
-                                <td className="px-4 py-3 text-sm">
-                                  <span className={(item.quantity && item.product?.minStockLevel && item.quantity < item.product.minStockLevel) ? 'text-red-600 font-medium' : ''}>
-                                    {item.quantity}
-                                  </span>
-                                </td>
-                                <td className="px-4 py-3 text-sm">{item.product?.minStockLevel || 'N/A'}</td>
-                              </tr>
-                            ))}
-                            {!stockTake?.items?.length && (
-                              <tr>
-                                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                                  No items recorded in this stock take
-                                </td>
-                              </tr>
-                            )}
-                          </tbody>
-                        </table>
-                      </div>
-                    </div>
-                    
-                    {/* Show shelf images if available */}
-                    {stockTake?.pictures && stockTake.pictures.length > 0 && (
-                      <div>
-                        <h3 className="text-sm font-medium mb-2">Shelf Images ({stockTake.pictures.length})</h3>
-                        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                          {stockTake.pictures.map((image: string, index: number) => (
-                            <div 
-                              key={index} 
-                              className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
-                              onClick={() => window.open(image, '_blank')}
-                            >
-                              <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                                <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                              </div>
-                              <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center">
-                                <span className="sr-only">View Image</span>
-                              </div>
-                              <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
-                                Image {index + 1}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Merchandising Data Tab */}
-          <TabsContent value="merchandising" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <Tag className="h-5 w-5 mr-2 text-primary" />
-                  Merchandising Details
-                </CardTitle>
-                <CardDescription>
-                  Merchandising data submitted by merchandiser
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!merchandisingData ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No merchandising data available for this work item.</p>
-                  </div>
-                ) : (
-                  <div className="text-sm">
-                    Merchandising data details would be displayed here.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Competitor Data Tab */}
-          <TabsContent value="competitor" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <BarChart className="h-5 w-5 mr-2 text-primary" />
-                  Competitor Analysis
-                </CardTitle>
-                <CardDescription>
-                  Competitor data submitted by merchandiser
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!competitorData ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No competitor analysis data available for this work item.</p>
-                  </div>
-                ) : (
-                  <div className="text-sm">
-                    Competitor data details would be displayed here.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-          
-          {/* Order Data Tab */}
-          <TabsContent value="order" className="mt-4">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center">
-                  <ShoppingCart className="h-5 w-5 mr-2 text-primary" />
-                  Order Details
-                </CardTitle>
-                <CardDescription>
-                  Order data submitted by merchandiser
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                {!orderData ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <p>No order data available for this work item.</p>
-                  </div>
-                ) : (
-                  <div className="text-sm">
-                    Order data details would be displayed here.
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
-      </div>
-    </div>
-  );
-};
+
 
 export default ProcessForm;
