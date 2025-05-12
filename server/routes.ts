@@ -176,6 +176,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Register user alerts routes
   app.use('/api', userAlertsRouter);
   
+  // Add endpoint to serve uploaded images
+  app.get('/api/images/:filename', (req, res) => {
+    try {
+      const filename = req.params.filename;
+      // Sanitize the filename to prevent directory traversal attacks
+      const sanitizedFilename = path.basename(filename);
+      const imagePath = path.join(process.cwd(), 'uploads', sanitizedFilename);
+      
+      // Send the file or a 404 if not found
+      res.sendFile(imagePath, (err) => {
+        if (err) {
+          console.error(`Error serving image ${sanitizedFilename}:`, err);
+          res.status(404).send('Image not found');
+        }
+      });
+    } catch (error) {
+      console.error('Error serving image:', error);
+      res.status(500).send('Error serving image');
+    }
+  });
+  
   // Work Items Endpoints for Admin
   
   // Get active work items (admin only, PENDING and IN_PROGRESS only)
