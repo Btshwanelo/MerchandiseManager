@@ -1412,55 +1412,111 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
+  // Implementation of getStockTakeByWorkItemId for DatabaseStorage
+  async getStockTakeByWorkItemId(workItemId: number): Promise<any | null> {
+    try {
+      console.log("Looking up stock take for work item:", workItemId);
+      
+      // First, get the work item to find store and user IDs
+      const workItem = await db.query.workItems.findFirst({
+        where: eq(workItems.id, workItemId),
+      });
+      
+      if (!workItem) {
+        console.log(`Work item ${workItemId} not found`);
+        return null;
+      }
+      
+      console.log(`Fetching stock take data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // Find stock takes for this store and user that are completed
+      const stockTake = await db.query.stockTakes.findFirst({
+        where: and(
+          eq(stockTakes.storeId, workItem.storeId),
+          eq(stockTakes.userId, workItem.userId),
+          eq(stockTakes.status, 'completed')
+        ),
+        with: {
+          items: {
+            with: {
+              product: true
+            }
+          }
+        }
+      });
+      
+      console.log(`Found stock take ${stockTake?.id} for work item ${workItemId}`);
+      return stockTake;
+    } catch (error) {
+      console.error("Error getting stock take by work item ID:", error);
+      return null;
+    }
+  }
+  
   async getOrderByWorkItemId(workItemId: number): Promise<any | null> {
     console.log("Getting order by work item ID:", workItemId);
     try {
-      // First check if there's an existing order in the database
-      const existingOrder = null; // This would be a database query in a real implementation
-      
-      // If there's no existing order, generate one from the stock take data
-      if (!existingOrder) {
-        // Get the stock take data for this work item
-        const stockTake = await this.getStockTakeByWorkItemId(workItemId);
-        if (stockTake && stockTake.items && stockTake.items.length > 0) {
-          // Find all items with quantity 0 or below minimum stock level
-          const lowStockItems = stockTake.items.filter(item => 
-            item.quantity === 0 || 
-            (item.product?.minStockLevel && item.quantity < item.product.minStockLevel)
-          );
-          
-          // If we have items to order, create a synthetic order
-          if (lowStockItems.length > 0) {
-            console.log(`Found ${lowStockItems.length} items for potential order from work item ${workItemId}`);
-            
-            // Get the work item for additional context
-            const workItem = await this.getWorkItemById(workItemId);
-            
-            // Create order items from the low stock items
-            const orderItems = lowStockItems.map(item => ({
-              productId: item.productId,
-              product: item.product,
-              quantity: item.product?.minStockLevel ? 
-                Math.max(item.product.minStockLevel - item.quantity, 1) : 1,
-              notes: item.quantity === 0 ? "Out of stock" : "Low stock level"
-            }));
-            
-            // Return a synthetic order
-            return {
-              id: `synthetic-${workItemId}`,
-              workItemId: workItemId,
-              storeId: workItem?.storeId,
-              userId: workItem?.userId,
-              orderDate: workItem?.completedAt || new Date().toISOString(),
-              status: "pending",
-              items: orderItems,
-              notes: "Automatically generated from stock take data"
-            };
+      // First, try to get an existing order from the database
+      const existingOrder = await db.query.orders.findFirst({
+        where: eq(orders.workItemId, workItemId),
+        with: {
+          items: {
+            with: {
+              product: true
+            }
           }
         }
+      });
+      
+      if (existingOrder) {
+        console.log(`Found existing order for work item ${workItemId}`);
+        return existingOrder;
       }
       
-      return existingOrder; // Will be null if no order exists and none was generated
+      // If no existing order, try to generate one from stock take data
+      const stockTake = await this.getStockTakeByWorkItemId(workItemId);
+      
+      if (stockTake && stockTake.items && stockTake.items.length > 0) {
+        // Find all items with quantity 0 or below minimum stock level
+        const lowStockItems = stockTake.items.filter(item => 
+          item.quantity === 0 || 
+          (item.product?.minStockLevel && item.quantity < item.product.minStockLevel)
+        );
+        
+        // If we have items to order, create a synthetic order
+        if (lowStockItems.length > 0) {
+          console.log(`Found ${lowStockItems.length} items for potential order from work item ${workItemId}`);
+          
+          // Get the work item for additional context
+          const workItem = await this.getWorkItemById(workItemId);
+          
+          // Create order items from the low stock items
+          const orderItems = lowStockItems.map(item => ({
+            productId: item.productId,
+            product: item.product,
+            quantity: item.product?.minStockLevel ? 
+              Math.max(item.product.minStockLevel - item.quantity, 1) : 1,
+            notes: item.quantity === 0 ? "Out of stock" : "Low stock level"
+          }));
+          
+          // Return a synthetic order
+          return {
+            id: `synthetic-${workItemId}`,
+            workItemId: workItemId,
+            storeId: workItem?.storeId,
+            userId: workItem?.userId,
+            orderDate: workItem?.completedAt || new Date().toISOString(),
+            status: "pending",
+            items: orderItems,
+            notes: "Automatically generated from stock take data",
+            createdAt: new Date().toISOString()
+          };
+        }
+      } else {
+        console.log(`No stock take found or no items in stock take for work item ${workItemId}`);
+      }
+      
+      return null; // No order exists and none was generated
     } catch (error) {
       console.error("Error getting/generating order by work item ID:", error);
       return null;
