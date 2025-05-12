@@ -7,6 +7,23 @@ import {
   ImageIcon,
 } from "lucide-react";
 
+// Utility function to convert server file paths to client URLs
+const getImageUrl = (imagePath: string): string => {
+  if (!imagePath) return '';
+  
+  // Check if it's a server-side file path
+  if (imagePath.includes('/home/runner/workspace/uploads/')) {
+    // Extract just the filename
+    const filename = imagePath.split('/').pop();
+    if (!filename) return '';
+    // Return an API endpoint URL for the image
+    return `/api/images/${encodeURIComponent(filename)}`;
+  }
+  
+  // If it's already a URL or other format, return as is
+  return imagePath;
+};
+
 // UI Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -138,19 +155,16 @@ export function AdminDataOverview({
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
                               onClick={() => {
-                                const imageSrc = image.startsWith('/home/runner/workspace') 
-                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                  : image;
-                                window.open(imageSrc, '_blank');
+                                const imageSrc = getImageUrl(image);
+                                if (imageSrc) {
+                                  window.open(imageSrc, '_blank');
+                                }
                               }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image.startsWith('/home/runner/workspace') 
-                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                      : image
-                                    } 
+                                    src={getImageUrl(image)} 
                                     alt={`Shelf image ${index + 1}`} 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -262,19 +276,16 @@ export function AdminDataOverview({
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
                               onClick={() => {
-                                const imageSrc = image.startsWith('/home/runner/workspace') 
-                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                  : image;
-                                window.open(imageSrc, '_blank');
+                                const imageSrc = getImageUrl(image);
+                                if (imageSrc) {
+                                  window.open(imageSrc, '_blank');
+                                }
                               }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image.startsWith('/home/runner/workspace') 
-                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                      : image
-                                    } 
+                                    src={getImageUrl(image)} 
                                     alt={`Promotion image ${index + 1}`} 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
