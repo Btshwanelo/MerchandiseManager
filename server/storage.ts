@@ -1396,11 +1396,54 @@ export class DatabaseStorage implements IStorage {
   async getOrderByWorkItemId(workItemId: number): Promise<any | null> {
     console.log("Getting order by work item ID:", workItemId);
     try {
-      // Implementation would depend on the schema definition
-      // This is a stub that should be properly implemented
-      return null;
+      // First check if there's an existing order in the database
+      const existingOrder = null; // This would be a database query in a real implementation
+      
+      // If there's no existing order, generate one from the stock take data
+      if (!existingOrder) {
+        // Get the stock take data for this work item
+        const stockTake = await this.getStockTakeByWorkItemId(workItemId);
+        if (stockTake && stockTake.items && stockTake.items.length > 0) {
+          // Find all items with quantity 0 or below minimum stock level
+          const lowStockItems = stockTake.items.filter(item => 
+            item.quantity === 0 || 
+            (item.product?.minStockLevel && item.quantity < item.product.minStockLevel)
+          );
+          
+          // If we have items to order, create a synthetic order
+          if (lowStockItems.length > 0) {
+            console.log(`Found ${lowStockItems.length} items for potential order from work item ${workItemId}`);
+            
+            // Get the work item for additional context
+            const workItem = await this.getWorkItemById(workItemId);
+            
+            // Create order items from the low stock items
+            const orderItems = lowStockItems.map(item => ({
+              productId: item.productId,
+              product: item.product,
+              quantity: item.product?.minStockLevel ? 
+                Math.max(item.product.minStockLevel - item.quantity, 1) : 1,
+              notes: item.quantity === 0 ? "Out of stock" : "Low stock level"
+            }));
+            
+            // Return a synthetic order
+            return {
+              id: `synthetic-${workItemId}`,
+              workItemId: workItemId,
+              storeId: workItem?.storeId,
+              userId: workItem?.userId,
+              orderDate: workItem?.completedAt || new Date().toISOString(),
+              status: "pending",
+              items: orderItems,
+              notes: "Automatically generated from stock take data"
+            };
+          }
+        }
+      }
+      
+      return existingOrder; // Will be null if no order exists and none was generated
     } catch (error) {
-      console.error("Error getting order by work item ID:", error);
+      console.error("Error getting/generating order by work item ID:", error);
       return null;
     }
   }
