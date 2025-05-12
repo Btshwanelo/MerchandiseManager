@@ -141,6 +141,30 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     enabled: !!workItemId && !!storeId,
   });
   
+  // Fetch merchandising data if available
+  const { data: merchandisingData } = useQuery({
+    queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
+    enabled: !!workItemId && isReadOnly,
+  });
+  
+  // Fetch competitor data if available
+  const { data: competitorData } = useQuery({
+    queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`],
+    enabled: !!workItemId && isReadOnly,
+  });
+  
+  // Fetch order data if available
+  const { data: orderData } = useQuery({
+    queryKey: [`/api/orders/by-work-item/${workItemId}`],
+    enabled: !!workItemId && isReadOnly,
+  });
+  
+  // Fetch audit trail for admin users
+  const { data: auditTrail = [] } = useQuery({
+    queryKey: [`/api/work-items/${workItemId}/audit`],
+    enabled: !!workItemId && isReadOnly && user?.role === "admin",
+  });
+  
   // Update state with stock take data when available
   useEffect(() => {
     if (stockTake) {
@@ -649,16 +673,52 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               ) : (
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {shelfImages.filter(Boolean).map((image, index) => (
-                    <div key={index} className="group relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow">
+                    <div 
+                      key={index} 
+                      className="group relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                      onClick={() => {
+                        // In a real implementation, this would open a modal to preview the image
+                        if (user?.role === "admin") {
+                          window.open(image.toString(), '_blank');
+                        }
+                        toast({
+                          title: "Image Preview",
+                          description: "Image URL: " + image.toString(),
+                        });
+                      }}
+                    >
                       <div className="w-full h-full bg-muted flex items-center justify-center">
-                        {/* In a real app, this would show the actual image */}
-                        <span className="text-sm text-center px-2 text-muted-foreground">
-                          {image}
-                        </span>
+                        {image.toString().includes('.jpg') || image.toString().includes('.png') || image.toString().includes('.jpeg') ? (
+                          <div className="relative w-full h-full">
+                            <span className="absolute inset-0 bg-gray-200 animate-pulse"></span>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                            </div>
+                          </div>
+                        ) : (
+                          <span className="text-sm text-center px-2 text-muted-foreground">
+                            {image}
+                          </span>
+                        )}
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
                         Image {index + 1}
                       </div>
+                      {user?.role === "admin" && (
+                        <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Button 
+                            size="icon" 
+                            variant="secondary" 
+                            className="h-7 w-7 rounded-full bg-white shadow-md"
+                            onClick={(e) => {
+                              e.stopPropagation(); 
+                              window.open(image.toString(), '_blank');
+                            }}
+                          >
+                            <Maximize2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      )}
                     </div>
                   ))}
                 </div>
