@@ -1393,6 +1393,19 @@ export class DatabaseStorage implements IStorage {
   async createCompetitorMerchandising(data: any): Promise<any> {
     console.log("Creating competitor merchandising data:", data);
     try {
+      // Process promotion pictures to ensure they're coming through correctly
+      let promotionPictures = [];
+      
+      if (data.promotionPictures && Array.isArray(data.promotionPictures)) {
+        promotionPictures = data.promotionPictures;
+      } else if (data.pictureUrl) {
+        // For backward compatibility
+        promotionPictures = [data.pictureUrl];
+      }
+      
+      // Log the image paths being stored
+      console.log("Storing promotion pictures:", promotionPictures);
+      
       // Insert the competitor merchandising data into the database
       const [result] = await db.insert(competitorMerchandising).values({
         storeId: data.storeId,
@@ -1400,8 +1413,8 @@ export class DatabaseStorage implements IStorage {
         date: new Date(),
         brand: data.brand || '',
         productDescription: data.productDescription || '',
-        promotionalPrice: data.promotionalPrice || 0,
-        promotionPictures: data.promotionPictures || []
+        promotionalPrice: data.promotionalPrice || data.price || 0,
+        promotionPictures: promotionPictures
       }).returning();
       
       console.log("Created competitor merchandising data:", result);
