@@ -390,38 +390,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       console.log("Received competitor data:", req.body);
       
+      // Simplified schema to match the database structure
       const competitorSchema = z.object({
         storeId: z.number(),
-        workItemId: z.number(),
-        brand: z.string(),
-        productDescription: z.string(),
-        // Support both price and promotionalPrice
-        price: z.number().optional(),
-        promotionalPrice: z.number().optional(),
-        promoType: z.string().optional(),
-        promoDetails: z.string().optional(),
-        pictureUrl: z.string().optional(),
-        date: z.date().optional(),
+        workItemId: z.number().optional(),
+        brand: z.string().min(1, "Brand name is required"),
+        productDescription: z.string().min(1, "Product description is required"),
+        promotionalPrice: z.number().min(0, "Price must be a positive number"),
+        promotionPictures: z.array(z.string()).optional().default([]),
       });
       
       const validatedData = competitorSchema.parse(req.body);
       
-      // Map promotionalPrice to price if it exists
-      const mappedData = {
-        ...validatedData,
-        price: validatedData.promotionalPrice || validatedData.price,
+      // Create the data object for storage
+      const data = {
+        storeId: validatedData.storeId,
         userId: req.user!.id,
-        date: validatedData.date || new Date()
+        brand: validatedData.brand,
+        productDescription: validatedData.productDescription,
+        promotionalPrice: validatedData.promotionalPrice,
+        promotionPictures: validatedData.promotionPictures,
       };
       
-      // Remove promotionalPrice before sending to storage
-      if ('promotionalPrice' in mappedData) {
-        delete mappedData.promotionalPrice;
+      console.log("Processed competitor data:", data);
+      
+      // Create the competitor merchandising record
+      const result = await storage.createCompetitorMerchandising(data);
+      
+      // If we have a work item ID, mark it as completed
+      if (validatedData.workItemId) {
+        await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
+        
+        // Record an activity for the completed work item
+        await storage.createActivity({
+          userId: req.user!.id,
+          storeId: validatedData.storeId,
+          actionType: "competitor-merchandising-complete",
+          notes: `Completed competitor merchandising data for brand: ${validatedData.brand}`,
+          status: "completed"
+        });
       }
-      
-      console.log("Processed competitor data:", mappedData);
-      
-      const result = await storage.createCompetitorMerchandising(mappedData);
       
       res.status(201).json(result);
     } catch (error) {

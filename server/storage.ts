@@ -1393,8 +1393,19 @@ export class DatabaseStorage implements IStorage {
   async createCompetitorMerchandising(data: any): Promise<any> {
     console.log("Creating competitor merchandising data:", data);
     try {
-      // Implementation would depend on the schema definition
-      return { id: 0, ...data, createdAt: new Date() };
+      // Insert the competitor merchandising data into the database
+      const [result] = await db.insert(competitorMerchandising).values({
+        storeId: data.storeId,
+        userId: data.userId,
+        date: new Date(),
+        brand: data.brand || '',
+        productDescription: data.productDescription || '',
+        promotionalPrice: data.promotionalPrice || 0,
+        promotionPictures: data.promotionPictures || []
+      }).returning();
+      
+      console.log("Created competitor merchandising data:", result);
+      return result;
     } catch (error) {
       console.error("Error creating competitor merchandising data:", error);
       throw error;
@@ -1456,21 +1467,63 @@ export class DatabaseStorage implements IStorage {
   async getOrderByWorkItemId(workItemId: number): Promise<any | null> {
     console.log("Getting order by work item ID:", workItemId);
     try {
-      // First, try to get an existing order from the database
-      const existingOrder = await db.query.orders.findFirst({
-        where: eq(orders.workItemId, workItemId),
-        with: {
-          items: {
-            with: {
-              product: true
-            }
-          }
-        }
+      // First, try to find the work item to get relevant info
+      const workItem = await db.query.workItems.findFirst({
+        where: eq(workItems.id, workItemId)
       });
       
-      if (existingOrder) {
+      if (!workItem) {
+        console.log(`Work item ${workItemId} not found`);
+        return null;
+      }
+      
+      // Look for an order associated with this work item's store and user
+      const existingOrder = await db.select({
+          orders: orders,
+          order_items: orderItems,
+          products: products
+        })
+        .from(orders)
+        .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+        .leftJoin(products, eq(products.id, orderItems.productId))
+        .where(
+          and(
+            eq(orders.storeId, workItem.storeId),
+            eq(orders.userId, workItem.userId)
+          )
+        )
+        .execute();
+        
+      if (existingOrder && existingOrder.length > 0) {
+        // Process the results to create a proper structure
+        const order = {
+          id: existingOrder[0].orders.id,
+          storeId: existingOrder[0].orders.storeId,
+          userId: existingOrder[0].orders.userId,
+          orderDate: existingOrder[0].orders.orderDate,
+          status: existingOrder[0].orders.status,
+          notes: existingOrder[0].orders.notes,
+          createdAt: existingOrder[0].orders.createdAt,
+          items: existingOrder.map(row => ({
+            id: row.order_items?.id,
+            productId: row.order_items?.productId,
+            quantity: row.order_items?.quantity,
+            notes: row.order_items?.notes,
+            product: row.products ? {
+              id: row.products.id,
+              name: row.products.name,
+              sku: row.products.sku,
+              price: row.products.price,
+              category: row.products.category,
+              minStockLevel: row.products.minStockLevel,
+              description: row.products.description,
+              image: row.products.image
+            } : null
+          })).filter(item => item.id !== undefined)
+        };
+        
         console.log(`Found existing order for work item ${workItemId}`);
-        return existingOrder;
+        return order;
       }
       
       // If no existing order, try to generate one from stock take data
@@ -1487,9 +1540,6 @@ export class DatabaseStorage implements IStorage {
         if (lowStockItems.length > 0) {
           console.log(`Found ${lowStockItems.length} items for potential order from work item ${workItemId}`);
           
-          // Get the work item for additional context
-          const workItem = await this.getWorkItemById(workItemId);
-          
           // Create order items from the low stock items
           const orderItems = lowStockItems.map(item => ({
             productId: item.productId,
@@ -1503,9 +1553,9 @@ export class DatabaseStorage implements IStorage {
           return {
             id: `synthetic-${workItemId}`,
             workItemId: workItemId,
-            storeId: workItem?.storeId,
-            userId: workItem?.userId,
-            orderDate: workItem?.completedAt || new Date().toISOString(),
+            storeId: workItem.storeId,
+            userId: workItem.userId,
+            orderDate: workItem.completedAt || new Date().toISOString(),
             status: "pending",
             items: orderItems,
             notes: "Automatically generated from stock take data",
@@ -1538,9 +1588,28 @@ export class DatabaseStorage implements IStorage {
   async getCompetitorMerchandisingByWorkItemId(workItemId: number): Promise<any | null> {
     console.log("Getting competitor merchandising by work item ID:", workItemId);
     try {
-      // Implementation would depend on the schema definition
-      // This is a stub that should be properly implemented
-      return null;
+      // First, get the work item to find store and user IDs
+      const workItem = await db.query.workItems.findFirst({
+        where: eq(workItems.id, workItemId),
+      });
+      
+      if (!workItem) {
+        console.log(`Work item ${workItemId} not found`);
+        return null;
+      }
+      
+      console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // Find competitor merchandising data for this store and user
+      const competitorData = await db.query.competitorMerchandising.findFirst({
+        where: and(
+          eq(competitorMerchandising.storeId, workItem.storeId),
+          eq(competitorMerchandising.userId, workItem.userId)
+        )
+      });
+      
+      console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
+      return competitorData;
     } catch (error) {
       console.error("Error getting competitor merchandising by work item ID:", error);
       return null;
