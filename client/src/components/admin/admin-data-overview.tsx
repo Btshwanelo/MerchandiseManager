@@ -193,18 +193,7 @@ export function AdminDataOverview({
                                     src={getImageUrl(image)} 
                                     alt={`Shelf image ${index + 1}`} 
                                     className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      // When image fails to load, show the icon instead
-                                      target.style.display = 'none';
-                                      const parent = target.parentElement;
-                                      if (parent) {
-                                        const icon = parent.querySelector('.fallback-icon');
-                                        if (icon) {
-                                          (icon as HTMLElement).style.display = 'block';
-                                        }
-                                      }
-                                    }}
+                                    onError={handleImageError}
                                   />
                                 ) : null}
                                 <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
@@ -314,18 +303,7 @@ export function AdminDataOverview({
                                     src={getImageUrl(image)} 
                                     alt={`Promotion image ${index + 1}`} 
                                     className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      // When image fails to load, show the icon instead
-                                      target.style.display = 'none';
-                                      const parent = target.parentElement;
-                                      if (parent) {
-                                        const icon = parent.querySelector('.fallback-icon');
-                                        if (icon) {
-                                          (icon as HTMLElement).style.display = 'block';
-                                        }
-                                      }
-                                    }}
+                                    onError={handleImageError}
                                   />
                                 ) : null}
                                 <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
@@ -353,7 +331,7 @@ export function AdminDataOverview({
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <BarChart className="h-5 w-5 mr-2 text-primary" />
-                  Competitor Analysis
+                  Competitor Details
                 </CardTitle>
                 <CardDescription>
                   Competitor data submitted by merchandiser
@@ -362,7 +340,7 @@ export function AdminDataOverview({
               <CardContent>
                 {!competitorData ? (
                   <div className="text-center py-8 text-muted-foreground">
-                    <p>No competitor analysis data available for this work item.</p>
+                    <p>No competitor data available for this work item.</p>
                   </div>
                 ) : (
                   <div className="space-y-4">
@@ -372,29 +350,29 @@ export function AdminDataOverview({
                         <p>{competitorData.createdAt ? new Date(competitorData.createdAt).toLocaleString() : 'Not available'}</p>
                       </div>
                       <div>
-                        <h3 className="text-sm font-medium mb-1">Competitor Name</h3>
-                        <p>{competitorData.competitorName || 'Not specified'}</p>
+                        <h3 className="text-sm font-medium mb-1">Competitor Store</h3>
+                        <p>{competitorData.storeName || 'Not specified'}</p>
                       </div>
                     </div>
                     
                     <div>
-                      <h3 className="text-sm font-medium mb-2">Competitor Products ({competitorData.items?.length || 0})</h3>
+                      <h3 className="text-sm font-medium mb-2">Competitor Products</h3>
                       <div className="border rounded-md overflow-hidden">
                         <table className="min-w-full divide-y divide-border">
                           <thead className="bg-muted">
                             <tr>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product Name</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Brand</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Regular Price</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Promo Price</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</th>
                             </tr>
                           </thead>
                           <tbody className="bg-card divide-y divide-border">
                             {competitorData.items?.map((item: any, index: number) => (
                               <tr key={index}>
-                                <td className="px-4 py-3 text-sm">{item.productName || 'Unnamed Product'}</td>
-                                <td className="px-4 py-3 text-sm">{item.brand || 'Unknown'}</td>
+                                <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
                                 <td className="px-4 py-3 text-sm">R {item.price.toFixed(2)}</td>
+                                <td className="px-4 py-3 text-sm">{item.promotionalPrice ? `R ${item.promotionalPrice.toFixed(2)}` : 'N/A'}</td>
                                 <td className="px-4 py-3 text-sm">{item.notes || 'No notes'}</td>
                               </tr>
                             ))}
@@ -410,11 +388,11 @@ export function AdminDataOverview({
                       </div>
                     </div>
                     
-                    {competitorData.generalNotes && (
+                    {competitorData.comment && (
                       <div>
-                        <h3 className="text-sm font-medium mb-2">General Observations</h3>
+                        <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
                         <div className="border rounded-md p-4 bg-muted/30">
-                          <p>{competitorData.generalNotes}</p>
+                          <p>{competitorData.comment}</p>
                         </div>
                       </div>
                     )}
@@ -429,33 +407,19 @@ export function AdminDataOverview({
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
                               onClick={() => {
-                                const imageSrc = image.startsWith('/home/runner/workspace') 
-                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                  : image;
-                                window.open(imageSrc, '_blank');
+                                const imageSrc = getImageUrl(image);
+                                if (imageSrc) {
+                                  window.open(imageSrc, '_blank');
+                                }
                               }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image.startsWith('/home/runner/workspace') 
-                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
-                                      : image
-                                    } 
+                                    src={getImageUrl(image)} 
                                     alt={`Competitor image ${index + 1}`} 
                                     className="w-full h-full object-cover"
-                                    onError={(e) => {
-                                      const target = e.target as HTMLImageElement;
-                                      // When image fails to load, show the icon instead
-                                      target.style.display = 'none';
-                                      const parent = target.parentElement;
-                                      if (parent) {
-                                        const icon = parent.querySelector('.fallback-icon');
-                                        if (icon) {
-                                          (icon as HTMLElement).style.display = 'block';
-                                        }
-                                      }
-                                    }}
+                                    onError={handleImageError}
                                   />
                                 ) : null}
                                 <ImageIcon className="h-8 w-8 text-muted-foreground fallback-icon" style={{display: 'none'}} />
@@ -496,31 +460,21 @@ export function AdminDataOverview({
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
-                        <h3 className="text-sm font-medium mb-1">Order Date</h3>
-                        <p>{orderData.orderDate ? new Date(orderData.orderDate).toLocaleString() : 'Not available'}</p>
+                        <h3 className="text-sm font-medium mb-1">Created Date</h3>
+                        <p>{orderData.createdAt ? new Date(orderData.createdAt).toLocaleString() : 'Not available'}</p>
                       </div>
                       <div>
                         <h3 className="text-sm font-medium mb-1">Status</h3>
-                        <Badge variant={
-                          orderData.status === 'completed' 
-                            ? 'success' 
-                            : orderData.status === 'rejected' 
-                              ? 'destructive' 
-                              : 'default'
-                        }>
+                        <Badge variant={orderData.status === 'completed' ? 'success' : 'default'}>
                           {orderData.status}
                         </Badge>
-                      </div>
-                      <div>
-                        <h3 className="text-sm font-medium mb-1">Total Items</h3>
-                        <p>{orderData.items?.length || 0}</p>
                       </div>
                     </div>
                     
                     <div>
-                      <h3 className="text-sm font-medium mb-2">Ordered Items</h3>
+                      <h3 className="text-sm font-medium mb-2">Order Items</h3>
                       <div className="border rounded-md overflow-hidden">
                         <table className="min-w-full divide-y divide-border">
                           <thead className="bg-muted">
@@ -528,8 +482,7 @@ export function AdminDataOverview({
                               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">SKU</th>
                               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Quantity</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Unit Price</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Total</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</th>
                             </tr>
                           </thead>
                           <tbody className="bg-card divide-y divide-border">
@@ -538,16 +491,13 @@ export function AdminDataOverview({
                                 <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
                                 <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
                                 <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                                <td className="px-4 py-3 text-sm">R {item.product?.price ? (item.product.price / 100).toFixed(2) : '0.00'}</td>
-                                <td className="px-4 py-3 text-sm font-medium">
-                                  R {item.product?.price ? ((item.product.price * item.quantity) / 100).toFixed(2) : '0.00'}
-                                </td>
+                                <td className="px-4 py-3 text-sm">{item.notes || 'No notes'}</td>
                               </tr>
                             ))}
                             {!orderData.items?.length && (
                               <tr>
-                                <td colSpan={5} className="px-4 py-6 text-center text-muted-foreground">
-                                  No items in this order
+                                <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
+                                  No order items recorded
                                 </td>
                               </tr>
                             )}
@@ -556,11 +506,11 @@ export function AdminDataOverview({
                       </div>
                     </div>
                     
-                    {orderData.notes && (
+                    {orderData.note && (
                       <div>
-                        <h3 className="text-sm font-medium mb-2">Order Notes</h3>
+                        <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
                         <div className="border rounded-md p-4 bg-muted/30">
-                          <p>{orderData.notes}</p>
+                          <p>{orderData.note}</p>
                         </div>
                       </div>
                     )}
@@ -571,6 +521,35 @@ export function AdminDataOverview({
           </TabsContent>
         </Tabs>
       </div>
+      
+      {/* Show audit trail if available */}
+      {auditTrail && auditTrail.length > 0 && (
+        <div className="mt-8">
+          <h3 className="text-lg font-medium mb-4">Audit Trail</h3>
+          <div className="border rounded-md overflow-hidden">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted">
+                <tr>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Date</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">User</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Action</th>
+                  <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Comments</th>
+                </tr>
+              </thead>
+              <tbody className="bg-card divide-y divide-border">
+                {auditTrail.map((entry: any, index: number) => (
+                  <tr key={index}>
+                    <td className="px-4 py-3 text-sm">{new Date(entry.timestamp).toLocaleString()}</td>
+                    <td className="px-4 py-3 text-sm">{entry.user?.name || 'Unknown User'}</td>
+                    <td className="px-4 py-3 text-sm">{entry.action}</td>
+                    <td className="px-4 py-3 text-sm">{entry.comments || 'No comments'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
