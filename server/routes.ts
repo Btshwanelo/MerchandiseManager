@@ -7,7 +7,8 @@ import {
   UserRole, 
   StockLocation,
   StockTake,
-  InsertStockTakeItem
+  InsertStockTakeItem,
+  WorkItemStatus
 } from "@shared/schema";
 import { z } from "zod";
 import { 
@@ -1770,6 +1771,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: error.message });
       }
       res.status(500).json({ message: "Failed to process bulk store upload" });
+    }
+  });
+
+  // Update work item status endpoint
+  app.put("/api/work-items/:id/status", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid work item ID" });
+      }
+      
+      // Get the work item to check if it exists and verify permissions
+      const workItem = await storage.getWorkItemById(id);
+      if (!workItem) {
+        return res.status(404).json({ message: "Work item not found" });
+      }
+      
+      // Check permissions: Admin or manager can update any, merchandiser can only update their own
+      if (req.user!.role !== UserRole.ADMIN && req.user!.role !== UserRole.MANAGER && workItem.userId !== req.user!.id) {
+        return res.status(403).json({ message: "Not authorized to update this work item" });
+      }
+      
+      // Get the new status from request body
+      const { status } = req.body;
+      if (!status || !Object.values(WorkItemStatus).includes(status)) {
+        return res.status(400).json({ message: "Invalid status value" });
+      }
+      
+      console.log(`Updating work item ${id} status to ${status} by user ${req.user!.id}`);
+      
+      // Update the work item status
+      if (status === WorkItemStatus.COMPLETED) {
+        await storage.completeWorkItem(id);
+      } else {
+        await storage.updateWorkItemStatus(id, status);
+      }
+      
+      // Return the updated work item
+      const updatedWorkItem = await storage.getWorkItemById(id);
+      res.json(updatedWorkItem);
+    } catch (error) {
+      console.error("Error updating work item status:", error);
+      res.status(500).json({ message: "Server error updating work item status" });
     }
   });
 
