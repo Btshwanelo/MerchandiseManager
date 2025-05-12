@@ -1,5 +1,6 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
+import fs from "fs";
 import { storage } from "./storage";
 import { db, pool } from "./db"; // Add import for database operations
 import { setupAuth, checkRole, isAuthenticated } from "./auth";
@@ -184,16 +185,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const sanitizedFilename = path.basename(filename);
       const imagePath = path.join(process.cwd(), 'uploads', sanitizedFilename);
       
-      // Send the file or a 404 if not found
+      // Check if the file exists first
+      if (!fs.existsSync(imagePath)) {
+        console.log(`Image not found: ${imagePath}`);
+        
+        // Return a placeholder or fallback image instead of 404
+        return res.status(404).json({ 
+          error: 'Image not found',
+          message: 'The requested image could not be found on the server.'
+        });
+      }
+      
+      // Send the file
       res.sendFile(imagePath, (err) => {
         if (err) {
           console.error(`Error serving image ${sanitizedFilename}:`, err);
-          res.status(404).send('Image not found');
+          res.status(404).json({ 
+            error: 'Error serving image',
+            message: 'An error occurred while trying to serve the image.'
+          });
         }
       });
     } catch (error) {
       console.error('Error serving image:', error);
-      res.status(500).send('Error serving image');
+      res.status(500).json({ 
+        error: 'Server error',
+        message: 'An internal server error occurred.'
+      });
     }
   });
   

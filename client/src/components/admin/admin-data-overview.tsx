@@ -12,16 +12,42 @@ const getImageUrl = (imagePath: string): string => {
   if (!imagePath) return '';
   
   // Check if it's a server-side file path
-  if (imagePath.includes('/home/runner/workspace/uploads/')) {
-    // Extract just the filename
-    const filename = imagePath.split('/').pop();
+  // Handle any format of server-side path that includes the uploads directory
+  if (imagePath.includes('/uploads/') || imagePath.includes('/home/runner/workspace/')) {
+    // Extract just the filename with extension
+    const parts = imagePath.split('/');
+    const filename = parts[parts.length - 1];
     if (!filename) return '';
+    
     // Return an API endpoint URL for the image
     return `/api/images/${encodeURIComponent(filename)}`;
   }
   
   // If it's already a URL or other format, return as is
   return imagePath;
+};
+
+// Helper function to handle image loading errors
+const handleImageError = (e: React.SyntheticEvent<HTMLImageElement, Event>) => {
+  const target = e.target as HTMLImageElement;
+  // When image fails to load, show the icon instead
+  target.style.display = 'none';
+  const parent = target.parentElement;
+  if (parent) {
+    const icon = parent.querySelector('.fallback-icon');
+    if (icon) {
+      (icon as HTMLElement).style.display = 'block';
+    }
+    
+    // Add a message indicating the image couldn't be loaded
+    // First check if a message already exists
+    if (!parent.querySelector('.error-message')) {
+      const messageElem = document.createElement('div');
+      messageElem.className = 'text-xs text-white text-center px-2 absolute bottom-8 w-full bg-black/50 error-message';
+      messageElem.innerText = 'Image unavailable';
+      parent.appendChild(messageElem);
+    }
+  }
 };
 
 // UI Components
