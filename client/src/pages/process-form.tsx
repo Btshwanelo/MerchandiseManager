@@ -129,6 +129,9 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   // Flag to indicate if we're in read-only mode (completed work item)
   const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;
   
+  // Get current authenticated user
+  const { user } = useAuth();
+  
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
@@ -678,33 +681,45 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       className="group relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
                       onClick={() => {
                         // In a real implementation, this would open a modal to preview the image
-                        if (user?.role === "admin") {
-                          window.open(image.toString(), '_blank');
+                        const imageStr = image?.toString() || "";
+                        if (user?.role === "admin" && imageStr) {
+                          window.open(imageStr, '_blank');
                         }
-                        toast({
-                          title: "Image Preview",
-                          description: "Image URL: " + image.toString(),
-                        });
+                        if (imageStr) {
+                          toast({
+                            title: "Image Preview",
+                            description: "Image URL: " + imageStr,
+                          });
+                        }
                       }}
                     >
                       <div className="w-full h-full bg-muted flex items-center justify-center">
-                        {image.toString().includes('.jpg') || image.toString().includes('.png') || image.toString().includes('.jpeg') ? (
-                          <div className="relative w-full h-full">
-                            <span className="absolute inset-0 bg-gray-200 animate-pulse"></span>
-                            <div className="absolute inset-0 flex items-center justify-center">
-                              <ImageIcon className="h-8 w-8 text-muted-foreground" />
-                            </div>
-                          </div>
+                        {image && (typeof image.toString === 'function') ? (
+                          (() => {
+                            const imageStr = image.toString();
+                            return imageStr.includes('.jpg') || imageStr.includes('.png') || imageStr.includes('.jpeg') ? (
+                              <div className="relative w-full h-full">
+                                <span className="absolute inset-0 bg-gray-200 animate-pulse"></span>
+                                <div className="absolute inset-0 flex items-center justify-center">
+                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                                </div>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-center px-2 text-muted-foreground">
+                                {imageStr}
+                              </span>
+                            );
+                          })()
                         ) : (
                           <span className="text-sm text-center px-2 text-muted-foreground">
-                            {image}
+                            Image data unavailable
                           </span>
                         )}
                       </div>
                       <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
                         Image {index + 1}
                       </div>
-                      {user?.role === "admin" && (
+                      {user?.role === "admin" && image && (
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
                           <Button 
                             size="icon" 
@@ -712,7 +727,9 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             className="h-7 w-7 rounded-full bg-white shadow-md"
                             onClick={(e) => {
                               e.stopPropagation(); 
-                              window.open(image.toString(), '_blank');
+                              if (image && typeof image.toString === 'function') {
+                                window.open(image.toString(), '_blank');
+                              }
                             }}
                           >
                             <Maximize2 className="h-4 w-4" />
