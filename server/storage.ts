@@ -1284,15 +1284,19 @@ export class MemStorage implements IStorage {
     productDescription: string;
     promoType?: string;
     promoDetails?: string;
-    price?: number;
+    price?: number; // Map from promotionalPrice in client
     pictureUrl?: string;
     date: Date;
   }): Promise<any> {
+    console.log("Creating competitor merchandising with data:", data);
     const id = this.currentCompetitorId++;
     
+    // Ensure we handle both the old and new properties correctly
     const competitorData = {
       id,
       ...data,
+      // Store as promotionalPrice for backward compatibility with existing code
+      promotionalPrice: data.price, 
       createdAt: new Date()
     };
     

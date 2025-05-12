@@ -1624,7 +1624,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
         workItemId,
         brand,
         productDescription,
-        price: promotionalPrice || undefined,
+        promotionalPrice, // Send as promotionalPrice - server will map it to price
         date: new Date()
       };
       
@@ -1633,6 +1633,8 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
         // @ts-ignore
         competitorData.pictureUrl = pictures.join(',');
       }
+      
+      console.log("Submitting competitor data:", competitorData);
       
       const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
       const result = await response.json();

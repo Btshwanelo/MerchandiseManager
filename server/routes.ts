@@ -310,27 +310,45 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Competitor Merchandising Information
   app.post("/api/competitor-merchandising", isAuthenticated, async (req, res) => {
     try {
+      console.log("Received competitor data:", req.body);
+      
       const competitorSchema = z.object({
         storeId: z.number(),
         workItemId: z.number(),
         brand: z.string(),
         productDescription: z.string(),
+        // Support both price and promotionalPrice
+        price: z.number().optional(),
+        promotionalPrice: z.number().optional(),
         promoType: z.string().optional(),
         promoDetails: z.string().optional(),
-        price: z.number().optional(),
         pictureUrl: z.string().optional(),
+        date: z.date().optional(),
       });
       
       const validatedData = competitorSchema.parse(req.body);
-      const result = await storage.createCompetitorMerchandising({
+      
+      // Map promotionalPrice to price if it exists
+      const mappedData = {
         ...validatedData,
+        price: validatedData.promotionalPrice || validatedData.price,
         userId: req.user!.id,
-        date: new Date()
-      });
+        date: validatedData.date || new Date()
+      };
+      
+      // Remove promotionalPrice before sending to storage
+      if ('promotionalPrice' in mappedData) {
+        delete mappedData.promotionalPrice;
+      }
+      
+      console.log("Processed competitor data:", mappedData);
+      
+      const result = await storage.createCompetitorMerchandising(mappedData);
       
       res.status(201).json(result);
     } catch (error) {
       if (error instanceof z.ZodError) {
+        console.error("Validation error:", error.errors);
         return res.status(400).json({ message: "Invalid competitor data", errors: error.errors });
       }
       console.error("Error creating competitor data:", error);
