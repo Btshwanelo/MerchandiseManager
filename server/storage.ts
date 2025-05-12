@@ -65,6 +65,7 @@ export interface IStorage {
   createWorkItem(workItem: InsertWorkItem): Promise<WorkItem>;
   updateWorkItem(id: number, workItem: Partial<InsertWorkItem>): Promise<WorkItem | undefined>;
   completeWorkItem(id: number): Promise<WorkItem | undefined>;
+  updateWorkItemStatus(id: number, status: WorkItemStatus): Promise<WorkItem | undefined>;
   deleteWorkItem(id: number): Promise<boolean>;
   
   // Audit Trail methods
@@ -1170,13 +1171,27 @@ export class MemStorage implements IStorage {
     return updatedItem;
   }
   
+  async updateWorkItemStatus(id: number, status: WorkItemStatus): Promise<WorkItem | undefined> {
+    const item = await this.getWorkItem(id);
+    if (!item) return undefined;
+    
+    const updatedItem = { 
+      ...item, 
+      status, 
+      updatedAt: new Date() 
+    };
+    
+    this.workItems.set(id, updatedItem);
+    return updatedItem;
+  }
+
   async completeWorkItem(id: number): Promise<WorkItem | undefined> {
     const item = await this.getWorkItem(id);
     if (!item) return undefined;
     
     const completedItem = { 
       ...item, 
-      status: 'completed', 
+      status: WorkItemStatus.COMPLETED, 
       completedAt: new Date(),
       updatedAt: new Date()
     };
@@ -2132,6 +2147,24 @@ export class DatabaseStorage implements IStorage {
       .where(eq(workItems.id, id))
       .returning();
     return updatedWorkItem;
+  }
+  
+  async updateWorkItemStatus(id: number, status: WorkItemStatus): Promise<WorkItem | undefined> {
+    try {
+      const [updatedWorkItem] = await db
+        .update(workItems)
+        .set({
+          status: status,
+          updatedAt: new Date()
+        })
+        .where(eq(workItems.id, id))
+        .returning();
+        
+      return updatedWorkItem;
+    } catch (error) {
+      console.error("Error updating work item status:", error);
+      return undefined;
+    }
   }
   
   async completeWorkItem(id: number): Promise<WorkItem | undefined> {
