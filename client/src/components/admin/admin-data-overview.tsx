@@ -11,20 +11,30 @@ import {
 const getImageUrl = (imagePath: string): string => {
   if (!imagePath) return '';
   
-  // Check if it's a server-side file path
-  // Handle any format of server-side path that includes the uploads directory
-  if (imagePath.includes('/uploads/') || imagePath.includes('/home/runner/workspace/')) {
-    // Extract just the filename with extension
-    const parts = imagePath.split('/');
-    const filename = parts[parts.length - 1];
-    if (!filename) return '';
+  try {
+    // Check if it's a server-side file path
+    // Handle any format of server-side path that includes the uploads directory
+    if (imagePath.includes('/uploads/') || imagePath.includes('/home/runner/workspace/')) {
+      // Extract just the filename with extension
+      const parts = imagePath.split('/');
+      const filename = parts[parts.length - 1];
+      if (!filename) return '';
+      
+      // Return an API endpoint URL for the image
+      return `/api/images/${encodeURIComponent(filename)}`;
+    }
     
-    // Return an API endpoint URL for the image
-    return `/api/images/${encodeURIComponent(filename)}`;
+    // If it's a timestamped filename without path
+    if (/^\d+[-_].+\.(jpg|jpeg|png|gif)$/i.test(imagePath)) {
+      return `/api/images/${encodeURIComponent(imagePath)}`;
+    }
+    
+    // If it's already a URL or other format, return as is
+    return imagePath;
+  } catch (error) {
+    console.error('Error processing image path:', error, 'Path was:', imagePath);
+    return '';
   }
-  
-  // If it's already a URL or other format, return as is
-  return imagePath;
 };
 
 // Helper function to handle image loading errors

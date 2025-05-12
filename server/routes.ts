@@ -183,13 +183,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const filename = req.params.filename;
       // Sanitize the filename to prevent directory traversal attacks
       const sanitizedFilename = path.basename(filename);
-      const imagePath = path.join(process.cwd(), 'uploads', sanitizedFilename);
       
-      // Check if the file exists first
+      // Try different potential file locations
+      const uploadsDir = path.join(process.cwd(), 'uploads');
+      
+      // Check if the file exists using just the filename in the uploads directory
+      let imagePath = path.join(uploadsDir, sanitizedFilename);
+      
+      // If the file doesn't exist with the given filename
       if (!fs.existsSync(imagePath)) {
-        console.log(`Image not found: ${imagePath}`);
+        console.log(`Image not found at path: ${imagePath}`);
         
-        // Return a placeholder or fallback image instead of 404
+        // Check if the uploads directory exists and is accessible
+        if (!fs.existsSync(uploadsDir)) {
+          console.error(`Uploads directory does not exist: ${uploadsDir}`);
+          return res.status(500).json({ 
+            error: 'Directory not found',
+            message: 'The uploads directory does not exist.'
+          });
+        }
+        
+        // Try to find files with similar names
+        try {
+          const files = fs.readdirSync(uploadsDir);
+          console.log('Available files in uploads directory:', files);
+          
+          // Extract the timestamp part if it's a timestamped filename
+          const timestampMatch = sanitizedFilename.match(/^(\d+)/);
+          if (timestampMatch) {
+            const timestamp = timestampMatch[1];
+            console.log('Looking for files with timestamp:', timestamp);
+            
+            // Find files with the same timestamp prefix
+            const matchingFile = files.find(file => file.startsWith(timestamp));
+            if (matchingFile) {
+              imagePath = path.join(uploadsDir, matchingFile);
+              console.log('Found matching file by timestamp:', imagePath);
+            }
+          }
+        } catch (err) {
+          console.error('Error searching for matching files:', err);
+        }
+      }
+      
+      // If we still can't find the file
+      if (!fs.existsSync(imagePath)) {
+        console.log(`No matching image found for: ${sanitizedFilename}`);
         return res.status(404).json({ 
           error: 'Image not found',
           message: 'The requested image could not be found on the server.'
