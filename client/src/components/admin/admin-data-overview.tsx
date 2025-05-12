@@ -137,12 +137,20 @@ export function AdminDataOverview({
                             <div 
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
-                              onClick={() => window.open(image, '_blank')}
+                              onClick={() => {
+                                const imageSrc = image.startsWith('/home/runner/workspace') 
+                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                  : image;
+                                window.open(imageSrc, '_blank');
+                              }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image} 
+                                    src={image.startsWith('/home/runner/workspace') 
+                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                      : image
+                                    } 
                                     alt={`Shelf image ${index + 1}`} 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -253,12 +261,20 @@ export function AdminDataOverview({
                             <div 
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
-                              onClick={() => window.open(image, '_blank')}
+                              onClick={() => {
+                                const imageSrc = image.startsWith('/home/runner/workspace') 
+                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                  : image;
+                                window.open(imageSrc, '_blank');
+                              }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image} 
+                                    src={image.startsWith('/home/runner/workspace') 
+                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                      : image
+                                    } 
                                     alt={`Promotion image ${index + 1}`} 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
@@ -375,12 +391,20 @@ export function AdminDataOverview({
                             <div 
                               key={index} 
                               className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow"
-                              onClick={() => window.open(image, '_blank')}
+                              onClick={() => {
+                                const imageSrc = image.startsWith('/home/runner/workspace') 
+                                  ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                  : image;
+                                window.open(imageSrc, '_blank');
+                              }}
                             >
                               <div className="w-full h-full bg-muted/50 flex items-center justify-center">
                                 {image ? (
                                   <img 
-                                    src={image} 
+                                    src={image.startsWith('/home/runner/workspace') 
+                                      ? `/api/images/${encodeURIComponent(image.split('/').pop() || '')}`
+                                      : image
+                                    } 
                                     alt={`Competitor image ${index + 1}`} 
                                     className="w-full h-full object-cover"
                                     onError={(e) => {
