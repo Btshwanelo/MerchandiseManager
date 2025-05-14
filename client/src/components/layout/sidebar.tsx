@@ -233,126 +233,20 @@ export const Sidebar = ({ className }: SidebarProps) => {
       {/* Navigation menu */}
       <ScrollArea className="flex-1 py-4">
         <nav>
-          {/* Core Section */}
           {userRole && (
             <>
-              {/* Filter core menu items by role first to check if section should display */}
-              {navigationItems.filter(item => 
-                item.section === "core" && 
-                (!item.roles || item.roles.includes(userRole))
-              ).length > 0 && (
-                <div className="mb-4">
-                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                    Main
-                  </h3>
-                  <ul className="space-y-1 px-2">
-                    {navigationItems
-                      .filter(item => item.section === "core")
-                      .map((item) => {
-                        // Hide items that are restricted by role
-                        if (item.roles && !item.roles.includes(userRole)) {
-                          return null;
-                        }
-
-                        const isActive = location === item.href;
-
-                        return (
-                          <li key={item.href}>
-                            <Link href={item.href}>
-                              <a
-                                className={cn(
-                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                                    : "text-foreground hover:bg-neutral-100"
-                                )}
-                              >
-                                {item.icon}
-                                <span className="ml-3">{item.label}</span>
-                                {item.label === "Alerts" && (
-                                  <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
-                                    5
-                                  </span>
-                                )}
-                              </a>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              )}
-
-              {/* My Assignments for merchandisers - always visible */}
-              {userRole === UserRole.MERCHANDISER && (
-                <div className="mb-4">
-                  <ul className="space-y-1 px-2">
-                    {navigationItems
-                      .filter(item => item.href === "/my-assignments" && item.roles?.includes(UserRole.MERCHANDISER))
-                      .map((item) => {
-                        const isActive = location === item.href;
-
-                        return (
-                          <li key={item.href}>
-                            <Link href={item.href}>
-                              <a
-                                className={cn(
-                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                                    : "text-foreground hover:bg-neutral-100"
-                                )}
-                              >
-                                {item.icon}
-                                <span className="ml-3">{item.label}</span>
-                              </a>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              )}
-
-              {/* Merchandising Section - Collapsible for merchandisers */}
-              {navigationItems.filter(item => 
-                item.section === "merchandising" && 
-                (!item.roles || item.roles.includes(userRole))
-              ).length > 0 && (
-                <div className="mb-4">
-                  {/* Merchandising Header - Clickable for merchandisers */}
-                  <div 
-                    className={cn(
-                      "px-4 py-1 flex items-center justify-between",
-                      userRole === UserRole.MERCHANDISER ? "cursor-pointer" : ""
-                    )}
-                    onClick={userRole === UserRole.MERCHANDISER ? toggleMerchandisingMenu : undefined}
-                  >
-                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                      Merchandising
+              {/* For Merchandiser Role: Special Navigation Layout */}
+              {userRole === UserRole.MERCHANDISER ? (
+                <>
+                  {/* My Assignments - Always visible at the top */}
+                  <div className="mb-4">
+                    <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                      Main
                     </h3>
-                    {userRole === UserRole.MERCHANDISER && (
-                      merchandisingMenuOpen ? 
-                        <ChevronDown className="h-4 w-4 text-muted-foreground" /> : 
-                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
-                    )}
-                  </div>
-                  
-                  {/* Show all items for admin/manager, but only when expanded for merchandisers */}
-                  {(userRole !== UserRole.MERCHANDISER || merchandisingMenuOpen) && (
                     <ul className="space-y-1 px-2">
                       {navigationItems
-                        .filter(item => 
-                          item.section === "merchandising" && 
-                          // For merchandisers, exclude the "My Assignments" item as it's shown separately
-                          !(userRole === UserRole.MERCHANDISER && item.href === "/my-assignments")
-                        )
+                        .filter(item => item.href === "/my-assignments" && item.roles?.includes(UserRole.MERCHANDISER))
                         .map((item) => {
-                          // Hide items that are restricted by role
-                          if (item.roles && !item.roles.includes(userRole)) {
-                            return null;
-                          }
-
                           const isActive = location === item.href;
 
                           return (
@@ -374,97 +268,279 @@ export const Sidebar = ({ className }: SidebarProps) => {
                           );
                         })}
                     </ul>
+                  </div>
+
+                  {/* Merchandising Section - Collapsible */}
+                  <div className="mb-4">
+                    <div 
+                      className="px-4 py-1 flex items-center justify-between cursor-pointer"
+                      onClick={toggleMerchandisingMenu}
+                    >
+                      <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                        Merchandising
+                      </h3>
+                      {merchandisingMenuOpen ? 
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" /> : 
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                      }
+                    </div>
+                    
+                    {/* Merchandising Items - Only visible when expanded */}
+                    {merchandisingMenuOpen && (
+                      <ul className="space-y-1 px-2 mt-1">
+                        {navigationItems
+                          .filter(item => 
+                            // All merchandising items except My Assignments
+                            item.section === "merchandising" && 
+                            item.href !== "/my-assignments" &&
+                            (!item.roles || item.roles.includes(userRole))
+                          )
+                          .map((item) => {
+                            const isActive = location === item.href;
+
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    )}
+                  </div>
+
+                  {/* Documents Section */}
+                  {navigationItems.filter(item => 
+                    item.section === "documents" && 
+                    (!item.roles || item.roles.includes(userRole))
+                  ).length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Documents
+                      </h3>
+                      <ul className="space-y-1 px-2">
+                        {navigationItems
+                          .filter(item => 
+                            item.section === "documents" &&
+                            (!item.roles || item.roles.includes(userRole))
+                          )
+                          .map((item) => {
+                            const isActive = location === item.href;
+
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
                   )}
-                </div>
-              )}
+                </>
+              ) : (
+                // For Admin and Manager Roles: Regular Navigation Layout
+                <>
+                  {/* Core Section */}
+                  {navigationItems.filter(item => 
+                    item.section === "core" && 
+                    (!item.roles || item.roles.includes(userRole))
+                  ).length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Main
+                      </h3>
+                      <ul className="space-y-1 px-2">
+                        {navigationItems
+                          .filter(item => item.section === "core")
+                          .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
 
-              {/* Documents Section */}
-              {navigationItems.filter(item => 
-                item.section === "documents" && 
-                (!item.roles || item.roles.includes(userRole))
-              ).length > 0 && (
-                <div className="mb-4">
-                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                    Documents
-                  </h3>
-                  <ul className="space-y-1 px-2">
-                    {navigationItems
-                      .filter(item => item.section === "documents")
-                      .map((item) => {
-                        // Hide items that are restricted by role
-                        if (item.roles && !item.roles.includes(userRole)) {
-                          return null;
-                        }
+                            const isActive = location === item.href;
 
-                        const isActive = location === item.href;
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                    {item.label === "Alerts" && (
+                                      <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                                        5
+                                      </span>
+                                    )}
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
+                  )}
 
-                        return (
-                          <li key={item.href}>
-                            <Link href={item.href}>
-                              <a
-                                className={cn(
-                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                                    : "text-foreground hover:bg-neutral-100"
-                                )}
-                              >
-                                {item.icon}
-                                <span className="ml-3">{item.label}</span>
-                              </a>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
-              )}
+                  {/* Merchandising Section */}
+                  {navigationItems.filter(item => 
+                    item.section === "merchandising" && 
+                    (!item.roles || item.roles.includes(userRole))
+                  ).length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Merchandising
+                      </h3>
+                      <ul className="space-y-1 px-2">
+                        {navigationItems
+                          .filter(item => item.section === "merchandising")
+                          .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
 
-              {/* Admin Section */}
-              {navigationItems.filter(item => 
-                item.section === "admin" && 
-                (!item.roles || item.roles.includes(userRole))
-              ).length > 0 && (
-                <div>
-                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                    Administration
-                  </h3>
-                  <ul className="space-y-1 px-2">
-                    {navigationItems
-                      .filter(item => item.section === "admin")
-                      .map((item) => {
-                        // Hide items that are restricted by role
-                        if (item.roles && !item.roles.includes(userRole)) {
-                          return null;
-                        }
+                            const isActive = location === item.href;
 
-                        const isActive = location === item.href;
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
+                  )}
 
-                        return (
-                          <li key={item.href}>
-                            <Link href={item.href}>
-                              <a
-                                className={cn(
-                                  "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
-                                  isActive
-                                    ? "bg-primary-foreground text-primary border-l-4 border-primary"
-                                    : "text-foreground hover:bg-neutral-100"
-                                )}
-                              >
-                                {item.icon}
-                                <span className="ml-3">{item.label}</span>
-                                {item.label === "Alerts" && (
-                                  <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
-                                    5
-                                  </span>
-                                )}
-                              </a>
-                            </Link>
-                          </li>
-                        );
-                      })}
-                  </ul>
-                </div>
+                  {/* Documents Section */}
+                  {navigationItems.filter(item => 
+                    item.section === "documents" && 
+                    (!item.roles || item.roles.includes(userRole))
+                  ).length > 0 && (
+                    <div className="mb-4">
+                      <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Documents
+                      </h3>
+                      <ul className="space-y-1 px-2">
+                        {navigationItems
+                          .filter(item => item.section === "documents")
+                          .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
+
+                            const isActive = location === item.href;
+
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
+                  )}
+
+                  {/* Admin Section */}
+                  {navigationItems.filter(item => 
+                    item.section === "admin" && 
+                    (!item.roles || item.roles.includes(userRole))
+                  ).length > 0 && (
+                    <div>
+                      <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
+                        Administration
+                      </h3>
+                      <ul className="space-y-1 px-2">
+                        {navigationItems
+                          .filter(item => item.section === "admin")
+                          .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
+
+                            const isActive = location === item.href;
+
+                            return (
+                              <li key={item.href}>
+                                <Link href={item.href}>
+                                  <a
+                                    className={cn(
+                                      "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                      isActive
+                                        ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                        : "text-foreground hover:bg-neutral-100"
+                                    )}
+                                  >
+                                    {item.icon}
+                                    <span className="ml-3">{item.label}</span>
+                                    {item.label === "Alerts" && (
+                                      <span className="ml-auto bg-destructive text-white text-xs px-2 py-1 rounded-full">
+                                        5
+                                      </span>
+                                    )}
+                                  </a>
+                                </Link>
+                              </li>
+                            );
+                          })}
+                      </ul>
+                    </div>
+                  )}
+                </>
               )}
             </>
           )}
