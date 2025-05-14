@@ -1426,13 +1426,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const storeId = parseInt(req.body.storeId);
       const comment = req.body.comment || '';
       const itemsJson = req.body.items;
+      const workItemId = req.body.workItemId ? parseInt(req.body.workItemId) : null;
       
       // Detailed validation logging
       console.log("Validating required fields:", { 
         storeId, 
         validStoreId: !isNaN(storeId),
         hasItemsJson: !!itemsJson,
-        itemsJsonType: typeof itemsJson
+        itemsJsonType: typeof itemsJson,
+        workItemId
       });
       
       if (!storeId || isNaN(storeId)) {
@@ -1461,14 +1463,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get file paths if any were uploaded
       const files = (req.files as Express.Multer.File[]) || [];
-      const filePaths = files.map(file => file.path);
+      const uploadedPictures = files.map(file => file.path);
+      
+      // Handle previously uploaded pictures if they were passed in the request
+      let allPictures = [...uploadedPictures];
+      if (req.body.pictures) {
+        let existingPictures = [];
+        try {
+          // Try to parse as JSON if it's a string array
+          existingPictures = JSON.parse(req.body.pictures);
+        } catch (e) {
+          // If not JSON, treat as a single string
+          existingPictures = [req.body.pictures];
+        }
+        
+        // Only add non-empty strings
+        if (Array.isArray(existingPictures)) {
+          existingPictures.forEach(pic => {
+            if (pic && typeof pic === 'string' && pic.trim() !== '') {
+              allPictures.push(pic);
+            }
+          });
+        }
+      }
+      
+      console.log("Pictures to save:", {
+        uploaded: uploadedPictures,
+        existing: req.body.pictures ? typeof req.body.pictures === 'string' ? [req.body.pictures] : req.body.pictures : [],
+        final: allPictures
+      });
       
       // Create the stock take record in the database
       const stockTake = await storage.createStockTake({
         storeId,
         userId: req.user!.id,
         comment,
-        pictures: filePaths,
+        pictures: allPictures,
         status: 'completed'
       });
       
