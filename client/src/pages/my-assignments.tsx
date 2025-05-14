@@ -350,21 +350,6 @@ const MyAssignmentsPage = () => {
         </div>
       </div>
       
-      {/* Mobile My Details dropdown */}
-      <div className="block md:hidden mb-4">
-        <Card>
-          <CardContent className="p-0">
-            <Button
-              variant="ghost"
-              className="w-full flex items-center justify-between p-4"
-            >
-              <span className="font-medium">My details</span>
-              <ChevronRight className="h-4 w-4" />
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-      
       <Card className="mb-8">
         <CardContent className="p-0 md:p-6">
           <div className="flex items-center justify-between p-4 md:p-0 md:pb-4">
