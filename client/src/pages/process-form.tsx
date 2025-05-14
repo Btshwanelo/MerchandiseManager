@@ -401,14 +401,47 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const handleShelfImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
-      // Create a new copy of the shelf images array
-      const newShelfImages = [...shelfImages];
-      // Store the file name (in a real app, this would be the file URL after upload)
-      newShelfImages[index] = files[0].name;
-      setShelfImages(newShelfImages);
+      const file = files[0];
       
-      // Also add to the pictures array for backward compatibility
-      setPictures(prev => [...prev, files[0].name]);
+      // Create FormData for the image upload
+      const formData = new FormData();
+      formData.append('file', file);
+      
+      // Upload the file first
+      fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      })
+      .then(response => response.json())
+      .then(data => {
+        if (data.filePath) {
+          // Create a new copy of the shelf images array
+          const newShelfImages = [...shelfImages];
+          // Store the full file path returned from the server
+          newShelfImages[index] = data.filePath;
+          setShelfImages(newShelfImages);
+          
+          // Also add to the pictures array for backward compatibility
+          setPictures(prev => [...prev, data.filePath]);
+          
+          console.log(`Image uploaded successfully at index ${index}:`, data.filePath);
+        } else {
+          console.error('Upload failed:', data.error || 'Unknown error');
+          toast({
+            title: "Image upload failed",
+            description: data.error || "Failed to upload image",
+            variant: "destructive"
+          });
+        }
+      })
+      .catch(error => {
+        console.error('Upload error:', error);
+        toast({
+          title: "Image upload failed",
+          description: "An error occurred while uploading the image",
+          variant: "destructive"
+        });
+      });
     }
   };
   
