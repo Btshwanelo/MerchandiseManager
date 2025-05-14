@@ -232,11 +232,16 @@ const MyAssignmentsPage = () => {
       return;
     }
     
-    // Direct all work items to the process form with validated parameters
-    navigate(`/process-form?workItemId=${workItemId}&storeId=${storeId}`);
-    
-    // Log the navigation for debugging
-    console.log(`Navigating to process form with workItemId=${workItemId}, storeId=${storeId}`);
+    // Check if the work item is completed
+    if (workItem.status === WorkItemStatus.COMPLETED) {
+      // Navigate to the summary page for completed work items
+      navigate(`/work-item-summary/${workItemId}`);
+      console.log(`Navigating to work item summary for completed item ${workItemId}`);
+    } else {
+      // Direct active work items to the process form with validated parameters
+      navigate(`/process-form?workItemId=${workItemId}&storeId=${storeId}`);
+      console.log(`Navigating to process form with workItemId=${workItemId}, storeId=${storeId}`);
+    }
   };
   
   const filterWorkItems = (items: WorkItemWithRelations[] | undefined, status: string, search: string) => {
@@ -747,7 +752,7 @@ const MyAssignmentsPage = () => {
                             <Button
                               variant="secondary"
                               size="sm"
-                              onClick={() => handleWorkItemClick(item)}
+                              onClick={() => navigate(`/work-item-summary/${item.id}`)}
                               className="flex items-center bg-green-50 text-green-700 hover:bg-green-100"
                             >
                               <Eye className="mr-1 h-4 w-4" />
