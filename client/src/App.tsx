@@ -42,6 +42,7 @@ import MyAssignments from "@/pages/my-assignments";
 import ProcessForm from "@/pages/process-form";
 import WorkItems from "@/pages/work-items";
 import WorkItemDetail from "@/pages/work-item-detail";
+import WorkItemSummaryPage from "@/pages/work-item-summary-page";
 
 // Redirector component for different user roles
 function RoleBasedRedirect() {
@@ -315,6 +316,16 @@ function Router() {
         component={() => (
           <Layout>
             <WorkItemDetail />
+          </Layout>
+        )} 
+      />
+      
+      <ProtectedRoute 
+        path="/work-item-summary/:id" 
+        roles={[UserRole.ADMIN, UserRole.MANAGER, UserRole.MERCHANDISER]}
+        component={() => (
+          <Layout>
+            <WorkItemSummaryPage />
           </Layout>
         )} 
       />
