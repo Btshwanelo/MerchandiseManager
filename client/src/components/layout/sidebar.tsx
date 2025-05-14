@@ -20,10 +20,13 @@ import {
   Laptop,
   Activity,
   ClipboardList,
-  Calendar
+  Calendar,
+  ChevronDown,
+  ChevronRight
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { useState } from "react";
 
 type NavItem = {
   href: string;
@@ -191,9 +194,14 @@ interface SidebarProps {
 export const Sidebar = ({ className }: SidebarProps) => {
   const [location] = useLocation();
   const { user, logoutMutation } = useAuth();
+  const [merchandisingMenuOpen, setMerchandisingMenuOpen] = useState(false);
 
   const handleLogout = () => {
     logoutMutation.mutate();
+  };
+
+  const toggleMerchandisingMenu = () => {
+    setMerchandisingMenuOpen(!merchandisingMenuOpen);
   };
 
   const userRole = user?.role as UserRole;
@@ -275,24 +283,13 @@ export const Sidebar = ({ className }: SidebarProps) => {
                 </div>
               )}
 
-              {/* Merchandising Section */}
-              {navigationItems.filter(item => 
-                item.section === "merchandising" && 
-                (!item.roles || item.roles.includes(userRole))
-              ).length > 0 && (
+              {/* My Assignments for merchandisers - always visible */}
+              {userRole === UserRole.MERCHANDISER && (
                 <div className="mb-4">
-                  <h3 className="px-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider mb-1">
-                    Merchandising
-                  </h3>
                   <ul className="space-y-1 px-2">
                     {navigationItems
-                      .filter(item => item.section === "merchandising")
+                      .filter(item => item.href === "/my-assignments" && item.roles?.includes(UserRole.MERCHANDISER))
                       .map((item) => {
-                        // Hide items that are restricted by role
-                        if (item.roles && !item.roles.includes(userRole)) {
-                          return null;
-                        }
-
                         const isActive = location === item.href;
 
                         return (
@@ -314,6 +311,70 @@ export const Sidebar = ({ className }: SidebarProps) => {
                         );
                       })}
                   </ul>
+                </div>
+              )}
+
+              {/* Merchandising Section - Collapsible for merchandisers */}
+              {navigationItems.filter(item => 
+                item.section === "merchandising" && 
+                (!item.roles || item.roles.includes(userRole))
+              ).length > 0 && (
+                <div className="mb-4">
+                  {/* Merchandising Header - Clickable for merchandisers */}
+                  <div 
+                    className={cn(
+                      "px-4 py-1 flex items-center justify-between",
+                      userRole === UserRole.MERCHANDISER ? "cursor-pointer" : ""
+                    )}
+                    onClick={userRole === UserRole.MERCHANDISER ? toggleMerchandisingMenu : undefined}
+                  >
+                    <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
+                      Merchandising
+                    </h3>
+                    {userRole === UserRole.MERCHANDISER && (
+                      merchandisingMenuOpen ? 
+                        <ChevronDown className="h-4 w-4 text-muted-foreground" /> : 
+                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  {/* Show all items for admin/manager, but only when expanded for merchandisers */}
+                  {(userRole !== UserRole.MERCHANDISER || merchandisingMenuOpen) && (
+                    <ul className="space-y-1 px-2">
+                      {navigationItems
+                        .filter(item => 
+                          item.section === "merchandising" && 
+                          // For merchandisers, exclude the "My Assignments" item as it's shown separately
+                          !(userRole === UserRole.MERCHANDISER && item.href === "/my-assignments")
+                        )
+                        .map((item) => {
+                          // Hide items that are restricted by role
+                          if (item.roles && !item.roles.includes(userRole)) {
+                            return null;
+                          }
+
+                          const isActive = location === item.href;
+
+                          return (
+                            <li key={item.href}>
+                              <Link href={item.href}>
+                                <a
+                                  className={cn(
+                                    "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
+                                    isActive
+                                      ? "bg-primary-foreground text-primary border-l-4 border-primary"
+                                      : "text-foreground hover:bg-neutral-100"
+                                  )}
+                                >
+                                  {item.icon}
+                                  <span className="ml-3">{item.label}</span>
+                                </a>
+                              </Link>
+                            </li>
+                          );
+                        })}
+                    </ul>
+                  )}
                 </div>
               )}
 
