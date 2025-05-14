@@ -541,16 +541,32 @@ const WorkItemSummary = ({
                     }
                     
                     // Filter out duplicates, empty strings and null/undefined
-                    picturesToRender = [...new Set(picturesToRender)].filter(Boolean);
+                    picturesToRender = picturesToRender.filter(Boolean)
+                      .filter((value, index, self) => self.indexOf(value) === index);
+                    
+                    // Debug
+                    console.log("Competitor photos to render:", picturesToRender);
                     
                     return picturesToRender.length > 0 ? (
                       picturesToRender.map((pic: string, index: number) => {
                         // Clean up path - handle different path formats
-                        const imgPath = pic.startsWith('http') 
-                          ? pic 
-                          : pic.includes('uploads/') 
-                            ? `/api/${pic}` 
-                            : `/api/uploads/${pic.replace(/^uploads[\/\\]/, '')}`;
+                        let imgPath = '';
+                        
+                        if (pic.startsWith('http')) {
+                          // Full URL
+                          imgPath = pic;
+                        } else if (pic.startsWith('/')) {
+                          // Root-relative path
+                          imgPath = pic;
+                        } else if (pic.includes('uploads/')) {
+                          // Path with uploads dir but no leading slash
+                          imgPath = `/${pic}`;
+                        } else {
+                          // Just a filename
+                          imgPath = `/uploads/${pic}`; 
+                        }
+                            
+                        console.log(`Image ${index} path:`, { original: pic, processed: imgPath });
                             
                         return (
                           <div key={index} className="border rounded-md overflow-hidden">
@@ -561,7 +577,7 @@ const WorkItemSummary = ({
                               onError={(e) => {
                                 console.log(`Image load error for competitor photo: ${imgPath}`);
                                 const target = e.target as HTMLImageElement;
-                                target.src = "/images/placeholder.png";
+                                target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
                               }}
                             />
                           </div>
