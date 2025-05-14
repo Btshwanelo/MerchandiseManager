@@ -1453,12 +1453,12 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Fetching stock take data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Find stock takes for this store and user that are completed
-      const stockTake = await db.query.stockTakes.findFirst({
+      // First try to find stock takes directly associated with this work item if available
+      // This looks for stock takes that might have saved the workItemId
+      const stockTakesWithWorkItemId = await db.query.stockTakes.findMany({
         where: and(
           eq(stockTakes.storeId, workItem.storeId),
-          eq(stockTakes.userId, workItem.userId),
-          eq(stockTakes.status, 'completed')
+          eq(stockTakes.userId, workItem.userId)
         ),
         with: {
           items: {
@@ -1469,8 +1469,44 @@ export class DatabaseStorage implements IStorage {
         }
       });
       
-      console.log(`Found stock take ${stockTake?.id} for work item ${workItemId}`);
-      return stockTake;
+      // Log all found stock takes for debugging
+      console.log(`Found ${stockTakesWithWorkItemId.length} potential stock takes for work item ${workItemId}`);
+      
+      // Try to match by completion date vs. work item completion date first
+      if (workItem.completedAt) {
+        const completionDate = new Date(workItem.completedAt);
+        // Look for stock takes submitted around the same time as the work item completion
+        // (within 10 minutes before or after)
+        const matchingStockTake = stockTakesWithWorkItemId.find(st => {
+          if (!st.createdAt) return false;
+          const stDate = new Date(st.createdAt);
+          const diffMs = Math.abs(stDate.getTime() - completionDate.getTime());
+          const diffMinutes = diffMs / (1000 * 60);
+          return diffMinutes < 10; // Within 10 minutes
+        });
+        
+        if (matchingStockTake) {
+          console.log(`Found matching stock take ${matchingStockTake.id} by completion time`);
+          return matchingStockTake;
+        }
+      }
+      
+      // If no match by completion time, get the most recent completed stock take
+      const completedStockTakes = stockTakesWithWorkItemId
+        .filter(st => st.status === 'completed' || st.status === 'submitted')
+        .sort((a, b) => {
+          const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+          const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+          return dateB - dateA; // Sort in descending order (newest first)
+        });
+      
+      if (completedStockTakes.length > 0) {
+        console.log(`Found most recent stock take ${completedStockTakes[0].id} for work item ${workItemId}`);
+        return completedStockTakes[0];
+      }
+      
+      console.log(`No suitable stock take found for work item ${workItemId}`);
+      return null;
     } catch (error) {
       console.error("Error getting stock take by work item ID:", error);
       return null;

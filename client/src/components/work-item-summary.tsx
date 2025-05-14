@@ -212,24 +212,61 @@ const WorkItemSummary = ({
             )}
             
             {/* Stock Take Photos */}
-            {stockTake.pictures && stockTake.pictures.length > 0 && (
+            {stockTake.pictures && (
               <>
                 <Separator className="my-4" />
                 <h3 className="font-medium text-sm mb-2">Photos</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {stockTake.pictures.map((pic: string, index: number) => (
-                    <div key={index} className="border rounded-md overflow-hidden">
-                      <img 
-                        src={pic.startsWith('http') ? pic : `/api/uploads/${pic}`} 
-                        alt={`Stock Take Photo ${index + 1}`}
-                        className="w-full h-32 object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/images/placeholder.png";
-                        }}
-                      />
-                    </div>
-                  ))}
+                  {(() => {
+                    // Handle different possible picture formats
+                    let picturesToRender: string[] = [];
+                    
+                    if (typeof stockTake.pictures === 'string') {
+                      // Try to parse if it's a JSON string
+                      try {
+                        const parsed = JSON.parse(stockTake.pictures);
+                        picturesToRender = Array.isArray(parsed) ? parsed : [stockTake.pictures];
+                      } catch (e) {
+                        // If parsing fails, assume it's a single path
+                        picturesToRender = [stockTake.pictures];
+                      }
+                    } else if (Array.isArray(stockTake.pictures)) {
+                      picturesToRender = stockTake.pictures;
+                    }
+                    
+                    // Filter out falsy values and empty strings
+                    picturesToRender = picturesToRender.filter(Boolean);
+                    
+                    return picturesToRender.length > 0 ? (
+                      picturesToRender.map((pic: string, index: number) => {
+                        // Clean up path - handle different path formats
+                        const imgPath = pic.startsWith('http') 
+                          ? pic 
+                          : pic.includes('uploads/') 
+                            ? `/api/${pic}` 
+                            : `/api/uploads/${pic.replace(/^uploads[\/\\]/, '')}`;
+                            
+                        return (
+                          <div key={index} className="border rounded-md overflow-hidden">
+                            <img 
+                              src={imgPath} 
+                              alt={`Stock Take Photo ${index + 1}`}
+                              className="w-full h-32 object-cover"
+                              onError={(e) => {
+                                console.log(`Image load error for path: ${imgPath}`);
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/images/placeholder.png";
+                              }}
+                            />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full text-sm text-muted-foreground italic">
+                        No photos available
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
@@ -431,19 +468,72 @@ const WorkItemSummary = ({
                 <Separator className="my-4" />
                 <h3 className="font-medium text-sm mb-2">Photos</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                  {(competitorMerchandising.pictures || competitorMerchandising.promotionPictures || []).map((pic: string, index: number) => (
-                    <div key={index} className="border rounded-md overflow-hidden">
-                      <img 
-                        src={pic.startsWith('http') ? pic : `/api/uploads/${pic}`} 
-                        alt={`Competitor Photo ${index + 1}`}
-                        className="w-full h-32 object-cover"
-                        onError={(e) => {
-                          const target = e.target as HTMLImageElement;
-                          target.src = "/images/placeholder.png";
-                        }}
-                      />
-                    </div>
-                  ))}
+                  {(() => {
+                    // Handle different possible picture formats
+                    let picturesToRender: string[] = [];
+                    
+                    // Combine pictures and promotionPictures
+                    if (competitorMerchandising.pictures) {
+                      const pics = competitorMerchandising.pictures;
+                      if (typeof pics === 'string') {
+                        try {
+                          const parsed = JSON.parse(pics);
+                          picturesToRender = picturesToRender.concat(Array.isArray(parsed) ? parsed : [pics]);
+                        } catch (e) {
+                          picturesToRender.push(pics);
+                        }
+                      } else if (Array.isArray(pics)) {
+                        picturesToRender = picturesToRender.concat(pics);
+                      }
+                    }
+                    
+                    if (competitorMerchandising.promotionPictures) {
+                      const promosPics = competitorMerchandising.promotionPictures;
+                      if (typeof promosPics === 'string') {
+                        try {
+                          const parsed = JSON.parse(promosPics);
+                          picturesToRender = picturesToRender.concat(Array.isArray(parsed) ? parsed : [promosPics]);
+                        } catch (e) {
+                          picturesToRender.push(promosPics);
+                        }
+                      } else if (Array.isArray(promosPics)) {
+                        picturesToRender = picturesToRender.concat(promosPics);
+                      }
+                    }
+                    
+                    // Filter out duplicates, empty strings and null/undefined
+                    picturesToRender = [...new Set(picturesToRender)].filter(Boolean);
+                    
+                    return picturesToRender.length > 0 ? (
+                      picturesToRender.map((pic: string, index: number) => {
+                        // Clean up path - handle different path formats
+                        const imgPath = pic.startsWith('http') 
+                          ? pic 
+                          : pic.includes('uploads/') 
+                            ? `/api/${pic}` 
+                            : `/api/uploads/${pic.replace(/^uploads[\/\\]/, '')}`;
+                            
+                        return (
+                          <div key={index} className="border rounded-md overflow-hidden">
+                            <img 
+                              src={imgPath} 
+                              alt={`Competitor Photo ${index + 1}`}
+                              className="w-full h-32 object-cover"
+                              onError={(e) => {
+                                console.log(`Image load error for competitor photo: ${imgPath}`);
+                                const target = e.target as HTMLImageElement;
+                                target.src = "/images/placeholder.png";
+                              }}
+                            />
+                          </div>
+                        );
+                      })
+                    ) : (
+                      <div className="col-span-full text-sm text-muted-foreground italic">
+                        No competitor photos available
+                      </div>
+                    );
+                  })()}
                 </div>
               </>
             )}
