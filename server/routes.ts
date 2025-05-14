@@ -1650,7 +1650,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         message: "Stock take completed successfully",
         stockTake,
         stockTakeItems,
-        picturesUploaded: filePaths.length
+        picturesUploaded: allPictures.length
       });
     } catch (error) {
       if (error instanceof Error) {
