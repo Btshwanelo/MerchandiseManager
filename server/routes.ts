@@ -394,30 +394,80 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Competitor Merchandising Information
-  app.post("/api/competitor-merchandising", isAuthenticated, async (req, res) => {
+  // Set up multer for file uploads
+  const competitorStorage = multer.diskStorage({
+    destination: function(req, file, cb) {
+      const dir = './uploads';
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: function(req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, 'competitor-' + uniqueSuffix + ext);
+    }
+  });
+
+  const competitorUpload = multer({
+    storage: competitorStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: function(req, file, cb) {
+      const filetypes = /jpeg|jpg|png|gif/;
+      const mimetype = filetypes.test(file.mimetype);
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      cb(new Error("Only image files are allowed"));
+    }
+  });
+  
+  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('pictures', 10), async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
+      console.log("Received files:", req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : 'No files');
       
-      // Simplified schema to match the database structure
-      const competitorSchema = z.object({
-        storeId: z.number(),
-        workItemId: z.number().optional(),
-        brand: z.string().min(1, "Brand name is required"),
-        productDescription: z.string().min(1, "Product description is required"),
-        promotionalPrice: z.number().min(0, "Price must be a positive number"),
-        promotionPictures: z.array(z.string()).optional().default([]),
-      });
+      // Parse numeric values from form data
+      const storeId = parseInt(req.body.storeId);
+      let workItemId = req.body.workItemId ? parseInt(req.body.workItemId) : undefined;
+      let promotionalPrice = req.body.promotionalPrice ? parseInt(req.body.promotionalPrice) : null;
       
-      const validatedData = competitorSchema.parse(req.body);
+      // Basic validation
+      if (isNaN(storeId)) {
+        return res.status(400).json({ message: "Invalid store ID" });
+      }
+      
+      if (workItemId !== undefined && isNaN(workItemId)) {
+        return res.status(400).json({ message: "Invalid work item ID" });
+      }
+      
+      if (promotionalPrice !== null && isNaN(promotionalPrice)) {
+        return res.status(400).json({ message: "Invalid price" });
+      }
+      
+      if (!req.body.brand || !req.body.brand.trim()) {
+        return res.status(400).json({ message: "Brand name is required" });
+      }
+      
+      if (!req.body.productDescription || !req.body.productDescription.trim()) {
+        return res.status(400).json({ message: "Product description is required" });
+      }
+      
+      // Get all uploaded file paths
+      const files = (req.files as Express.Multer.File[]) || [];
+      const filePaths = files.map(file => file.path);
       
       // Create the data object for storage
       const data = {
-        storeId: validatedData.storeId,
+        storeId,
         userId: req.user!.id,
-        brand: validatedData.brand,
-        productDescription: validatedData.productDescription,
-        promotionalPrice: validatedData.promotionalPrice,
-        promotionPictures: validatedData.promotionPictures,
+        brand: req.body.brand,
+        productDescription: req.body.productDescription,
+        promotionalPrice,
+        promotionPictures: filePaths,
+        workItemId
       };
       
       console.log("Processed competitor data:", data);
@@ -426,27 +476,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const result = await storage.createCompetitorMerchandising(data);
       
       // If we have a work item ID, mark it as completed
-      if (validatedData.workItemId) {
-        await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
+      if (workItemId) {
+        await storage.updateWorkItemStatus(workItemId, "completed");
         
         // Record an activity for the completed work item
         // Need to include a dummy product ID since it's a required field
         await storage.createActivity({
           userId: req.user!.id,
-          storeId: validatedData.storeId,
+          storeId,
           productId: 1, // Use a default product ID since it's required but not relevant for this activity type
           actionType: "competitor-merchandising-complete",
-          notes: `Completed competitor merchandising data for brand: ${validatedData.brand}`,
+          notes: `Completed competitor merchandising data for brand: ${req.body.brand}`,
           status: "completed"
         });
       }
       
       res.status(201).json(result);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        console.error("Validation error:", error.errors);
-        return res.status(400).json({ message: "Invalid competitor data", errors: error.errors });
-      }
       console.error("Error creating competitor data:", error);
       res.status(500).json({ message: "Failed to create competitor merchandising data" });
     }

@@ -1681,25 +1681,38 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
         return;
       }
       
-      // Create competitor merchandising record
-      const competitorData = {
-        storeId,
-        workItemId,
-        brand,
-        productDescription,
-        promotionalPrice, // Send as promotionalPrice - server will map it to price
-        date: new Date()
-      };
-      
-      // Include pictures if available
-      if (pictures.length > 0) {
-        // @ts-ignore
-        competitorData.pictureUrl = pictures.join(',');
+      // Create a FormData object for file uploads
+      const formData = new FormData();
+      formData.append('storeId', storeId.toString());
+      formData.append('workItemId', workItemId.toString());
+      formData.append('brand', brand);
+      formData.append('productDescription', productDescription);
+      if (promotionalPrice !== null) {
+        formData.append('promotionalPrice', promotionalPrice.toString());
       }
       
-      console.log("Submitting competitor data:", competitorData);
+      // Get file inputs and append to FormData if available
+      const fileInput = document.getElementById('competitor-pictures') as HTMLInputElement;
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const files = fileInput.files;
+        for (let i = 0; i < files.length; i++) {
+          formData.append('pictures', files[i]);
+        }
+      }
       
-      const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
+      console.log("Submitting competitor data with files");
+      
+      // Use fetch directly for multipart/form-data
+      const response = await fetch('/api/competitor-merchandising', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include'
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       
       toast({
@@ -1707,8 +1720,9 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
         description: "Your competitor analysis has been submitted successfully",
       });
       
-      // Invalidate queries to refresh data
+      // Invalidate related queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
+      queryClient.invalidateQueries({ queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`] });
       
       // Move to the next step in the process
       setTimeout(() => {
@@ -1718,7 +1732,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       console.error("Error submitting competitor analysis:", error);
       toast({
         title: "Error",
-        description: "Failed to submit competitor analysis",
+        description: error instanceof Error ? error.message : "Failed to submit competitor analysis",
         variant: "destructive",
       });
     } finally {

@@ -1278,15 +1278,15 @@ export class MemStorage implements IStorage {
   // Competitor Merchandising
   async createCompetitorMerchandising(data: {
     storeId: number;
-    workItemId: number;
+    workItemId?: number;
     userId: number;
     brand: string;
     productDescription: string;
     promoType?: string;
     promoDetails?: string;
-    price?: number; // Map from promotionalPrice in client
-    pictureUrl?: string;
-    date: Date;
+    promotionalPrice?: number | null;
+    promotionPictures?: string[];
+    date?: Date;
   }): Promise<any> {
     console.log("Creating competitor merchandising with data:", data);
     const id = this.currentCompetitorId++;
