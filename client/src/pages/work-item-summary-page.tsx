@@ -59,7 +59,7 @@ const WorkItemSummaryPage = () => {
     data: workItem, 
     isLoading: isLoadingWorkItem,
     error: workItemError
-  } = useQuery({
+  } = useQuery<WorkItem>({
     queryKey: [`/api/work-items/${workItemId}`],
     enabled: !!user && !!workItemId
   });
@@ -68,7 +68,7 @@ const WorkItemSummaryPage = () => {
   const { 
     data: stockTake,
     isLoading: isLoadingStockTake
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/stock-takes/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
@@ -77,7 +77,7 @@ const WorkItemSummaryPage = () => {
   const { 
     data: merchandising,
     isLoading: isLoadingMerchandising
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
@@ -86,7 +86,7 @@ const WorkItemSummaryPage = () => {
   const { 
     data: competitorMerchandising,
     isLoading: isLoadingCompetitorMerchandising
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
@@ -95,7 +95,7 @@ const WorkItemSummaryPage = () => {
   const { 
     data: order,
     isLoading: isLoadingOrder
-  } = useQuery({
+  } = useQuery<any>({
     queryKey: [`/api/orders/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
@@ -136,7 +136,8 @@ const WorkItemSummaryPage = () => {
   }
 
   // Make sure user has permission to view this work item
-  if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.MANAGER && workItem?.userId !== user?.id) {
+  if (user?.role !== UserRole.ADMIN && user?.role !== UserRole.MANAGER && 
+      workItem && 'userId' in workItem && workItem.userId !== user?.id) {
     toast({
       title: "Access Denied",
       description: "You don't have permission to view this work item.",
