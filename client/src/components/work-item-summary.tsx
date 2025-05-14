@@ -265,15 +265,21 @@ const WorkItemSummary = ({
                           // Use as is if it's a complete URL
                           imgPath = pic;
                         } else if (pic.includes('uploads/')) {
-                          // If it includes the uploads directory, just prepend /api
-                          imgPath = `/api/${pic}`;
+                          // If it's already a path with uploads directory
+                          if (pic.startsWith('/uploads/')) {
+                            // If it starts with /uploads/, use as is
+                            imgPath = pic;
+                          } else {
+                            // Prepend / if needed
+                            imgPath = `/${pic}`;
+                          }
                         } else if (pic.includes('/')) {
                           // If it has any other path separators, try to extract just the filename
                           const filename = pic.split('/').pop();
-                          imgPath = `/api/uploads/${filename}`;
+                          imgPath = `/uploads/${filename}`;
                         } else {
                           // Assume it's just a filename
-                          imgPath = `/api/uploads/${pic}`;
+                          imgPath = `/uploads/${pic}`;
                         }
                         
                         console.log(`Image ${index} path:`, { original: pic, processed: imgPath });
@@ -287,7 +293,8 @@ const WorkItemSummary = ({
                               onError={(e) => {
                                 console.log(`Image load error for path: ${imgPath}`);
                                 const target = e.target as HTMLImageElement;
-                                target.src = "/images/placeholder.png";
+                                // Use a data URI for the placeholder to avoid another potential 404
+                                target.src = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>';
                               }}
                             />
                           </div>

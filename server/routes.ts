@@ -1,4 +1,4 @@
-import type { Express } from "express";
+import express, { Express } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
 import { storage } from "./storage";
@@ -1181,6 +1181,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       cb(null, true);
     }
   });
+  
+  // Generic file upload endpoint
+  app.post("/api/upload", isAuthenticated, upload.single('file'), (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: "No file uploaded" });
+      }
+      
+      // Return the file path relative to the uploads directory
+      const filePath = req.file.filename;
+      console.log("File uploaded successfully:", filePath);
+      
+      // Return the file path for the client to use
+      return res.status(200).json({ 
+        filePath,
+        success: true,
+        message: "File uploaded successfully" 
+      });
+    } catch (error) {
+      console.error("Upload error:", error);
+      return res.status(500).json({ 
+        error: "File upload failed",
+        details: error instanceof Error ? error.message : "Unknown error"
+      });
+    }
+  });
+  
+  // Serve static files from the uploads directory
+  app.use('/uploads', express.static(path.join(process.cwd(), 'uploads')));
   
   // Get stock takes
   app.get("/api/stock-takes", async (req, res) => {

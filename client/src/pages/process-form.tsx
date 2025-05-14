@@ -386,14 +386,44 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   };
   
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    // For demo, just store file names - in a real app, this would upload files
     const files = event.target.files;
     if (files && files.length > 0) {
-      const newPictures = [...pictures];
       for (let i = 0; i < files.length; i++) {
-        newPictures.push(files[i].name);
+        const file = files[i];
+        
+        // Create FormData for the image upload
+        const formData = new FormData();
+        formData.append('file', file);
+        
+        // Upload the file first
+        fetch('/api/upload', {
+          method: 'POST',
+          body: formData,
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.filePath) {
+            // Add the file path to the pictures array
+            setPictures(prev => [...prev, data.filePath]);
+            console.log("Image uploaded successfully:", data.filePath);
+          } else {
+            console.error('Upload failed:', data.error || 'Unknown error');
+            toast({
+              title: "Image upload failed",
+              description: data.error || "Failed to upload image",
+              variant: "destructive"
+            });
+          }
+        })
+        .catch(error => {
+          console.error('Upload error:', error);
+          toast({
+            title: "Image upload failed",
+            description: "An error occurred while uploading the image",
+            variant: "destructive"
+          });
+        });
       }
-      setPictures(newPictures);
     }
   };
   
