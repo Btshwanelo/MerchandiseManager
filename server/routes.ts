@@ -1463,7 +1463,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Get file paths if any were uploaded
       const files = (req.files as Express.Multer.File[]) || [];
-      const uploadedPictures = files.map(file => file.path);
+      // Store just the filename, not the full path - we'll add the 'uploads/' prefix in the frontend
+      const uploadedPictures = files.map(file => {
+        const filename = file.filename || (file.path ? file.path.split('/').pop() : null);
+        // Ensure we only return valid strings
+        return filename || '';
+      });
       
       // Handle previously uploaded pictures if they were passed in the request
       let allPictures = [...uploadedPictures];
@@ -1481,7 +1486,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (Array.isArray(existingPictures)) {
           existingPictures.forEach(pic => {
             if (pic && typeof pic === 'string' && pic.trim() !== '') {
-              allPictures.push(pic);
+              // Extract just the filename if it's a path
+              const filename = pic.includes('/') ? pic.split('/').pop() : pic;
+              if (filename) allPictures.push(filename);
             }
           });
         }

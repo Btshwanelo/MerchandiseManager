@@ -218,6 +218,13 @@ const WorkItemSummary = ({
                 <h3 className="font-medium text-sm mb-2">Photos</h3>
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                   {(() => {
+                    // Debug output to understand what we've received
+                    console.log("Stock take pictures data:", {
+                      pictures: stockTake.pictures,
+                      type: typeof stockTake.pictures,
+                      isArray: Array.isArray(stockTake.pictures)
+                    });
+                    
                     // Handle different possible picture formats
                     let picturesToRender: string[] = [];
                     
@@ -232,20 +239,45 @@ const WorkItemSummary = ({
                       }
                     } else if (Array.isArray(stockTake.pictures)) {
                       picturesToRender = stockTake.pictures;
+                    } else if (stockTake.pictures && typeof stockTake.pictures === 'object') {
+                      // If it's a non-null object but not an array, might be empty object from database
+                      picturesToRender = Object.keys(stockTake.pictures).length > 0 
+                        ? Object.values(stockTake.pictures).map(v => String(v))
+                        : [];
                     }
                     
                     // Filter out falsy values and empty strings
-                    picturesToRender = picturesToRender.filter(Boolean);
+                    picturesToRender = picturesToRender
+                      .filter(Boolean)
+                      .filter(p => typeof p === 'string' && p.trim && p.trim() !== '');
+                      
+                    // Ensure all entries are strings
+                    picturesToRender = picturesToRender.map(p => String(p));
+                    
+                    console.log("Pictures to render:", picturesToRender);
                     
                     return picturesToRender.length > 0 ? (
                       picturesToRender.map((pic: string, index: number) => {
                         // Clean up path - handle different path formats
-                        const imgPath = pic.startsWith('http') 
-                          ? pic 
-                          : pic.includes('uploads/') 
-                            ? `/api/${pic}` 
-                            : `/api/uploads/${pic.replace(/^uploads[\/\\]/, '')}`;
-                            
+                        let imgPath;
+                        
+                        if (pic.startsWith('http')) {
+                          // Use as is if it's a complete URL
+                          imgPath = pic;
+                        } else if (pic.includes('uploads/')) {
+                          // If it includes the uploads directory, just prepend /api
+                          imgPath = `/api/${pic}`;
+                        } else if (pic.includes('/')) {
+                          // If it has any other path separators, try to extract just the filename
+                          const filename = pic.split('/').pop();
+                          imgPath = `/api/uploads/${filename}`;
+                        } else {
+                          // Assume it's just a filename
+                          imgPath = `/api/uploads/${pic}`;
+                        }
+                        
+                        console.log(`Image ${index} path:`, { original: pic, processed: imgPath });
+                        
                         return (
                           <div key={index} className="border rounded-md overflow-hidden">
                             <img 

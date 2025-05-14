@@ -1894,7 +1894,39 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createStockTake(stockTake: InsertStockTake): Promise<StockTake> {
-    const [newStockTake] = await db.insert(stockTakes).values(stockTake).returning();
+    // Log the input data
+    console.log("Creating stock take with pictures:", stockTake.pictures);
+    
+    // Make sure pictures is properly handled as an array
+    let picturesToSave = stockTake.pictures || [];
+    
+    // If it's not an array, convert it
+    if (!Array.isArray(picturesToSave)) {
+      if (typeof picturesToSave === 'string') {
+        try {
+          // Try to parse if it's a JSON string
+          const parsed = JSON.parse(picturesToSave);
+          picturesToSave = Array.isArray(parsed) ? parsed : [picturesToSave];
+        } catch (e) {
+          // If parsing fails, assume it's a single path
+          picturesToSave = [picturesToSave];
+        }
+      } else {
+        picturesToSave = [];
+      }
+    }
+    
+    // Filter out empty strings, null, undefined values
+    picturesToSave = picturesToSave.filter(p => p && typeof p === 'string' && p.trim() !== '');
+    
+    console.log("Saving stock take with pictures array:", picturesToSave);
+    
+    // Create the record with the cleaned pictures array
+    const [newStockTake] = await db.insert(stockTakes).values({
+      ...stockTake,
+      pictures: picturesToSave
+    }).returning();
+    
     return newStockTake;
   }
   
