@@ -1436,7 +1436,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Create a new stock take
-  app.post("/api/stock-takes", upload.array('pictures', 5), async (req, res) => {
+  app.post("/api/stock-takes", async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized - Please log in" });
@@ -1490,17 +1490,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Items must be an array" });
       }
       
-      // Get file paths if any were uploaded
-      const files = (req.files as Express.Multer.File[]) || [];
-      // Store just the filename, not the full path - we'll add the 'uploads/' prefix in the frontend
-      const uploadedPictures = files.map(file => {
-        const filename = file.filename || (file.path ? file.path.split('/').pop() : null);
-        // Ensure we only return valid strings
-        return filename || '';
-      });
+      // Process pictures array that's been uploaded separately using /api/upload
+      let allPictures = [];
       
-      // Handle previously uploaded pictures if they were passed in the request
-      let allPictures = [...uploadedPictures];
       if (req.body.pictures) {
         let existingPictures = [];
         try {
@@ -1515,16 +1507,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (Array.isArray(existingPictures)) {
           existingPictures.forEach(pic => {
             if (pic && typeof pic === 'string' && pic.trim() !== '') {
-              // Extract just the filename if it's a path
-              const filename = pic.includes('/') ? pic.split('/').pop() : pic;
-              if (filename) allPictures.push(filename);
+              // Store the paths as they are - they'll be served from /uploads
+              allPictures.push(pic);
             }
           });
         }
       }
       
       console.log("Pictures to save:", {
-        uploaded: uploadedPictures,
         existing: req.body.pictures ? typeof req.body.pictures === 'string' ? [req.body.pictures] : req.body.pictures : [],
         final: allPictures
       });
