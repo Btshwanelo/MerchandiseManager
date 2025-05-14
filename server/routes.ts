@@ -278,14 +278,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Note: "/api/work-items/all" route is defined at the top of the file
   // This comment is kept here to maintain code readability
   
-  // Get single work item by ID (admin only)
-  app.get("/api/work-items/:id", checkRole(UserRole.ADMIN), async (req, res) => {
+  // Get single work item by ID (accessible to authorized users)
+  app.get("/api/work-items/:id", isAuthenticated, async (req, res) => {
     try {
       const id = parseInt(req.params.id);
       const workItem = await storage.getWorkItemById(id);
       
       if (!workItem) {
         return res.status(404).json({ message: "Work item not found" });
+      }
+      
+      // Check permissions: Allow access if user is admin, manager, or the assigned user
+      const user = req.user!;
+      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER && workItem.userId !== user.id) {
+        return res.status(403).json({ 
+          message: "Forbidden: Insufficient permissions to access this work item" 
+        });
       }
       
       res.json(workItem);
