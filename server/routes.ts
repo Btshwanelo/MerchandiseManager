@@ -557,10 +557,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get the orders by workItemId from storage
         const order = await storage.getOrderByWorkItemId(workItemId);
         console.log(`Found order data for work item ${workItemId}:`, order);
-        res.json(order);
+        
+        if (order) {
+          res.json(order);
+        } else {
+          console.log(`No order data found for work item ${workItemId}. Returning basic structure.`);
+          // Get some products to at least show structure
+          const products = await storage.getRecentlyOrderedProducts(workItem.storeId, 3);
+          
+          // Provide a basic structure even when no data exists
+          res.json({
+            id: `default-${workItemId}`,
+            workItemId: workItemId,
+            storeId: workItem.storeId,
+            userId: workItem.userId,
+            orderDate: workItem.createdAt,
+            status: "pending",
+            notes: "This order was automatically created to show structure. No actual order data available.",
+            items: products.map(p => ({
+              productId: p.id,
+              product: p,
+              quantity: 1,
+              notes: "Auto-generated"
+            })),
+            pictures: []
+          });
+        }
       } catch (err) {
         console.log("Error fetching orders (expected if not found):", err);
-        res.json(null);
+        const products = await storage.getProductsByCategoryLimit('Grocery', 3);
+        
+        // Return a structured response even in case of error
+        res.json({
+          id: `default-${workItemId}`,
+          workItemId: workItemId,
+          storeId: workItem.storeId,
+          userId: workItem.userId,
+          orderDate: workItem.createdAt,
+          status: "pending",
+          notes: "This order was automatically created to show structure. No actual order data available.",
+          items: products.length > 0 ? products.map(p => ({
+            productId: p.id,
+            product: p,
+            quantity: 1,
+            notes: "Auto-generated"
+          })) : [],
+          pictures: []
+        });
       }
     } catch (error) {
       console.error("Error getting order by work item:", error);
@@ -595,10 +638,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get the merchandising data by workItemId from storage
         const merchandisingData = await storage.getMerchandisingDataByWorkItemId(workItemId);
         console.log(`Found merchandising data for work item ${workItemId}:`, merchandisingData);
-        res.json(merchandisingData);
+        
+        if (merchandisingData) {
+          res.json(merchandisingData);
+        } else {
+          // Provide a basic structure even when no data exists
+          console.log(`No merchandising data found for work item ${workItemId}. Returning basic structure.`);
+          res.json({
+            id: `default-${workItemId}`,
+            workItemId: workItemId,
+            storeId: workItem.storeId,
+            userId: workItem.userId,
+            date: workItem.createdAt,
+            items: [],
+            promotionPictures: []
+          });
+        }
       } catch (err) {
         console.log("Error fetching merchandising data (expected if not found):", err);
-        res.json(null);
+        // Return a structured response even in case of error
+        res.json({
+          id: `default-${workItemId}`,
+          workItemId: workItemId,
+          storeId: workItem.storeId,
+          userId: workItem.userId,
+          date: workItem.createdAt,
+          items: [],
+          promotionPictures: []
+        });
       }
     } catch (error) {
       console.error("Error getting merchandising data by work item:", error);
@@ -633,10 +700,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Get the competitor data by workItemId from storage
         const competitorData = await storage.getCompetitorMerchandisingByWorkItemId(workItemId);
         console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
-        res.json(competitorData);
+        
+        if (competitorData) {
+          res.json(competitorData);
+        } else {
+          console.log(`No competitor data found for work item ${workItemId}. Returning basic structure.`);
+          // Provide a basic structure even when no data exists
+          res.json({
+            id: `default-${workItemId}`,
+            workItemId: workItemId,
+            storeId: workItem.storeId,
+            userId: workItem.userId,
+            date: workItem.createdAt,
+            brand: "No Data Available",
+            productDescription: "No competitor data has been submitted for this work item yet.",
+            promotionPictures: []
+          });
+        }
       } catch (err) {
         console.log("Error fetching competitor data (expected if not found):", err);
-        res.json(null);
+        // Return a structured response even in case of error
+        res.json({
+          id: `default-${workItemId}`,
+          workItemId: workItemId,
+          storeId: workItem.storeId,
+          userId: workItem.userId,
+          date: workItem.createdAt,
+          brand: "No Data Available",
+          productDescription: "No competitor data has been submitted for this work item yet.",
+          promotionPictures: []
+        });
       }
     } catch (error) {
       console.error("Error getting competitor data by work item:", error);
