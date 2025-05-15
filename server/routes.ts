@@ -561,49 +561,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         if (order) {
           res.json(order);
         } else {
-          console.log(`No order data found for work item ${workItemId}. Returning basic structure.`);
-          // Get some products to at least show structure
-          const products = await storage.getRecentlyOrderedProducts(workItem.storeId, 3);
-          
-          // Provide a basic structure even when no data exists
-          res.json({
-            id: `default-${workItemId}`,
-            workItemId: workItemId,
-            storeId: workItem.storeId,
-            userId: workItem.userId,
-            orderDate: workItem.createdAt,
-            status: "pending",
-            notes: "This order was automatically created to show structure. No actual order data available.",
-            items: products.map(p => ({
-              productId: p.id,
-              product: p,
-              quantity: 1,
-              notes: "Auto-generated"
-            })),
-            pictures: []
-          });
+          console.log(`No order data found for work item ${workItemId}. Returning null.`);
+          res.json(null);
         }
       } catch (err) {
         console.log("Error fetching orders (expected if not found):", err);
-        const products = await storage.getProductsByCategoryLimit('Grocery', 3);
-        
-        // Return a structured response even in case of error
-        res.json({
-          id: `default-${workItemId}`,
-          workItemId: workItemId,
-          storeId: workItem.storeId,
-          userId: workItem.userId,
-          orderDate: workItem.createdAt,
-          status: "pending",
-          notes: "This order was automatically created to show structure. No actual order data available.",
-          items: products.length > 0 ? products.map(p => ({
-            productId: p.id,
-            product: p,
-            quantity: 1,
-            notes: "Auto-generated"
-          })) : [],
-          pictures: []
-        });
+        res.json(null);
       }
     } catch (error) {
       console.error("Error getting order by work item:", error);
