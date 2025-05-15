@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { useMemo } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { UserRole } from "@shared/schema";
-import { AlertsDropdown } from "@/components/alerts-dropdown";
+
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -70,7 +70,6 @@ export const Header = ({ onMobileMenuToggle }: HeaderProps) => {
           />
         </div>
 
-        <AlertsDropdown />
 
         <Button variant="ghost" size="icon">
           <HelpCircle className="h-5 w-5" />

@@ -26,6 +26,16 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { 
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useState } from "react";
 
 type NavItem = {
@@ -213,15 +223,53 @@ export const Sidebar = ({ className }: SidebarProps) => {
 
       {/* User profile information */}
       <div className="p-4 border-b border-neutral-200">
-        <div className="flex items-center space-x-3">
-          <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center text-white">
-            {user?.name?.charAt(0).toUpperCase() || "U"}
-          </div>
-          <div>
-            <p className="font-medium text-foreground">{user?.name || "User"}</p>
-            <p className="text-sm text-muted-foreground capitalize">{user?.role || "Guest"}</p>
-          </div>
-        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <div className="flex items-center space-x-3 cursor-pointer">
+              <Avatar className="h-10 w-10">
+                <AvatarFallback className="bg-primary text-primary-foreground">
+                  {user?.name?.split(" ").map(n => n[0]).join("").toUpperCase().substring(0, 2) || "U"}
+                </AvatarFallback>
+              </Avatar>
+              <div>
+                <p className="font-medium text-foreground">{user?.name || "User"}</p>
+                <p className="text-sm text-muted-foreground capitalize">{user?.role || "Guest"}</p>
+              </div>
+            </div>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-56" align="end" forceMount>
+            <DropdownMenuLabel className="font-normal">
+              <div className="flex flex-col space-y-1">
+                <p className="text-sm font-medium leading-none">{user?.name}</p>
+                <p className="text-xs leading-none text-muted-foreground">{user?.email}</p>
+                <p className="text-xs leading-none text-muted-foreground capitalize mt-1">{user?.role}</p>
+              </div>
+            </DropdownMenuLabel>
+            <DropdownMenuSeparator />
+            <DropdownMenuGroup>
+              <Link href="/user-profile">
+                <DropdownMenuItem>
+                  <User className="mr-2 h-4 w-4" />
+                  <span>My Profile</span>
+                </DropdownMenuItem>
+              </Link>
+              {user?.role === UserRole.ADMIN && (
+                <Link href="/users">
+                  <DropdownMenuItem>
+                    <Users className="mr-2 h-4 w-4" />
+                    <span>User Management</span>
+                  </DropdownMenuItem>
+                </Link>
+              )}
+            </DropdownMenuGroup>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => logoutMutation.mutate()} disabled={logoutMutation.isPending}>
+              <LogOut className="mr-2 h-4 w-4" />
+              <span>Log out</span>
+              {logoutMutation.isPending && <span className="ml-2">...</span>}
+            </DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu>
       </div>
 
       {/* Navigation menu */}
