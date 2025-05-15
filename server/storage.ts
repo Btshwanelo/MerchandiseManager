@@ -144,6 +144,10 @@ export interface IStorage {
   createStockTakeItem(item: InsertStockTakeItem): Promise<StockTakeItem>;
   updateStockTakeItem(id: number, data: Partial<StockTakeItem>): Promise<StockTakeItem>;
   
+  // Helper methods for data display
+  getRecentlyOrderedProducts(storeId: number, limit?: number): Promise<Product[]>;
+  getProductsByCategoryLimit(category: string, limit?: number): Promise<Product[]>;
+  
   // Dashboard methods
   getDashboardStats(): Promise<{
     totalProducts: number,
@@ -2038,6 +2042,84 @@ export class DatabaseStorage implements IStorage {
       return null;
     }
   }
+
+  async getRecentlyOrderedProducts(storeId: number, limit: number = 5): Promise<Product[]> {
+    try {
+      // Try to find products that have been ordered before at this store
+      const query = `
+        SELECT DISTINCT ON (p.id) p.*
+        FROM products p
+        JOIN order_items oi ON p.id = oi.product_id
+        JOIN orders o ON oi.order_id = o.id
+        WHERE o.store_id = $1
+        LIMIT $2;
+      `;
+      
+      const result = await pool.query(query, [storeId, limit]);
+      if (result.rows.length > 0) {
+        return result.rows.map(row => ({
+          id: row.id,
+          name: row.name,
+          sku: row.sku,
+          category: row.category,
+          price: parseFloat(row.price || 0),
+          description: row.description,
+          minStockLevel: row.min_stock_level || 5,
+          image: row.image,
+          createdAt: row.created_at
+        }));
+      }
+      return this.getProductsByCategoryLimit('General', limit);
+    } catch (error) {
+      console.error("Error getting recently ordered products:", error);
+      return this.getProductsByCategoryLimit('General', limit);
+    }
+  }
+  
+  async getProductsByCategoryLimit(category: string, limit: number = 5): Promise<Product[]> {
+    try {
+      const query = `
+        SELECT * FROM products 
+        WHERE category ILIKE $1
+        LIMIT $2;
+      `;
+      
+      const result = await pool.query(query, [`%${category}%`, limit]);
+      if (result.rows.length > 0) {
+        return result.rows.map(row => ({
+          id: row.id,
+          name: row.name,
+          sku: row.sku,
+          category: row.category,
+          price: parseFloat(row.price || 0),
+          description: row.description,
+          minStockLevel: row.min_stock_level || 5,
+          image: row.image,
+          createdAt: row.created_at
+        }));
+      }
+      
+      // If no products found in the specific category, just return any products
+      const allProductsQuery = `SELECT * FROM products LIMIT $1;`;
+      const allProductsResult = await pool.query(allProductsQuery, [limit]);
+      
+      return allProductsResult.rows.map(row => ({
+        id: row.id,
+        name: row.name,
+        sku: row.sku,
+        category: row.category,
+        price: parseFloat(row.price || 0),
+        description: row.description,
+        minStockLevel: row.min_stock_level || 5,
+        image: row.image,
+        createdAt: row.created_at
+      }));
+    } catch (error) {
+      console.error("Error getting products by category:", error);
+      return [];
+    }
+  }
+  
   sessionStore: any;
 
   constructor() {
