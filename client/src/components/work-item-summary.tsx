@@ -439,6 +439,9 @@ const WorkItemSummary = ({
         <CardContent>
           {competitorMerchandising ? (
             <>
+              {/* Debug output */}
+              {console.log("Competitor merchandising data:", competitorMerchandising)}
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div>
                   <h3 className="font-medium text-sm mb-2">Overview</h3>
@@ -448,55 +451,33 @@ const WorkItemSummary = ({
                       <div className="text-sm font-medium">{competitorMerchandising.date ? formatDate(competitorMerchandising.date) : "N/A"}</div>
                     </div>
                     <div className="grid grid-cols-2">
-                      <div className="text-sm text-muted-foreground">Competitor Name:</div>
-                      <div className="text-sm font-medium">{formatValue(competitorMerchandising.competitorName || competitorMerchandising.brand)}</div>
+                      <div className="text-sm text-muted-foreground">Competitor Brand:</div>
+                      <div className="text-sm font-medium">{formatValue(competitorMerchandising.brand)}</div>
                     </div>
                     <div className="grid grid-cols-2">
                       <div className="text-sm text-muted-foreground">Store:</div>
                       <div className="text-sm font-medium">{formatValue(workItem.store?.name)}</div>
                     </div>
+                    {competitorMerchandising.promotionalPrice !== undefined && (
+                      <div className="grid grid-cols-2">
+                        <div className="text-sm text-muted-foreground">Promotional Price:</div>
+                        <div className="text-sm font-medium">
+                          R {(competitorMerchandising.promotionalPrice / 100).toFixed(2)}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
                 
-                {competitorMerchandising.generalNotes && (
+                {competitorMerchandising.productDescription && (
                   <div>
-                    <h3 className="font-medium text-sm mb-2">General Notes</h3>
-                    <p className="text-sm">{competitorMerchandising.generalNotes}</p>
+                    <h3 className="font-medium text-sm mb-2">Product Description</h3>
+                    <p className="text-sm">{competitorMerchandising.productDescription}</p>
                   </div>
                 )}
               </div>
               
-              {/* Competitor Items */}
-              {competitorMerchandising.items && competitorMerchandising.items.length > 0 && (
-                <>
-                  <Separator className="my-4" />
-                  <h3 className="font-medium text-sm mb-2">Competitor Products</h3>
-                  <div className="border rounded-md overflow-x-auto">
-                    <table className="min-w-full divide-y divide-border">
-                      <thead className="bg-muted">
-                        <tr>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Product</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Brand</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Price (R)</th>
-                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Notes</th>
-                        </tr>
-                      </thead>
-                      <tbody className="divide-y divide-border">
-                        {competitorMerchandising.items.map((item: any, index: number) => (
-                          <tr key={index} className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}>
-                            <td className="px-4 py-2 text-sm">{item.productName || "Unknown"}</td>
-                            <td className="px-4 py-2 text-sm">{item.brand || "N/A"}</td>
-                            <td className="px-4 py-2 text-sm">R {item.price?.toFixed(2) || "N/A"}</td>
-                            <td className="px-4 py-2 text-sm">{item.notes || "-"}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </>
-              )}
-              
-              {/* Single competitor item support for older data format */}
+              {/* Single competitor item - our current format */}
               {competitorMerchandising.brand && competitorMerchandising.productDescription && (
                 <>
                   <Separator className="my-4" />
@@ -515,7 +496,10 @@ const WorkItemSummary = ({
                           <td className="px-4 py-2 text-sm">{competitorMerchandising.brand}</td>
                           <td className="px-4 py-2 text-sm">{competitorMerchandising.productDescription}</td>
                           <td className="px-4 py-2 text-sm">
-                            R {competitorMerchandising.promotionalPrice?.toFixed(2) || "N/A"}
+                            {competitorMerchandising.promotionalPrice !== undefined
+                              ? `R ${(competitorMerchandising.promotionalPrice / 100).toFixed(2)}`
+                              : "N/A"
+                            }
                           </td>
                         </tr>
                       </tbody>
@@ -524,85 +508,105 @@ const WorkItemSummary = ({
                 </>
               )}
               
+              {/* Multiple competitor items format - for future support */}
+              {competitorMerchandising.items && Array.isArray(competitorMerchandising.items) && competitorMerchandising.items.length > 0 && (
+                <>
+                  <Separator className="my-4" />
+                  <h3 className="font-medium text-sm mb-2">Competitor Products</h3>
+                  <div className="border rounded-md overflow-x-auto">
+                    <table className="min-w-full divide-y divide-border">
+                      <thead className="bg-muted">
+                        <tr>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Product</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Brand</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Price (R)</th>
+                          <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground">Notes</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-border">
+                        {competitorMerchandising.items.map((item: any, index: number) => (
+                          <tr key={index} className={index % 2 === 0 ? "bg-background" : "bg-muted/30"}>
+                            <td className="px-4 py-2 text-sm">{item.productName || item.productDescription || "Unknown"}</td>
+                            <td className="px-4 py-2 text-sm">{item.brand || "N/A"}</td>
+                            <td className="px-4 py-2 text-sm">
+                              {item.price !== undefined 
+                                ? `R ${(item.price / 100).toFixed(2)}` 
+                                : item.promotionalPrice !== undefined
+                                  ? `R ${(item.promotionalPrice / 100).toFixed(2)}`
+                                  : "N/A"
+                              }
+                            </td>
+                            <td className="px-4 py-2 text-sm">{item.notes || "-"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </>
+              )}
+              
               {/* Competitor Photos */}
-              {(competitorMerchandising.pictures || competitorMerchandising.promotionPictures) && (
+              {competitorMerchandising.promotionPictures && (
                 <>
                   <Separator className="my-4" />
                   <h3 className="font-medium text-sm mb-2">Photos</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {(() => {
-                      // Handle different possible photo formats
-                      let picturesToRender: string[] = [];
+                      console.log("Competitor photos data:", competitorMerchandising.promotionPictures);
                       
-                      // Check pictures field first
-                      if (competitorMerchandising.pictures) {
-                        if (typeof competitorMerchandising.pictures === 'string') {
-                          try {
-                            const parsed = JSON.parse(competitorMerchandising.pictures);
-                            picturesToRender = Array.isArray(parsed) ? parsed : [competitorMerchandising.pictures];
-                          } catch (e) {
-                            picturesToRender = [competitorMerchandising.pictures];
-                          }
-                        } else if (Array.isArray(competitorMerchandising.pictures)) {
-                          picturesToRender = competitorMerchandising.pictures;
+                      // Get the photos array
+                      let photoArray: string[] = [];
+                      
+                      if (typeof competitorMerchandising.promotionPictures === 'string') {
+                        // If it's a JSON string, try to parse it
+                        try {
+                          const parsed = JSON.parse(competitorMerchandising.promotionPictures);
+                          photoArray = Array.isArray(parsed) ? parsed : [competitorMerchandising.promotionPictures];
+                        } catch (e) {
+                          // If parsing fails, it's just a single string path
+                          photoArray = [competitorMerchandising.promotionPictures];
                         }
+                      } else if (Array.isArray(competitorMerchandising.promotionPictures)) {
+                        // If it's already an array, use it directly
+                        photoArray = competitorMerchandising.promotionPictures;
                       }
                       
-                      // Then check promotionPictures field if we still don't have any
-                      if (picturesToRender.length === 0 && competitorMerchandising.promotionPictures) {
-                        if (typeof competitorMerchandising.promotionPictures === 'string') {
-                          try {
-                            const parsed = JSON.parse(competitorMerchandising.promotionPictures);
-                            picturesToRender = Array.isArray(parsed) ? parsed : [competitorMerchandising.promotionPictures];
-                          } catch (e) {
-                            picturesToRender = [competitorMerchandising.promotionPictures];
-                          }
-                        } else if (Array.isArray(competitorMerchandising.promotionPictures)) {
-                          picturesToRender = competitorMerchandising.promotionPictures;
-                        }
-                      }
+                      // Filter out empty strings and null values
+                      photoArray = photoArray.filter(path => !!path && path.trim() !== '');
                       
-                      // Filter out falsy values and empty strings
-                      picturesToRender = picturesToRender
-                        .filter(Boolean)
-                        .filter(p => typeof p === 'string' && p.trim && p.trim() !== '');
-                        
-                      // Ensure all entries are strings
-                      picturesToRender = picturesToRender.map(p => String(p));
+                      console.log("Processed photo array:", photoArray);
                       
-                      // Debug
-                      console.log("Competitor photos to render:", picturesToRender);
-                      
-                      return picturesToRender.length > 0 ? (
-                        picturesToRender.map((pic: string, index: number) => {
-                          // Clean up path - handle different path formats
+                      return photoArray.length > 0 ? (
+                        photoArray.map((photoPath: string, index: number) => {
+                          // Process the image path to ensure it works
                           let imgPath = '';
                           
-                          if (pic.startsWith('http')) {
+                          if (photoPath.startsWith('http')) {
                             // Full URL
-                            imgPath = pic;
-                          } else if (pic.startsWith('/')) {
-                            // Root-relative path
-                            imgPath = pic;
-                          } else if (pic.includes('uploads/')) {
-                            // Path with uploads dir but no leading slash
-                            imgPath = `/${pic}`;
+                            imgPath = photoPath;
+                          } else if (photoPath.startsWith('/uploads/')) {
+                            // Path with leading slash - use as is
+                            imgPath = photoPath;
+                          } else if (photoPath.includes('uploads/')) {
+                            // Path with uploads but no leading slash
+                            imgPath = `/${photoPath}`;
                           } else {
                             // Just a filename
-                            imgPath = `/uploads/${pic}`; 
+                            imgPath = `/uploads/${photoPath}`;
                           }
-                              
-                          console.log(`Image ${index} path:`, { original: pic, processed: imgPath });
-                              
+                          
+                          console.log(`Competitor photo ${index} path:`, { original: photoPath, processed: imgPath });
+                          
                           return (
                             <div key={index} className="border rounded-md overflow-hidden">
                               <img 
-                                src={imgPath} 
+                                src={imgPath}
                                 alt={`Competitor Photo ${index + 1}`}
                                 className="w-full h-32 object-cover"
                                 onError={(e) => {
-                                  console.log(`Image load error for competitor photo: ${imgPath}`);
+                                  console.log(`Failed to load competitor image: ${imgPath}`);
                                   const target = e.target as HTMLImageElement;
+                                  // Use SVG placeholder to avoid another potential 404
                                   target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
                                 }}
                               />
