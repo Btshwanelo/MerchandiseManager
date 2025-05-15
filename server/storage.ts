@@ -1406,8 +1406,8 @@ export class DatabaseStorage implements IStorage {
       // Log the image paths being stored
       console.log("Storing promotion pictures:", promotionPictures);
       
-      // Insert the competitor merchandising data into the database
-      const [result] = await db.insert(competitorMerchandising).values({
+      // Prepare the data object
+      const insertData: any = {
         storeId: data.storeId,
         userId: data.userId,
         date: new Date(),
@@ -1415,7 +1415,22 @@ export class DatabaseStorage implements IStorage {
         productDescription: data.productDescription || '',
         promotionalPrice: data.promotionalPrice || data.price || 0,
         promotionPictures: promotionPictures
-      }).returning();
+      };
+      
+      // Add workItemId if present in the data
+      if (data.workItemId) {
+        console.log(`Associating competitor merchandising data with work item ID: ${data.workItemId}`);
+        // Check if the workItemId column exists in the schema
+        try {
+          // @ts-ignore - The workItemId field might not be in the schema yet
+          insertData.workItemId = data.workItemId;
+        } catch (err) {
+          console.log("Could not add workItemId to competitor data, it might not be in the schema yet");
+        }
+      }
+      
+      // Insert the competitor merchandising data into the database
+      const [result] = await db.insert(competitorMerchandising).values(insertData).returning();
       
       console.log("Created competitor merchandising data:", result);
       return result;

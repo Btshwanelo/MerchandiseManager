@@ -236,6 +236,7 @@ export const competitorMerchandising = pgTable("competitor_merchandising", {
   id: serial("id").primaryKey(),
   storeId: integer("store_id").references(() => stores.id).notNull(),
   userId: integer("user_id").references(() => users.id).notNull(),
+  workItemId: integer("work_item_id").references(() => workItems.id),
   date: timestamp("date").defaultNow(),
   brand: text("brand").notNull(),
   productDescription: text("product_description").notNull(),
@@ -665,6 +666,10 @@ export const competitorMerchandisingRelations = relations(competitorMerchandisin
   user: one(users, {
     fields: [competitorMerchandising.userId],
     references: [users.id],
+  }),
+  workItem: one(workItems, {
+    fields: [competitorMerchandising.workItemId],
+    references: [workItems.id],
   }),
 }));
 
