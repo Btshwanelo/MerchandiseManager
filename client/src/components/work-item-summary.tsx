@@ -706,24 +706,96 @@ const WorkItemSummary = ({
               )}
               
               {/* Order Photos */}
-              {order.pictures && order.pictures.length > 0 && (
+              {order.pictures && (
                 <>
                   <Separator className="my-4" />
                   <h3 className="font-medium text-sm mb-2">Photos</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                    {order.pictures.map((pic: string, index: number) => (
-                      <div key={index} className="border rounded-md overflow-hidden">
-                        <img 
-                          src={pic.startsWith('http') ? pic : `/api/uploads/${pic}`} 
-                          alt={`Order Photo ${index + 1}`}
-                          className="w-full h-32 object-cover"
-                          onError={(e) => {
-                            const target = e.target as HTMLImageElement;
-                            target.src = "/images/placeholder.png";
-                          }}
-                        />
-                      </div>
-                    ))}
+                    {(() => {
+                      console.log("Order photos data:", order.pictures);
+                      
+                      // Get the photos array
+                      let photoArray: string[] = [];
+                      
+                      if (typeof order.pictures === 'string') {
+                        // If it's a JSON string, try to parse it
+                        try {
+                          const parsed = JSON.parse(order.pictures);
+                          photoArray = Array.isArray(parsed) ? parsed : [order.pictures];
+                        } catch (e) {
+                          // If parsing fails, it's just a single string path
+                          photoArray = [order.pictures];
+                        }
+                      } else if (Array.isArray(order.pictures)) {
+                        // If it's already an array, use it directly
+                        photoArray = order.pictures;
+                      } else if (order.pictures && typeof order.pictures === 'object') {
+                        // If it's a non-null object but not an array, might be empty object from database
+                        photoArray = Object.keys(order.pictures).length > 0 
+                          ? Object.values(order.pictures).map(v => String(v))
+                          : [];
+                      }
+                      
+                      // Filter out falsy values and empty strings
+                      photoArray = photoArray
+                        .filter(Boolean)
+                        .filter(p => typeof p === 'string' && p.trim && p.trim() !== '');
+                        
+                      // Ensure all entries are strings
+                      photoArray = photoArray.map(p => String(p));
+                      
+                      console.log("Order pictures to render:", photoArray);
+                      
+                      return photoArray.length > 0 ? (
+                        photoArray.map((pic: string, index: number) => {
+                          // Clean up path - handle different path formats
+                          let imgPath;
+                          
+                          if (pic.startsWith('http')) {
+                            // Use as is if it's a complete URL
+                            imgPath = pic;
+                          } else if (pic.includes('uploads/')) {
+                            // If it's already a path with uploads directory
+                            if (pic.startsWith('/uploads/')) {
+                              // If it starts with /uploads/, use as is
+                              imgPath = pic;
+                            } else {
+                              // Prepend / if needed
+                              imgPath = `/${pic}`;
+                            }
+                          } else if (pic.includes('/')) {
+                            // If it has any other path separators, try to extract just the filename
+                            const filename = pic.split('/').pop();
+                            imgPath = `/uploads/${filename}`;
+                          } else {
+                            // Assume it's just a filename
+                            imgPath = `/uploads/${pic}`;
+                          }
+                          
+                          console.log(`Order image ${index} path:`, { original: pic, processed: imgPath });
+                          
+                          return (
+                            <div key={index} className="border rounded-md overflow-hidden">
+                              <img 
+                                src={imgPath}
+                                alt={`Order Photo ${index + 1}`}
+                                className="w-full h-32 object-cover"
+                                onError={(e) => {
+                                  console.log(`Failed to load order image: ${imgPath}`);
+                                  const target = e.target as HTMLImageElement;
+                                  // Use SVG placeholder to avoid another potential 404
+                                  target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                }}
+                              />
+                            </div>
+                          );
+                        })
+                      ) : (
+                        <div className="col-span-full text-sm text-muted-foreground italic">
+                          No order photos available
+                        </div>
+                      );
+                    })()}
                   </div>
                 </>
               )}

@@ -1752,19 +1752,57 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Fetching merchandising data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Use raw SQL to fetch merchandising data - avoiding schema mismatches
-      const merchandisingResult = await pool.query(`
-        SELECT 
-          mp.id, 
-          mp.store_id as "storeId", 
-          mp.user_id as "userId", 
-          mp.date,
-          mp.promotion_pictures as "promotionPictures"
-        FROM merchandising_promotions mp
-        WHERE mp.store_id = $1 AND mp.user_id = $2
-        ORDER BY mp.date DESC
-        LIMIT 1
-      `, [workItem.storeId, workItem.userId]);
+      let merchandisingResult;
+      
+      try {
+        // First try to find by work_item_id directly (if the column exists)
+        merchandisingResult = await pool.query(`
+          SELECT 
+            mp.id, 
+            mp.store_id as "storeId", 
+            mp.user_id as "userId", 
+            mp.date,
+            mp.promotion_pictures as "promotionPictures",
+            mp.work_item_id as "workItemId"
+          FROM merchandising_promotions mp
+          WHERE mp.work_item_id = $1
+          ORDER BY mp.date DESC
+          LIMIT 1
+        `, [workItemId]);
+        
+        // If no direct match found, try the store and user match
+        if (merchandisingResult.rows.length === 0) {
+          merchandisingResult = await pool.query(`
+            SELECT 
+              mp.id, 
+              mp.store_id as "storeId", 
+              mp.user_id as "userId", 
+              mp.date,
+              mp.promotion_pictures as "promotionPictures"
+            FROM merchandising_promotions mp
+            WHERE mp.store_id = $1 AND mp.user_id = $2
+            ORDER BY mp.date DESC
+            LIMIT 1
+          `, [workItem.storeId, workItem.userId]);
+        }
+      } catch (sqlError) {
+        // If the first query fails (likely because work_item_id column doesn't exist),
+        // fall back to the original approach
+        console.log("Error in direct SQL query for merchandising (likely schema mismatch), falling back:", sqlError);
+        
+        merchandisingResult = await pool.query(`
+          SELECT 
+            mp.id, 
+            mp.store_id as "storeId", 
+            mp.user_id as "userId", 
+            mp.date,
+            mp.promotion_pictures as "promotionPictures"
+          FROM merchandising_promotions mp
+          WHERE mp.store_id = $1 AND mp.user_id = $2
+          ORDER BY mp.date DESC
+          LIMIT 1
+        `, [workItem.storeId, workItem.userId]);
+      }
       
       if (merchandisingResult.rows.length === 0) {
         console.log(`No merchandising data found for work item ${workItemId}`);
@@ -1772,6 +1810,24 @@ export class DatabaseStorage implements IStorage {
       }
       
       const merchandisingData = merchandisingResult.rows[0];
+      
+      // Add workItemId if it doesn't exist
+      if (!merchandisingData.workItemId) {
+        merchandisingData.workItemId = workItemId;
+      }
+      
+      // Process promotion pictures if they exist and are in string format
+      if (merchandisingData.promotionPictures && typeof merchandisingData.promotionPictures === 'string') {
+        try {
+          // Try to parse as JSON if it's a JSON string
+          merchandisingData.promotionPictures = JSON.parse(merchandisingData.promotionPictures);
+        } catch (e) {
+          // If parsing fails, ensure it's an array
+          if (!Array.isArray(merchandisingData.promotionPictures)) {
+            merchandisingData.promotionPictures = [merchandisingData.promotionPictures];
+          }
+        }
+      }
       
       // Get merchandising items if they exist
       try {
@@ -1782,14 +1838,27 @@ export class DatabaseStorage implements IStorage {
             mi.product_id as "productId",
             mi.price,
             p.name as "productName",
-            p.sku
+            p.sku,
+            p.category,
+            p.price as "basePrice",
+            p.min_stock_level as "minStockLevel"
           FROM merchandising_items mi
           JOIN products p ON mi.product_id = p.id
           WHERE mi.merchandising_promotion_id = $1
         `, [merchandisingData.id]);
         
         if (itemsResult.rows.length > 0) {
-          merchandisingData.items = itemsResult.rows;
+          merchandisingData.items = itemsResult.rows.map(item => ({
+            ...item,
+            product: {
+              id: item.productId,
+              name: item.productName,
+              sku: item.sku,
+              category: item.category,
+              price: item.basePrice,
+              minStockLevel: item.minStockLevel
+            }
+          }));
         } else {
           merchandisingData.items = [];
         }
@@ -1821,21 +1890,72 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Use raw SQL to avoid the schema mismatch issues
-      // The database doesn't have a work_item_id column but our schema thinks it does
-      const result = await pool.query(`
-        SELECT id, store_id as "storeId", user_id as "userId", date, 
-               brand, product_description as "productDescription", 
-               promotional_price as "promotionalPrice", promotion_pictures as "promotionPictures"
-        FROM competitor_merchandising 
-        WHERE store_id = $1 AND user_id = $2
-        ORDER BY date DESC
-        LIMIT 1
-      `, [workItem.storeId, workItem.userId]);
+      let result;
+      
+      try {
+        // First try to find by work_item_id directly (if the column exists)
+        result = await pool.query(`
+          SELECT id, store_id as "storeId", user_id as "userId", date, 
+                 brand, product_description as "productDescription", 
+                 promotional_price as "promotionalPrice", promotion_pictures as "promotionPictures",
+                 work_item_id as "workItemId"
+          FROM competitor_merchandising 
+          WHERE work_item_id = $1
+          ORDER BY date DESC
+          LIMIT 1
+        `, [workItemId]);
+        
+        // If no direct match found, try the store and user match
+        if (result.rows.length === 0) {
+          result = await pool.query(`
+            SELECT id, store_id as "storeId", user_id as "userId", date, 
+                   brand, product_description as "productDescription", 
+                   promotional_price as "promotionalPrice", promotion_pictures as "promotionPictures"
+            FROM competitor_merchandising 
+            WHERE store_id = $1 AND user_id = $2
+            ORDER BY date DESC
+            LIMIT 1
+          `, [workItem.storeId, workItem.userId]);
+        }
+      } catch (sqlError) {
+        // If the first query fails (likely because work_item_id column doesn't exist),
+        // fall back to the original approach
+        console.log("Error in direct SQL query for competitor data (likely schema mismatch), falling back:", sqlError);
+        
+        result = await pool.query(`
+          SELECT id, store_id as "storeId", user_id as "userId", date, 
+                 brand, product_description as "productDescription", 
+                 promotional_price as "promotionalPrice", promotion_pictures as "promotionPictures"
+          FROM competitor_merchandising 
+          WHERE store_id = $1 AND user_id = $2
+          ORDER BY date DESC
+          LIMIT 1
+        `, [workItem.storeId, workItem.userId]);
+      }
       
       if (result.rows.length > 0) {
-        console.log(`Found competitor data for work item ${workItemId}:`, result.rows[0]);
-        return result.rows[0];
+        const competitorData = result.rows[0];
+        
+        // Add workItemId if it doesn't exist
+        if (!competitorData.workItemId) {
+          competitorData.workItemId = workItemId;
+        }
+        
+        // Process promotion pictures if they exist and are in string format
+        if (competitorData.promotionPictures && typeof competitorData.promotionPictures === 'string') {
+          try {
+            // Try to parse as JSON if it's a JSON string
+            competitorData.promotionPictures = JSON.parse(competitorData.promotionPictures);
+          } catch (e) {
+            // If parsing fails, ensure it's an array
+            if (!Array.isArray(competitorData.promotionPictures)) {
+              competitorData.promotionPictures = [competitorData.promotionPictures];
+            }
+          }
+        }
+        
+        console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
+        return competitorData;
       } else {
         console.log(`No competitor data found for work item ${workItemId}`);
         return null;
