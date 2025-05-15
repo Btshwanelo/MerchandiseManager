@@ -12,7 +12,7 @@ import Inventory from "@/pages/inventory";
 import Products from "@/pages/products";
 import Stores from "@/pages/stores";
 import Reports from "@/pages/reports";
-import Alerts from "@/pages/alerts";
+// Alerts removed as requested
 import UserManagement from "@/pages/user-management";
 import UserProfile from "@/pages/user-profile";
 import UserDetail from "@/pages/user-detail";
@@ -122,15 +122,7 @@ function Router() {
         )} 
       />
       
-      <ProtectedRoute 
-        path="/alerts" 
-        roles={[UserRole.ADMIN, UserRole.MANAGER]}
-        component={() => (
-          <Layout>
-            <Alerts />
-          </Layout>
-        )} 
-      />
+      {/* Alerts route removed as requested */}
       
       <ProtectedRoute 
         path="/users" 

@@ -7,6 +7,7 @@ import {
   Package,
   Tags,
   BarChart3,
+  Bell,
   Users,
   Settings,
   LogOut,
@@ -438,6 +439,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                                   >
                                     {item.icon}
                                     <span className="ml-3">{item.label}</span>
+                                    {/* Alert badge removed */}
                                   </a>
                                 </Link>
                               </li>
@@ -458,11 +460,13 @@ export const Sidebar = ({ className }: SidebarProps) => {
                       </h3>
                       <ul className="space-y-1 px-2">
                         {navigationItems
-                          .filter(item => 
-                            item.section === "merchandising" &&
-                            (!item.roles || item.roles.includes(userRole))
-                          )
+                          .filter(item => item.section === "merchandising")
                           .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
+
                             const isActive = location === item.href;
 
                             return (
@@ -498,11 +502,13 @@ export const Sidebar = ({ className }: SidebarProps) => {
                       </h3>
                       <ul className="space-y-1 px-2">
                         {navigationItems
-                          .filter(item => 
-                            item.section === "documents" &&
-                            (!item.roles || item.roles.includes(userRole))
-                          )
+                          .filter(item => item.section === "documents")
                           .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
+
                             const isActive = location === item.href;
 
                             return (
@@ -538,11 +544,13 @@ export const Sidebar = ({ className }: SidebarProps) => {
                       </h3>
                       <ul className="space-y-1 px-2">
                         {navigationItems
-                          .filter(item => 
-                            item.section === "admin" &&
-                            (!item.roles || item.roles.includes(userRole))
-                          )
+                          .filter(item => item.section === "admin")
                           .map((item) => {
+                            // Hide items that are restricted by role
+                            if (item.roles && !item.roles.includes(userRole)) {
+                              return null;
+                            }
+
                             const isActive = location === item.href;
 
                             return (
@@ -558,10 +566,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                                   >
                                     {item.icon}
                                     <span className="ml-3">{item.label}</span>
-                                  </a>
-                                </Link>
-                              </li>
-                            );
+                                    {/* Alert badge removed */}
                           })}
                       </ul>
                     </div>
@@ -573,16 +578,19 @@ export const Sidebar = ({ className }: SidebarProps) => {
         </nav>
       </ScrollArea>
 
+      {/* Sign Out button */}
       <div className="p-4 border-t border-neutral-200">
-        <Button 
-          variant="ghost" 
-          className="w-full justify-start"
+        <Button
+          variant="ghost"
+          className="w-full justify-start text-muted-foreground"
           onClick={handleLogout}
           disabled={logoutMutation.isPending}
         >
           <LogOut className="h-5 w-5 mr-3" />
-          <span>Log out</span>
-          {logoutMutation.isPending && <span className="ml-2">...</span>}
+          Sign Out
+          {logoutMutation.isPending && (
+            <span className="loading ml-2">...</span>
+          )}
         </Button>
       </div>
     </aside>
