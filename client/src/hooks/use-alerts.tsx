@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
+import { isFeatureEnabled, FeatureFlags } from "@/config/feature-flags";
 
 // Enum that matches the backend AlertType
 export enum AlertType {
@@ -48,6 +49,7 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [lastRefreshed, setLastRefreshed] = useState(new Date());
+  const alertsEnabled = isFeatureEnabled(FeatureFlags.ENABLE_USER_ALERTS);
 
   // Query to get all alerts for the current user
   const {
@@ -58,14 +60,14 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   } = useQuery<UserAlert[], Error>({
     queryKey: ["/api/user-alerts", lastRefreshed],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !alertsEnabled) return [];
       const res = await fetch("/api/user-alerts");
       if (!res.ok) {
         throw new Error("Failed to fetch alerts");
       }
       return res.json();
     },
-    enabled: !!user, // Only run query if user is logged in
+    enabled: !!user && alertsEnabled, // Only run query if user is logged in and alerts are enabled
   });
 
   // Query to get unread alerts
@@ -75,19 +77,21 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   } = useQuery<UserAlert[], Error>({
     queryKey: ["/api/user-alerts/unread", lastRefreshed],
     queryFn: async () => {
-      if (!user) return [];
+      if (!user || !alertsEnabled) return [];
       const res = await fetch("/api/user-alerts/unread");
       if (!res.ok) {
         throw new Error("Failed to fetch unread alerts");
       }
       return res.json();
     },
-    enabled: !!user, // Only run query if user is logged in
+    enabled: !!user && alertsEnabled, // Only run query if user is logged in and alerts are enabled
   });
 
   // Mutation to mark an alert as read
   const markAsReadMutation = useMutation({
     mutationFn: async (alertId: number) => {
+      if (!alertsEnabled) return null; // Don't make API call if alerts are disabled
+      
       const res = await fetch(`/api/user-alerts/${alertId}/read`, {
         method: "PATCH",
       });
@@ -98,9 +102,11 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       // Invalidate and refetch alerts
-      queryClient.invalidateQueries({ queryKey: ["/api/user-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user-alerts/unread"] });
-      setLastRefreshed(new Date());
+      if (alertsEnabled) {
+        queryClient.invalidateQueries({ queryKey: ["/api/user-alerts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user-alerts/unread"] });
+        setLastRefreshed(new Date());
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -114,6 +120,8 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
   // Mutation to delete an alert
   const deleteAlertMutation = useMutation({
     mutationFn: async (alertId: number) => {
+      if (!alertsEnabled) return null; // Don't make API call if alerts are disabled
+      
       const res = await fetch(`/api/user-alerts/${alertId}`, {
         method: "DELETE",
       });
@@ -124,13 +132,15 @@ export function AlertsProvider({ children }: { children: ReactNode }) {
     },
     onSuccess: () => {
       // Invalidate and refetch alerts
-      queryClient.invalidateQueries({ queryKey: ["/api/user-alerts"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/user-alerts/unread"] });
-      setLastRefreshed(new Date());
-      toast({
-        title: "Success",
-        description: "Alert deleted successfully",
-      });
+      if (alertsEnabled) {
+        queryClient.invalidateQueries({ queryKey: ["/api/user-alerts"] });
+        queryClient.invalidateQueries({ queryKey: ["/api/user-alerts/unread"] });
+        setLastRefreshed(new Date());
+        toast({
+          title: "Success",
+          description: "Alert deleted successfully",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({

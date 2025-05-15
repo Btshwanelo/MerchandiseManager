@@ -12,6 +12,7 @@ import { AlertCircle, Filter, Loader2, Search, CheckCircle2 } from "lucide-react
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Alert } from "@shared/schema";
+import { isFeatureEnabled, FeatureFlags } from "@/config/feature-flags";
 
 const AlertsPage = () => {
   const { toast } = useToast();

@@ -12,8 +12,14 @@ import { Card } from "@/components/ui/card";
 import { useAlerts, AlertType } from "@/hooks/use-alerts";
 import { cn } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
+import { isFeatureEnabled, FeatureFlags } from "@/config/feature-flags";
 
 export function AlertsDropdown() {
+  // Early return if alerts are disabled via feature flag
+  if (!isFeatureEnabled(FeatureFlags.ENABLE_USER_ALERTS)) {
+    return null;
+  }
+  
   const { alerts, unreadAlerts, markAsRead, deleteAlert, refetchAlerts } = useAlerts();
   const { toast } = useToast();
   const [open, setOpen] = useState(false);
