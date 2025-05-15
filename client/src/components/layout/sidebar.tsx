@@ -156,13 +156,7 @@ const navigationItems: NavItem[] = [
     section: "admin",
     roles: [UserRole.ADMIN, UserRole.MANAGER]
   },
-  {
-    href: "/alerts",
-    label: "Alerts",
-    icon: <Bell className="h-5 w-5" />,
-    section: "admin",
-    roles: [UserRole.ADMIN, UserRole.MANAGER]
-  },
+  // Alerts removed as requested
   {
     href: "/users",
     label: "User Management",
