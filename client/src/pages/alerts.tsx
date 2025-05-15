@@ -18,24 +18,48 @@ const AlertsPage = () => {
   const { toast } = useToast();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("active");
+  const alertsEnabled = isFeatureEnabled(FeatureFlags.ENABLE_USER_ALERTS);
+
+  // Show a message when alerts are disabled via feature flag
+  if (!alertsEnabled) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-2xl font-bold">Alerts & Notifications</h1>
+        <Card className="p-6">
+          <div className="flex flex-col items-center justify-center py-8 text-center">
+            <AlertCircle className="h-12 w-12 text-muted-foreground mb-4" />
+            <h3 className="text-lg font-medium">Alerts System Disabled</h3>
+            <p className="text-muted-foreground mt-1">
+              The alerts system is currently disabled via feature flags.
+            </p>
+          </div>
+        </Card>
+      </div>
+    );
+  }
 
   // Fetch alerts
   const { data: alerts, isLoading, error } = useQuery<(Alert & { product: any; store: any })[]>({
     queryKey: ["/api/alerts"],
+    enabled: alertsEnabled // Only fetch if alerts are enabled
   });
 
   // Resolve alert mutation
   const resolveMutation = useMutation({
     mutationFn: async (alertId: number) => {
+      if (!alertsEnabled) return null; // Don't make API call if alerts are disabled
+      
       const res = await apiRequest("POST", `/api/alerts/${alertId}/resolve`);
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
-      toast({
-        title: "Alert resolved",
-        description: "The alert has been successfully resolved.",
-      });
+      if (alertsEnabled) {
+        queryClient.invalidateQueries({ queryKey: ["/api/alerts"] });
+        toast({
+          title: "Alert resolved",
+          description: "The alert has been successfully resolved.",
+        });
+      }
     },
     onError: (error) => {
       toast({
@@ -47,7 +71,9 @@ const AlertsPage = () => {
   });
   
   const handleResolveAlert = (alertId: number) => {
-    resolveMutation.mutate(alertId);
+    if (alertsEnabled) {
+      resolveMutation.mutate(alertId);
+    }
   };
 
   // Filter alerts based on search query and tab
