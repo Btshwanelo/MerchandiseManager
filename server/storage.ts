@@ -1637,6 +1637,45 @@ export class DatabaseStorage implements IStorage {
         
         const orderData = orderResult.rows[0];
         
+        // Process pictures if they exist and are in string format
+        if (orderData.pictures) {
+          console.log("Processing order pictures, original format:", typeof orderData.pictures);
+          try {
+            // If it's a string, try to parse as JSON
+            if (typeof orderData.pictures === 'string') {
+              try {
+                const parsed = JSON.parse(orderData.pictures);
+                orderData.pictures = Array.isArray(parsed) ? parsed : [orderData.pictures];
+              } catch (e) {
+                // If parsing fails, ensure it's an array
+                orderData.pictures = [orderData.pictures];
+              }
+            } 
+            // If pictures is already an object but not an array, convert to array
+            else if (typeof orderData.pictures === 'object' && !Array.isArray(orderData.pictures)) {
+              orderData.pictures = Object.values(orderData.pictures)
+                .filter(Boolean)
+                .map(value => String(value));
+            }
+            
+            // Ensure all entries are strings and filter out empty values
+            if (Array.isArray(orderData.pictures)) {
+              orderData.pictures = orderData.pictures
+                .filter(Boolean)
+                .map(pic => String(pic))
+                .filter(pic => pic.trim && pic.trim() !== '');
+            }
+            
+            console.log("Processed order pictures:", orderData.pictures);
+          } catch (e) {
+            console.log("Error processing order pictures:", e);
+            // Provide fallback empty array if processing fails
+            orderData.pictures = [];
+          }
+        } else {
+          orderData.pictures = [];
+        }
+        
         // Get order items if they exist
         try {
           const itemsResult = await pool.query(`
@@ -1680,7 +1719,40 @@ export class DatabaseStorage implements IStorage {
           }
         } catch (itemsError) {
           console.log("Error fetching order items:", itemsError);
-          orderData.items = [];
+          
+          // Attempt fallback if possible - just get products without order items
+          try {
+            console.log("Attempting to retrieve product data even without order items");
+            const productsResult = await pool.query(`
+              SELECT id, name, sku, price, category, min_stock_level as "minStockLevel", description, image
+              FROM products 
+              WHERE id IN (SELECT product_id FROM inventory WHERE store_id = $1 AND quantity < 5)
+              LIMIT 5
+            `, [orderData.storeId]);
+            
+            if (productsResult.rows.length > 0) {
+              orderData.items = productsResult.rows.map(product => ({
+                productId: product.id,
+                quantity: 1,
+                product: {
+                  id: product.id,
+                  name: product.name,
+                  sku: product.sku,
+                  price: product.price,
+                  category: product.category,
+                  minStockLevel: product.minStockLevel,
+                  description: product.description,
+                  image: product.image
+                },
+                notes: "Auto-generated due to low stock"
+              }));
+            } else {
+              orderData.items = [];
+            }
+          } catch (fallbackError) {
+            console.log("Fallback product retrieval also failed:", fallbackError);
+            orderData.items = [];
+          }
         }
         
         // Ensure workItemId is set
@@ -1723,7 +1795,8 @@ export class DatabaseStorage implements IStorage {
             orderDate: workItem.completedAt || new Date().toISOString(),
             status: "pending",
             items: orderItems,
-            notes: "Automatically generated from stock take data"
+            notes: "Automatically generated from stock take data",
+            pictures: [] // Empty array for consistent structure
           };
         }
       } else {
