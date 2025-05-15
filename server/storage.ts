@@ -1664,17 +1664,25 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Find competitor merchandising data for this store and user
-      // Note: The database schema doesn't have the workItemId column currently
-      const competitorData = await db.query.competitorMerchandising.findFirst({
-        where: and(
-          eq(competitorMerchandising.storeId, workItem.storeId),
-          eq(competitorMerchandising.userId, workItem.userId)
-        )
-      });
+      // Use raw SQL to avoid the schema mismatch issues
+      // The database doesn't have a work_item_id column but our schema thinks it does
+      const result = await pool.query(`
+        SELECT id, store_id as "storeId", user_id as "userId", date, 
+               brand, product_description as "productDescription", 
+               promotional_price as "promotionalPrice", promotion_pictures as "promotionPictures"
+        FROM competitor_merchandising 
+        WHERE store_id = $1 AND user_id = $2
+        ORDER BY date DESC
+        LIMIT 1
+      `, [workItem.storeId, workItem.userId]);
       
-      console.log(`Found competitor data for work item ${workItemId} via store+user match:`, competitorData);
-      return competitorData;
+      if (result.rows.length > 0) {
+        console.log(`Found competitor data for work item ${workItemId}:`, result.rows[0]);
+        return result.rows[0];
+      } else {
+        console.log(`No competitor data found for work item ${workItemId}`);
+        return null;
+      }
     } catch (error) {
       console.error("Error getting competitor merchandising by work item ID:", error);
       return null;
