@@ -1649,7 +1649,23 @@ export class DatabaseStorage implements IStorage {
       
       console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // Find competitor merchandising data for this store and user
+      // Try to find competitor merchandising directly related to the work item
+      // First check if there's a direct relation in the database (workItemId field may exist)
+      try {
+        // @ts-ignore - Some implementations might have workItemId field
+        const directData = await db.query.competitorMerchandising.findFirst({
+          where: eq(competitorMerchandising.workItemId, workItemId)
+        });
+        
+        if (directData) {
+          console.log(`Found competitor data directly linked to work item ${workItemId}:`, directData);
+          return directData;
+        }
+      } catch (err) {
+        console.log("No direct workItemId relation found, falling back to store+user match");
+      }
+      
+      // Fallback to finding competitor merchandising data for this store and user
       const competitorData = await db.query.competitorMerchandising.findFirst({
         where: and(
           eq(competitorMerchandising.storeId, workItem.storeId),
@@ -1657,7 +1673,7 @@ export class DatabaseStorage implements IStorage {
         )
       });
       
-      console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
+      console.log(`Found competitor data for work item ${workItemId} via store+user match:`, competitorData);
       return competitorData;
     } catch (error) {
       console.error("Error getting competitor merchandising by work item ID:", error);
