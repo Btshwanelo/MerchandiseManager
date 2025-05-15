@@ -1541,53 +1541,154 @@ export class DatabaseStorage implements IStorage {
         return null;
       }
       
-      // Look for an order associated with this work item's store and user
-      const existingOrder = await db.select({
-          orders: orders,
-          order_items: orderItems,
-          products: products
-        })
-        .from(orders)
-        .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
-        .leftJoin(products, eq(products.id, orderItems.productId))
-        .where(
-          and(
-            eq(orders.storeId, workItem.storeId),
-            eq(orders.userId, workItem.userId)
+      console.log(`Fetching order data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // Use raw SQL to fetch order data - avoiding schema mismatches
+      let orderResult;
+      try {
+        // First try to find orders with work_item_id
+        orderResult = await pool.query(`
+          SELECT 
+            o.id, 
+            o.store_id as "storeId", 
+            o.user_id as "userId", 
+            o.order_date as "orderDate",
+            o.notes,
+            o.pictures,
+            o.status,
+            o.work_item_id as "workItemId"
+          FROM orders o
+          WHERE o.work_item_id = $1
+          ORDER BY o.order_date DESC
+          LIMIT 1
+        `, [workItemId]);
+        
+        // If no exact match, fallback to user and store match
+        if (orderResult.rows.length === 0) {
+          orderResult = await pool.query(`
+            SELECT 
+              o.id, 
+              o.store_id as "storeId", 
+              o.user_id as "userId", 
+              o.order_date as "orderDate",
+              o.notes,
+              o.pictures,
+              o.status
+            FROM orders o
+            WHERE o.store_id = $1 AND o.user_id = $2
+            ORDER BY o.order_date DESC
+            LIMIT 1
+          `, [workItem.storeId, workItem.userId]);
+        }
+      } catch (sqlError) {
+        console.log("Error in direct SQL query for orders, falling back to original schema query:", sqlError);
+        
+        // Fallback to original Drizzle query if SQL has error
+        const existingOrder = await db.select({
+            orders: orders,
+            order_items: orderItems,
+            products: products
+          })
+          .from(orders)
+          .leftJoin(orderItems, eq(orderItems.orderId, orders.id))
+          .leftJoin(products, eq(products.id, orderItems.productId))
+          .where(
+            and(
+              eq(orders.storeId, workItem.storeId),
+              eq(orders.userId, workItem.userId)
+            )
           )
-        )
-        .execute();
+          .execute();
+          
+        if (existingOrder && existingOrder.length > 0) {
+          // Process the results to create a proper structure
+          const order = {
+            id: existingOrder[0].orders.id,
+            storeId: existingOrder[0].orders.storeId,
+            userId: existingOrder[0].orders.userId,
+            orderDate: existingOrder[0].orders.orderDate,
+            status: existingOrder[0].orders.status,
+            notes: existingOrder[0].orders.notes,
+            items: existingOrder.map(row => ({
+              id: row.order_items?.id,
+              productId: row.order_items?.productId,
+              quantity: row.order_items?.quantity,
+              notes: row.order_items?.notes,
+              product: row.products ? {
+                id: row.products.id,
+                name: row.products.name,
+                sku: row.products.sku,
+                price: row.products.price,
+                category: row.products.category,
+                minStockLevel: row.products.minStockLevel,
+                description: row.products.description,
+                image: row.products.image
+              } : null
+            })).filter(item => item.id !== undefined)
+          };
+          
+          console.log(`Found existing order for work item ${workItemId} using fallback query`);
+          return order;
+        }
+      }
+      
+      if (orderResult && orderResult.rows.length > 0) {
+        console.log(`Found existing order for work item ${workItemId} using direct SQL`);
         
-      if (existingOrder && existingOrder.length > 0) {
-        // Process the results to create a proper structure
-        const order = {
-          id: existingOrder[0].orders.id,
-          storeId: existingOrder[0].orders.storeId,
-          userId: existingOrder[0].orders.userId,
-          orderDate: existingOrder[0].orders.orderDate,
-          status: existingOrder[0].orders.status,
-          notes: existingOrder[0].orders.notes,
-          createdAt: existingOrder[0].orders.createdAt,
-          items: existingOrder.map(row => ({
-            id: row.order_items?.id,
-            productId: row.order_items?.productId,
-            quantity: row.order_items?.quantity,
-            notes: row.order_items?.notes,
-            product: row.products ? {
-              id: row.products.id,
-              name: row.products.name,
-              sku: row.products.sku,
-              price: row.products.price,
-              category: row.products.category,
-              minStockLevel: row.products.minStockLevel,
-              description: row.products.description,
-              image: row.products.image
-            } : null
-          })).filter(item => item.id !== undefined)
-        };
+        const orderData = orderResult.rows[0];
         
-        console.log(`Found existing order for work item ${workItemId}`);
-        return order;
+        // Get order items if they exist
+        try {
+          const itemsResult = await pool.query(`
+            SELECT 
+              oi.id,
+              oi.order_id as "orderId",
+              oi.product_id as "productId",
+              oi.quantity,
+              oi.notes,
+              p.name as "productName",
+              p.sku,
+              p.price,
+              p.category,
+              p.min_stock_level as "minStockLevel",
+              p.description,
+              p.image
+            FROM order_items oi
+            JOIN products p ON oi.product_id = p.id
+            WHERE oi.order_id = $1
+          `, [orderData.id]);
+          
+          if (itemsResult.rows.length > 0) {
+            orderData.items = itemsResult.rows.map(item => ({
+              id: item.id,
+              productId: item.productId,
+              quantity: item.quantity,
+              notes: item.notes,
+              product: {
+                id: item.productId,
+                name: item.productName,
+                sku: item.sku,
+                price: item.price,
+                category: item.category,
+                minStockLevel: item.minStockLevel,
+                description: item.description,
+                image: item.image
+              }
+            }));
+          } else {
+            orderData.items = [];
+          }
+        } catch (itemsError) {
+          console.log("Error fetching order items:", itemsError);
+          orderData.items = [];
+        }
+        
+        // Ensure workItemId is set
+        if (!orderData.workItemId) {
+          orderData.workItemId = workItemId;
+        }
+        
+        return orderData;
       }
       
       // If no existing order, try to generate one from stock take data
@@ -1622,8 +1723,7 @@ export class DatabaseStorage implements IStorage {
             orderDate: workItem.completedAt || new Date().toISOString(),
             status: "pending",
             items: orderItems,
-            notes: "Automatically generated from stock take data",
-            createdAt: new Date().toISOString()
+            notes: "Automatically generated from stock take data"
           };
         }
       } else {
@@ -1640,9 +1740,66 @@ export class DatabaseStorage implements IStorage {
   async getMerchandisingDataByWorkItemId(workItemId: number): Promise<any | null> {
     console.log("Getting merchandising data by work item ID:", workItemId);
     try {
-      // Implementation would depend on the schema definition
-      // This is a stub that should be properly implemented
-      return null;
+      // First, get the work item to find store and user IDs
+      const workItem = await db.query.workItems.findFirst({
+        where: eq(workItems.id, workItemId),
+      });
+      
+      if (!workItem) {
+        console.log(`Work item ${workItemId} not found`);
+        return null;
+      }
+      
+      console.log(`Fetching merchandising data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      
+      // Use raw SQL to fetch merchandising data - avoiding schema mismatches
+      const merchandisingResult = await pool.query(`
+        SELECT 
+          mp.id, 
+          mp.store_id as "storeId", 
+          mp.user_id as "userId", 
+          mp.date,
+          mp.promotion_pictures as "promotionPictures"
+        FROM merchandising_promotions mp
+        WHERE mp.store_id = $1 AND mp.user_id = $2
+        ORDER BY mp.date DESC
+        LIMIT 1
+      `, [workItem.storeId, workItem.userId]);
+      
+      if (merchandisingResult.rows.length === 0) {
+        console.log(`No merchandising data found for work item ${workItemId}`);
+        return null;
+      }
+      
+      const merchandisingData = merchandisingResult.rows[0];
+      
+      // Get merchandising items if they exist
+      try {
+        const itemsResult = await pool.query(`
+          SELECT 
+            mi.id,
+            mi.merchandising_promotion_id as "merchandisingPromotionId",
+            mi.product_id as "productId",
+            mi.price,
+            p.name as "productName",
+            p.sku
+          FROM merchandising_items mi
+          JOIN products p ON mi.product_id = p.id
+          WHERE mi.merchandising_promotion_id = $1
+        `, [merchandisingData.id]);
+        
+        if (itemsResult.rows.length > 0) {
+          merchandisingData.items = itemsResult.rows;
+        } else {
+          merchandisingData.items = [];
+        }
+      } catch (itemsError) {
+        console.log("Error fetching merchandising items (may not exist in schema):", itemsError);
+        merchandisingData.items = [];
+      }
+      
+      console.log(`Found merchandising data for work item ${workItemId}:`, merchandisingData);
+      return merchandisingData;
     } catch (error) {
       console.error("Error getting merchandising data by work item ID:", error);
       return null;
