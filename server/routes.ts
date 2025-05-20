@@ -532,6 +532,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Orders Information
   app.post("/api/orders", isAuthenticated, async (req, res) => {
     try {
+      console.log("Received order data:", req.body);
+      
       const orderSchema = z.object({
         storeId: z.number(),
         workItemId: z.number(),
@@ -544,14 +546,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
       
       const validatedData = orderSchema.parse(req.body);
-      const result = await storage.createOrder({
-        ...validatedData,
-        userId: req.user!.id,
-        status: "pending",
-        date: new Date()
-      });
+      console.log("Validated order data:", validatedData);
       
-      res.status(201).json(result);
+      // Use direct SQL to ensure we're saving to the database
+      let orderResult;
+      try {
+        const orderQuery = `
+          INSERT INTO orders 
+          (store_id, user_id, status, notes, pictures, order_date, work_item_id) 
+          VALUES ($1, $2, $3, $4, $5, $6, $7)
+          RETURNING id, store_id as "storeId", user_id as "userId", status, notes, pictures, order_date as "orderDate", work_item_id as "workItemId"
+        `;
+        
+        orderResult = await pool.query(orderQuery, [
+          validatedData.storeId,
+          req.user!.id,
+          "pending",
+          validatedData.notes || null,
+          [], // Empty array for pictures
+          new Date(),
+          validatedData.workItemId
+        ]);
+        
+        if (!orderResult || orderResult.rows.length === 0) {
+          throw new Error("Failed to create order record");
+        }
+        
+        const order = orderResult.rows[0];
+        console.log("Created order in database:", order);
+        
+        // Save the order items if present
+        if (validatedData.products && validatedData.products.length > 0) {
+          for (const product of validatedData.products) {
+            const itemQuery = `
+              INSERT INTO order_items 
+              (order_id, product_id, quantity, notes)
+              VALUES ($1, $2, $3, $4)
+              RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
+            `;
+            
+            const itemResult = await pool.query(itemQuery, [
+              order.id,
+              product.productId,
+              product.quantity,
+              null // No notes by default
+            ]);
+            
+            console.log(`Added product ${product.productId} to order ${order.id}`);
+          }
+        }
+        
+        // Update the work item status
+        if (validatedData.workItemId) {
+          await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
+        }
+        
+        // Add the items to the response
+        const items = validatedData.products?.map(p => ({
+          productId: p.productId,
+          quantity: p.quantity
+        })) || [];
+        
+        const result = {
+          ...order,
+          items
+        };
+        
+        res.status(201).json(result);
+      } catch (dbError) {
+        console.error("Database error creating order:", dbError);
+        
+        // Fall back to the storage method if direct SQL fails
+        console.log("Falling back to storage method");
+        const result = await storage.createOrder({
+          ...validatedData,
+          userId: req.user!.id,
+          status: "pending",
+          date: new Date()
+        });
+        
+        res.status(201).json(result);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid order data", errors: error.errors });
@@ -583,21 +658,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Fetching order data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // For the first version, we'll use the createOrder data that's stored with the work item completion
+      // Query the database directly to find orders with this work_item_id
       try {
-        // Get the orders by workItemId from storage
-        const order = await storage.getOrderByWorkItemId(workItemId);
-        console.log(`Found order data for work item ${workItemId}:`, order);
+        const orderQuery = `
+          SELECT 
+            o.id, 
+            o.store_id as "storeId", 
+            o.user_id as "userId", 
+            o.order_date as "orderDate",
+            o.notes,
+            o.pictures,
+            o.status,
+            o.work_item_id as "workItemId"
+          FROM orders o
+          WHERE o.work_item_id = $1
+          ORDER BY o.order_date DESC
+          LIMIT 1
+        `;
         
-        if (order) {
-          res.json(order);
-        } else {
-          console.log(`No order data found for work item ${workItemId}. Returning null.`);
-          res.json(null);
+        const orderResult = await pool.query(orderQuery, [workItemId]);
+        
+        if (orderResult.rows && orderResult.rows.length > 0) {
+          const order = orderResult.rows[0];
+          
+          // Get the order items
+          const itemsQuery = `
+            SELECT 
+              oi.id, 
+              oi.order_id as "orderId", 
+              oi.product_id as "productId",
+              oi.quantity,
+              oi.notes,
+              p.name as "productName",
+              p.sku as "productSku",
+              p.price as "productPrice"
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = $1
+          `;
+          
+          const itemsResult = await pool.query(itemsQuery, [order.id]);
+          
+          // Add the items to the order
+          order.items = itemsResult.rows || [];
+          
+          console.log(`Found real order data in database for work item ${workItemId}:`, order);
+          return res.json(order);
         }
+        
+        // If no order found with work_item_id, check if we have any orders for this store and user
+        // This is a fallback for older data
+        const fallbackQuery = `
+          SELECT 
+            o.id, 
+            o.store_id as "storeId", 
+            o.user_id as "userId", 
+            o.order_date as "orderDate",
+            o.notes,
+            o.pictures,
+            o.status
+          FROM orders o
+          WHERE o.store_id = $1 AND o.user_id = $2
+          ORDER BY o.order_date DESC
+          LIMIT 1
+        `;
+        
+        const fallbackResult = await pool.query(fallbackQuery, [workItem.storeId, workItem.userId]);
+        
+        if (fallbackResult.rows && fallbackResult.rows.length > 0) {
+          const order = fallbackResult.rows[0];
+          
+          // Add workItemId to match client expectations
+          order.workItemId = workItemId;
+          
+          // Get the order items
+          const itemsQuery = `
+            SELECT 
+              oi.id, 
+              oi.order_id as "orderId", 
+              oi.product_id as "productId",
+              oi.quantity,
+              oi.notes,
+              p.name as "productName",
+              p.sku as "productSku",
+              p.price as "productPrice"
+            FROM order_items oi
+            JOIN products p ON p.id = oi.product_id
+            WHERE oi.order_id = $1
+          `;
+          
+          const itemsResult = await pool.query(itemsQuery, [order.id]);
+          
+          // Add the items to the order
+          order.items = itemsResult.rows || [];
+          
+          console.log(`Found fallback order data in database for store ${workItem.storeId} and user ${workItem.userId}:`, order);
+          return res.json(order);
+        }
+        
+        // As a last resort, generate from stock take data
+        console.log(`No order data found in database for work item ${workItemId}. Checking stock take data.`);
+        const generatedOrder = await storage.getOrderByWorkItemId(workItemId);
+        
+        if (generatedOrder) {
+          console.log(`Generated order data from stock take for work item ${workItemId}:`, generatedOrder);
+          return res.json(generatedOrder);
+        }
+        
+        console.log(`No order data found for work item ${workItemId}.`);
+        return res.json(null);
       } catch (err) {
-        console.log("Error fetching orders (expected if not found):", err);
-        res.json(null);
+        console.error("Error querying orders from database:", err);
+        
+        // Fall back to the storage method if database queries fail
+        const order = await storage.getOrderByWorkItemId(workItemId);
+        console.log(`Fallback order data for work item ${workItemId}:`, order);
+        return res.json(order);
       }
     } catch (error) {
       console.error("Error getting order by work item:", error);
