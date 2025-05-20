@@ -1333,36 +1333,57 @@ export class MemStorage implements IStorage {
     date?: Date;
   }): Promise<any> {
     console.log("Creating competitor merchandising with data:", data);
-    const id = this.currentCompetitorId++;
     
-    // Ensure we handle the properties correctly
-    const competitorData = {
-      id,
-      ...data,
-      // No need to reassign promotionalPrice as it's already in the data object
-      createdAt: new Date()
-    };
-    
-    this.competitorData.set(id, competitorData);
-    
-    // Update the work item status if needed
-    const workItem = await this.getWorkItem(data.workItemId);
-    if (workItem && workItem.status === WorkItemStatus.PENDING) {
-      await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+    try {
+      // Save the competitor merchandising data to the database
+      const result = await db.insert(competitorMerchandising).values({
+        storeId: data.storeId,
+        userId: data.userId,
+        workItemId: data.workItemId || null,
+        brand: data.brand,
+        productDescription: data.productDescription,
+        promotionalPrice: data.promotionalPrice || null,
+        promotionPictures: data.promotionPictures || []
+      }).returning();
+      
+      const competitorData = result[0];
+      console.log("Saved competitor merchandising data to database:", competitorData);
+      
+      // Update the work item status if needed
+      if (data.workItemId) {
+        const workItem = await this.getWorkItem(data.workItemId);
+        if (workItem && workItem.status === WorkItemStatus.PENDING) {
+          await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+        }
+      }
+      
+      // Track this as an activity
+      await this.createActivity({
+        userId: data.userId,
+        storeId: data.storeId,
+        productId: 0, // No specific product ID for competitor data
+        actionType: 'competitor_analysis',
+        status: 'completed',
+        notes: `Competitor data recorded for ${data.brand}`
+      });
+      
+      return competitorData;
+    } catch (error) {
+      console.error("Error saving competitor data to database:", error);
+      
+      // Fallback to memory storage if database fails
+      const id = this.currentCompetitorId++;
+      const competitorData = {
+        id,
+        ...data,
+        createdAt: new Date()
+      };
+      
+      this.competitorData.set(id, competitorData);
+      console.log("Saved competitor data to memory as fallback");
+      
+      return competitorData;
     }
-    
-    // Track this as an activity
-    await this.createActivity({
-      userId: data.userId,
-      storeId: data.storeId,
-      productId: 0, // No specific product ID for competitor data
-      actionType: 'competitor_analysis',
-      status: 'completed',
-      timestamp: new Date(),
-      notes: `Competitor data recorded for ${data.brand}`
-    });
-    
-    return competitorData;
   }
   
   // Orders
