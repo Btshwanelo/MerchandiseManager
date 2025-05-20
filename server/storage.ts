@@ -1,6 +1,6 @@
 import {
   users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, userAlerts,
-  orders, orderItems, competitorMerchandising, 
+  orders, orderItems, competitorMerchandising, merchandisingPromotions, merchandisingItems,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
@@ -9,7 +9,9 @@ import {
   type WorkItem, type InsertWorkItem, WorkItemStatus, AlertStatus,
   type UserAlert, type InsertUserAlert,
   type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
-  type CompetitorMerchandising, type InsertCompetitorMerchandising
+  type CompetitorMerchandising, type InsertCompetitorMerchandising,
+  type MerchandisingPromotion, type InsertMerchandisingPromotion,
+  type MerchandisingItem, type InsertMerchandisingItem
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -1249,34 +1251,72 @@ export class MemStorage implements IStorage {
       notes?: string;
     }>;
   }): Promise<any> {
-    const id = this.currentMerchandisingId++;
+    console.log("Creating merchandising data:", data);
     
-    const merchandisingData = {
-      id,
-      ...data,
-      createdAt: new Date()
-    };
-    
-    this.merchandisingData.set(id, merchandisingData);
-    
-    // Update the work item status to indicate progress
-    const workItem = await this.getWorkItem(data.workItemId);
-    if (workItem && workItem.status === WorkItemStatus.PENDING) {
-      await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+    try {
+      // First, create the merchandising promotion record in the database
+      const promotionResult = await db.insert(merchandisingPromotions).values({
+        storeId: data.storeId,
+        userId: data.userId,
+        promotionPictures: [] // Empty array since we don't have pictures by default
+      }).returning();
+      
+      const promotion = promotionResult[0];
+      console.log("Created merchandising promotion:", promotion);
+      
+      // Now create the individual merchandising items linked to the promotion
+      const savedItems = [];
+      for (const item of data.merchandisingItems) {
+        const itemResult = await db.insert(merchandisingItems).values({
+          merchandisingPromotionId: promotion.id,
+          productId: item.productId,
+          price: item.price
+        }).returning();
+        
+        savedItems.push(itemResult[0]);
+      }
+      
+      console.log(`Added ${savedItems.length} merchandising items to the database`);
+      
+      // Create the complete merchandising data record with items
+      const merchandisingData = {
+        ...promotion,
+        merchandisingItems: savedItems
+      };
+      
+      // Update the work item status to indicate progress
+      const workItem = await this.getWorkItem(data.workItemId);
+      if (workItem && workItem.status === WorkItemStatus.PENDING) {
+        await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+      }
+      
+      // Track this as an activity
+      await this.createActivity({
+        userId: data.userId,
+        storeId: data.storeId,
+        productId: data.merchandisingItems.length > 0 ? data.merchandisingItems[0].productId : 0,
+        actionType: 'merchandising_data',
+        status: 'completed',
+        notes: `Merchandising data recorded for ${data.merchandisingItems.length} products`
+      });
+      
+      return merchandisingData;
+    } catch (error) {
+      console.error("Error saving merchandising data to database:", error);
+      
+      // Fallback to memory storage if database fails
+      const id = this.currentMerchandisingId++;
+      const merchandisingData = {
+        id,
+        ...data,
+        createdAt: new Date()
+      };
+      
+      this.merchandisingData.set(id, merchandisingData);
+      console.log("Saved merchandising data to memory as fallback");
+      
+      return merchandisingData;
     }
-    
-    // Track this as an activity
-    await this.createActivity({
-      userId: data.userId,
-      storeId: data.storeId,
-      productId: data.merchandisingItems.length > 0 ? data.merchandisingItems[0].productId : 0,
-      actionType: 'merchandising_data',
-      status: 'completed',
-      timestamp: new Date(),
-      notes: `Merchandising data recorded for ${data.merchandisingItems.length} products`
-    });
-    
-    return merchandisingData;
   }
   
   // Competitor Merchandising
