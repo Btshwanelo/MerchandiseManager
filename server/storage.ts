@@ -1428,33 +1428,56 @@ export class MemStorage implements IStorage {
     
     try {
       // Insert the order into the database
+      // Add workItemId to match our updated schema
       const orderValues = {
         storeId: data.storeId,
         userId: data.userId,
         status: data.status || "submitted",
         notes: data.notes || null,
-        pictures: [] // Empty array since we don't have pictures
+        pictures: [], // Empty array since we don't have pictures
+        orderDate: new Date(),
+        workItemId: data.workItemId // Add this to the database now
       };
       
       console.log("Inserting order with values:", orderValues);
-      const orderResult = await db.insert(orders).values(orderValues).returning();
       
-      if (!orderResult || orderResult.length === 0) {
+      // Use raw SQL to avoid schema issues
+      const orderResult = await pool.query(`
+        INSERT INTO orders 
+        (store_id, user_id, status, notes, pictures, order_date, work_item_id) 
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING id, store_id as "storeId", user_id as "userId", status, notes, pictures, order_date as "orderDate", work_item_id as "workItemId"
+      `, [
+        orderValues.storeId,
+        orderValues.userId, 
+        orderValues.status,
+        orderValues.notes,
+        orderValues.pictures,
+        orderValues.orderDate,
+        orderValues.workItemId
+      ]);
+      
+      if (!orderResult || orderResult.rows.length === 0) {
         throw new Error("Failed to create order - no order was returned");
       }
       
-      const order = orderResult[0];
+      const order = orderResult.rows[0];
       console.log("Order created in database:", order);
       
       // Save order items if present
       if (data.products && data.products.length > 0) {
         for (const product of data.products) {
-          await db.insert(orderItems).values({
-            orderId: order.id,
-            productId: product.productId,
-            quantity: product.quantity,
-            notes: null
-          }).returning();
+          await pool.query(`
+            INSERT INTO order_items 
+            (order_id, product_id, quantity, notes) 
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
+          `, [
+            order.id,
+            product.productId,
+            product.quantity,
+            null
+          ]);
         }
         console.log(`Added ${data.products.length} products to order`);
       }
