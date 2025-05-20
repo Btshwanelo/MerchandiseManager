@@ -1400,17 +1400,24 @@ export class MemStorage implements IStorage {
     status: string;
     date: Date;
   }): Promise<any> {
-    console.log("Creating order with data:", data);
+    console.log("Creating order:", data);
     
     try {
-      // First try to save to the database
-      const orderResult = await db.insert(orders).values({
+      // Insert the order into the database
+      const orderValues = {
         storeId: data.storeId,
         userId: data.userId,
+        status: data.status || "submitted",
         notes: data.notes || null,
-        status: data.status,
         pictures: [] // Empty array since we don't have pictures
-      }).returning();
+      };
+      
+      console.log("Inserting order with values:", orderValues);
+      const orderResult = await db.insert(orders).values(orderValues).returning();
+      
+      if (!orderResult || orderResult.length === 0) {
+        throw new Error("Failed to create order - no order was returned");
+      }
       
       const order = orderResult[0];
       console.log("Order created in database:", order);
@@ -1423,7 +1430,7 @@ export class MemStorage implements IStorage {
             productId: product.productId,
             quantity: product.quantity,
             notes: null
-          });
+          }).returning();
         }
         console.log(`Added ${data.products.length} products to order`);
       }
@@ -1437,8 +1444,7 @@ export class MemStorage implements IStorage {
         type: 'order',
         storeId: data.storeId,
         productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
-        status: 'active',
-        createdAt: new Date()
+        status: 'active'
       });
       
       // Track this as an activity
@@ -1448,7 +1454,6 @@ export class MemStorage implements IStorage {
         productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
         actionType: 'order_placed',
         status: 'pending',
-        timestamp: new Date(),
         notes: data.notes
       });
       
