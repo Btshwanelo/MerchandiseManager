@@ -1295,12 +1295,11 @@ export class MemStorage implements IStorage {
     console.log("Creating competitor merchandising with data:", data);
     const id = this.currentCompetitorId++;
     
-    // Ensure we handle both the old and new properties correctly
+    // Ensure we handle the properties correctly
     const competitorData = {
       id,
       ...data,
-      // Store as promotionalPrice for backward compatibility with existing code
-      promotionalPrice: data.price, 
+      // No need to reassign promotionalPrice as it's already in the data object
       createdAt: new Date()
     };
     
