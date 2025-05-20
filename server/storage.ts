@@ -1339,43 +1339,77 @@ export class MemStorage implements IStorage {
     status: string;
     date: Date;
   }): Promise<any> {
-    const id = this.currentOrderId++;
+    console.log("Creating order with data:", data);
     
-    const orderData = {
-      id,
-      ...data,
-      createdAt: new Date(),
-      // Set defaults if not provided
-      priority: data.priority || 'medium'
-    };
-    
-    this.orders.set(id, orderData);
-    
-    // Update the work item status
-    await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.COMPLETED });
-    
-    // Create alert for managers about the new order
-    await this.createAlert({
-      message: `New order created: ${data.notes}`,
-      type: 'order',
-      storeId: data.storeId,
-      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
-      status: 'active',
-      createdAt: new Date()
-    });
-    
-    // Track this as an activity
-    await this.createActivity({
-      userId: data.userId,
-      storeId: data.storeId,
-      productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
-      actionType: 'order_placed',
-      status: 'pending',
-      timestamp: new Date(),
-      notes: data.notes
-    });
-    
-    return orderData;
+    try {
+      // First try to save to the database
+      const orderResult = await db.insert(schema.orders).values({
+        storeId: data.storeId,
+        userId: data.userId,
+        notes: data.notes || null,
+        status: data.status,
+        pictures: [] // Empty array since we don't have pictures
+      }).returning();
+      
+      const order = orderResult[0];
+      console.log("Order created in database:", order);
+      
+      // Save order items if present
+      if (data.products && data.products.length > 0) {
+        for (const product of data.products) {
+          await db.insert(schema.orderItems).values({
+            orderId: order.id,
+            productId: product.productId,
+            quantity: product.quantity,
+            notes: null
+          });
+        }
+        console.log(`Added ${data.products.length} products to order`);
+      }
+      
+      // Update the work item status
+      await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.COMPLETED });
+      
+      // Create alert for managers about the new order
+      await this.createAlert({
+        message: `New order created: ${data.notes}`,
+        type: 'order',
+        storeId: data.storeId,
+        productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+        status: 'active',
+        createdAt: new Date()
+      });
+      
+      // Track this as an activity
+      await this.createActivity({
+        userId: data.userId,
+        storeId: data.storeId,
+        productId: data.products && data.products.length > 0 ? data.products[0].productId : 0,
+        actionType: 'order_placed',
+        status: 'pending',
+        timestamp: new Date(),
+        notes: data.notes
+      });
+      
+      return order;
+    } catch (error) {
+      console.error("Error creating order in database:", error);
+      
+      // Fallback to memory storage if database fails
+      const id = this.currentOrderId++;
+      
+      const orderData = {
+        id,
+        ...data,
+        createdAt: new Date(),
+        priority: data.priority || 'medium'
+      };
+      
+      this.orders.set(id, orderData);
+      console.log("Order saved to memory as fallback:", orderData);
+      
+      return orderData;
+    }
   }
 }
 
