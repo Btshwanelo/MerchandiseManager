@@ -376,14 +376,81 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }))
       });
       
+      console.log("Received merchandising data:", req.body);
       const validatedData = merchandisingSchema.parse(req.body);
-      const result = await storage.createMerchandisingData({
-        ...validatedData,
-        userId: req.user!.id,
-        date: new Date()
-      });
+      console.log("Validated merchandising data:", validatedData);
       
-      res.status(201).json(result);
+      try {
+        // Save merchandising data directly to database
+        const query = `
+          INSERT INTO merchandising_data 
+          (store_id, user_id, date, work_item_id)
+          VALUES ($1, $2, $3, $4)
+          RETURNING id, store_id as "storeId", user_id as "userId", date, work_item_id as "workItemId"
+        `;
+        
+        const dbResult = await pool.query(query, [
+          validatedData.storeId,
+          req.user!.id,
+          new Date(),
+          validatedData.workItemId
+        ]);
+        
+        if (!dbResult || dbResult.rows.length === 0) {
+          throw new Error("Failed to save merchandising data to database");
+        }
+        
+        const merchandisingData = dbResult.rows[0];
+        const merchandisingId = merchandisingData.id;
+        
+        console.log("Saved merchandising data record:", merchandisingData);
+        
+        // Save each merchandising item in a separate table
+        const items = [];
+        for (const item of validatedData.merchandisingItems) {
+          const itemQuery = `
+            INSERT INTO merchandising_items 
+            (merchandising_id, product_id, price, notes, work_item_id)
+            VALUES ($1, $2, $3, $4, $5)
+            RETURNING id, merchandising_id as "merchandisingId", product_id as "productId", price, notes
+          `;
+          
+          const itemResult = await pool.query(itemQuery, [
+            merchandisingId,
+            item.productId,
+            item.price,
+            item.notes || null,
+            validatedData.workItemId
+          ]);
+          
+          if (itemResult && itemResult.rows.length > 0) {
+            items.push(itemResult.rows[0]);
+          }
+        }
+        
+        // Add items to the result
+        merchandisingData.items = items;
+        
+        // Update work item status
+        if (validatedData.workItemId) {
+          await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
+        }
+        
+        console.log("Successfully created merchandising data with items:", merchandisingData);
+        res.status(201).json(merchandisingData);
+      } catch (dbError) {
+        console.error("Database error creating merchandising data:", dbError);
+        
+        // Fall back to storage method if direct database insert fails
+        console.log("Falling back to storage method");
+        const result = await storage.createMerchandisingData({
+          ...validatedData,
+          userId: req.user!.id,
+          date: new Date()
+        });
+        
+        res.status(201).json(result);
+      }
     } catch (error) {
       if (error instanceof z.ZodError) {
         return res.status(400).json({ message: "Invalid merchandising data", errors: error.errors });
@@ -486,10 +553,35 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Processed competitor data:", JSON.stringify(data, null, 2));
       
       try {
-        // Create the competitor merchandising record
-        const result = await storage.createCompetitorMerchandising(data);
+        // Use direct SQL to ensure we're saving to the database
+        const query = `
+          INSERT INTO competitor_merchandising 
+          (store_id, user_id, date, brand, product_description, promotional_price, promotion_pictures, work_item_id)
+          VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+          RETURNING id, store_id as "storeId", user_id as "userId", date, brand, 
+                   product_description as "productDescription", 
+                   promotional_price as "promotionalPrice", 
+                   promotion_pictures as "promotionPictures",
+                   work_item_id as "workItemId"
+        `;
         
-        console.log("Successfully created competitor merchandising record:", result);
+        const dbResult = await pool.query(query, [
+          data.storeId,
+          data.userId,
+          new Date(),
+          data.brand,
+          data.productDescription,
+          data.promotionalPrice,
+          data.promotionPictures,
+          data.workItemId
+        ]);
+        
+        if (!dbResult || dbResult.rows.length === 0) {
+          throw new Error("Failed to save competitor data to database");
+        }
+        
+        const result = dbResult.rows[0];
+        console.log("Successfully saved competitor data to database:", result);
         
         // If we have a work item ID, mark it as completed
         if (workItemId) {
@@ -865,33 +957,98 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log(`Fetching competitor data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
       
-      // For the first version, we'll use the createCompetitorMerchandising call that's stored with the work item completion
+      // Query the database directly using SQL to ensure we get real data
       try {
-        // Get the competitor data by workItemId from storage
-        const competitorData = await storage.getCompetitorMerchandisingByWorkItemId(workItemId);
-        console.log(`Found competitor data for work item ${workItemId}:`, competitorData);
+        const competitorQuery = `
+          SELECT 
+            cm.id, 
+            cm.store_id as "storeId", 
+            cm.user_id as "userId", 
+            cm.date,
+            cm.brand,
+            cm.product_description as "productDescription",
+            cm.promotional_price as "promotionalPrice",
+            cm.promotion_pictures as "promotionPictures",
+            cm.work_item_id as "workItemId"
+          FROM competitor_merchandising cm
+          WHERE cm.work_item_id = $1
+          ORDER BY cm.date DESC
+          LIMIT 1
+        `;
         
-        if (competitorData) {
-          res.json(competitorData);
-        } else {
-          console.log(`No competitor data found for work item ${workItemId}. Returning basic structure.`);
-          // Provide a basic structure even when no data exists
-          res.json({
-            id: `default-${workItemId}`,
-            workItemId: workItemId,
-            storeId: workItem.storeId,
-            userId: workItem.userId,
-            date: workItem.createdAt,
-            brand: "No Data Available",
-            productDescription: "No competitor data has been submitted for this work item yet.",
-            promotionPictures: []
-          });
+        const competitorResult = await pool.query(competitorQuery, [workItemId]);
+        
+        if (competitorResult.rows && competitorResult.rows.length > 0) {
+          const competitorData = competitorResult.rows[0];
+          console.log(`Found competitor data in database for work item ${workItemId}:`, competitorData);
+          return res.json(competitorData);
         }
-      } catch (err) {
-        console.log("Error fetching competitor data (expected if not found):", err);
-        // Return a structured response even in case of error
-        res.json({
-          id: `default-${workItemId}`,
+        
+        // If no direct match by work_item_id, try to find by store and user
+        const fallbackQuery = `
+          SELECT 
+            cm.id, 
+            cm.store_id as "storeId", 
+            cm.user_id as "userId", 
+            cm.date,
+            cm.brand,
+            cm.product_description as "productDescription",
+            cm.promotional_price as "promotionalPrice",
+            cm.promotion_pictures as "promotionPictures"
+          FROM competitor_merchandising cm
+          WHERE cm.store_id = $1 AND cm.user_id = $2
+          ORDER BY cm.date DESC
+          LIMIT 1
+        `;
+        
+        const fallbackResult = await pool.query(fallbackQuery, [workItem.storeId, workItem.userId]);
+        
+        if (fallbackResult.rows && fallbackResult.rows.length > 0) {
+          const competitorData = fallbackResult.rows[0];
+          
+          // Add the work item ID for consistency
+          competitorData.workItemId = workItemId;
+          
+          console.log(`Found fallback competitor data for store ${workItem.storeId} and user ${workItem.userId}:`, competitorData);
+          return res.json(competitorData);
+        }
+        
+        // Fall back to storage method if needed
+        const memoryData = await storage.getCompetitorMerchandisingByWorkItemId(workItemId);
+        if (memoryData) {
+          console.log(`Found competitor data in memory for work item ${workItemId}:`, memoryData);
+          return res.json(memoryData);
+        }
+        
+        console.log(`No competitor data found for work item ${workItemId}. Returning basic structure.`);
+        // Provide a basic structure even when no data exists
+        return res.json({
+          id: null,
+          workItemId: workItemId,
+          storeId: workItem.storeId,
+          userId: workItem.userId,
+          date: workItem.createdAt,
+          brand: "No Data Available",
+          productDescription: "No competitor data has been submitted for this work item yet.",
+          promotionPictures: []
+        });
+      } catch (dbError) {
+        console.error("Database error fetching competitor data:", dbError);
+        
+        // Try the storage method as fallback
+        try {
+          const competitorData = await storage.getCompetitorMerchandisingByWorkItemId(workItemId);
+          if (competitorData) {
+            console.log(`Found competitor data in storage for work item ${workItemId}:`, competitorData);
+            return res.json(competitorData);
+          }
+        } catch (storageError) {
+          console.error("Storage error fetching competitor data:", storageError);
+        }
+        
+        // Return a structured response as last resort
+        return res.json({
+          id: null,
           workItemId: workItemId,
           storeId: workItem.storeId,
           userId: workItem.userId,
