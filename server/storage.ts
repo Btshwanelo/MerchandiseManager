@@ -1335,8 +1335,13 @@ export class MemStorage implements IStorage {
     console.log("Creating competitor merchandising with data:", data);
     
     try {
-      // Save the competitor merchandising data to the database
-      const result = await db.insert(competitorMerchandising).values({
+      // Ensure all required values are present
+      if (!data.storeId || !data.userId || !data.brand || !data.productDescription) {
+        throw new Error("Missing required fields for competitor merchandising");
+      }
+      
+      // Validate values
+      const insertValues = {
         storeId: data.storeId,
         userId: data.userId,
         workItemId: data.workItemId || null,
@@ -1344,28 +1349,47 @@ export class MemStorage implements IStorage {
         productDescription: data.productDescription,
         promotionalPrice: data.promotionalPrice || null,
         promotionPictures: data.promotionPictures || []
-      }).returning();
+      };
+      
+      console.log("Inserting competitor merchandising values:", insertValues);
+      
+      // Save the competitor merchandising data to the database
+      const result = await db.insert(competitorMerchandising).values(insertValues).returning();
+      
+      if (!result || result.length === 0) {
+        throw new Error("Failed to insert competitor merchandising data");
+      }
       
       const competitorData = result[0];
       console.log("Saved competitor merchandising data to database:", competitorData);
       
       // Update the work item status if needed
       if (data.workItemId) {
-        const workItem = await this.getWorkItem(data.workItemId);
-        if (workItem && workItem.status === WorkItemStatus.PENDING) {
-          await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+        try {
+          const workItem = await this.getWorkItem(data.workItemId);
+          if (workItem && workItem.status === WorkItemStatus.PENDING) {
+            await this.updateWorkItem(data.workItemId, { status: WorkItemStatus.IN_PROGRESS });
+          }
+        } catch (workItemError) {
+          console.error("Error updating work item status:", workItemError);
+          // Continue despite this error
         }
       }
       
-      // Track this as an activity
-      await this.createActivity({
-        userId: data.userId,
-        storeId: data.storeId,
-        productId: 0, // No specific product ID for competitor data
-        actionType: 'competitor_analysis',
-        status: 'completed',
-        notes: `Competitor data recorded for ${data.brand}`
-      });
+      try {
+        // Track this as an activity
+        await this.createActivity({
+          userId: data.userId,
+          storeId: data.storeId,
+          productId: 1, // Using a default product ID since it's required
+          actionType: 'competitor_analysis',
+          status: 'completed',
+          notes: `Competitor data recorded for ${data.brand}`
+        });
+      } catch (activityError) {
+        console.error("Error creating activity:", activityError);
+        // Continue despite this error
+      }
       
       return competitorData;
     } catch (error) {

@@ -431,20 +431,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Parse numeric values from form data
       const storeId = parseInt(req.body.storeId);
-      let workItemId = req.body.workItemId ? parseInt(req.body.workItemId) : undefined;
-      let promotionalPrice = req.body.promotionalPrice ? parseInt(req.body.promotionalPrice) : null;
+      let workItemId = req.body.workItemId ? parseInt(req.body.workItemId) : null;
+      
+      // Parse promotional price properly - handle currency formatting
+      let promotionalPrice = null;
+      if (req.body.promotionalPrice && req.body.promotionalPrice.trim() !== '') {
+        try {
+          // Remove any currency symbols and commas
+          const priceCleaned = req.body.promotionalPrice.replace(/[^0-9.]/g, '');
+          const priceFloat = parseFloat(priceCleaned);
+          
+          if (!isNaN(priceFloat)) {
+            // Convert to cents for storage (database stores in cents)
+            promotionalPrice = Math.round(priceFloat * 100);
+            console.log(`Converted price ${req.body.promotionalPrice} to ${promotionalPrice} cents`);
+          }
+        } catch (e) {
+          console.error("Error parsing promotional price:", e);
+        }
+      }
       
       // Basic validation
       if (isNaN(storeId)) {
         return res.status(400).json({ message: "Invalid store ID" });
       }
       
-      if (workItemId !== undefined && isNaN(workItemId)) {
+      if (workItemId !== null && isNaN(workItemId)) {
         return res.status(400).json({ message: "Invalid work item ID" });
-      }
-      
-      if (promotionalPrice !== null && isNaN(promotionalPrice)) {
-        return res.status(400).json({ message: "Invalid price" });
       }
       
       if (!req.body.brand || !req.body.brand.trim()) {
@@ -463,38 +476,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const data = {
         storeId,
         userId: req.user!.id,
-        brand: req.body.brand,
-        productDescription: req.body.productDescription,
+        brand: req.body.brand.trim(),
+        productDescription: req.body.productDescription.trim(),
         promotionalPrice,
         promotionPictures: filePaths,
         workItemId
       };
       
-      console.log("Processed competitor data:", data);
+      console.log("Processed competitor data:", JSON.stringify(data, null, 2));
       
-      // Create the competitor merchandising record
-      const result = await storage.createCompetitorMerchandising(data);
-      
-      // If we have a work item ID, mark it as completed
-      if (workItemId) {
-        await storage.updateWorkItemStatus(workItemId, "completed");
+      try {
+        // Create the competitor merchandising record
+        const result = await storage.createCompetitorMerchandising(data);
         
-        // Record an activity for the completed work item
-        // Need to include a dummy product ID since it's a required field
-        await storage.createActivity({
-          userId: req.user!.id,
-          storeId,
-          productId: 1, // Use a default product ID since it's required but not relevant for this activity type
-          actionType: "competitor-merchandising-complete",
-          notes: `Completed competitor merchandising data for brand: ${req.body.brand}`,
-          status: "completed"
+        console.log("Successfully created competitor merchandising record:", result);
+        
+        // If we have a work item ID, mark it as completed
+        if (workItemId) {
+          try {
+            await storage.updateWorkItemStatus(workItemId, "completed");
+            console.log(`Work item ${workItemId} marked as completed`);
+            
+            // Record an activity for the completed work item
+            await storage.createActivity({
+              userId: req.user!.id,
+              storeId,
+              productId: 1, // Use a default product ID since it's required
+              actionType: "competitor-merchandising-complete",
+              notes: `Completed competitor merchandising data for brand: ${req.body.brand}`,
+              status: "completed"
+            });
+          } catch (workItemError) {
+            // Log but don't fail the whole request
+            console.error("Error updating work item status or creating activity:", workItemError);
+          }
+        }
+        
+        res.status(201).json(result);
+      } catch (dbError) {
+        console.error("Database error creating competitor merchandising:", dbError);
+        return res.status(500).json({ 
+          message: "Database error while saving competitor data", 
+          details: dbError.message 
         });
       }
-      
-      res.status(201).json(result);
-    } catch (error) {
-      console.error("Error creating competitor data:", error);
-      res.status(500).json({ message: "Failed to create competitor merchandising data" });
+    } catch (error: any) {
+      console.error("Unexpected error creating competitor data:", error);
+      res.status(500).json({ 
+        message: "Failed to create competitor merchandising data",
+        details: error.message || "Unknown error"
+      });
     }
   });
   
