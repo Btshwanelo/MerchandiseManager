@@ -1404,7 +1404,7 @@ export class MemStorage implements IStorage {
     
     try {
       // First try to save to the database
-      const orderResult = await db.insert(schema.orders).values({
+      const orderResult = await db.insert(orders).values({
         storeId: data.storeId,
         userId: data.userId,
         notes: data.notes || null,
@@ -1418,7 +1418,7 @@ export class MemStorage implements IStorage {
       // Save order items if present
       if (data.products && data.products.length > 0) {
         for (const product of data.products) {
-          await db.insert(schema.orderItems).values({
+          await db.insert(orderItems).values({
             orderId: order.id,
             productId: product.productId,
             quantity: product.quantity,
