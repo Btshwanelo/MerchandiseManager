@@ -212,6 +212,7 @@ export const merchandisingPromotions = pgTable("merchandising_promotions", {
   userId: integer("user_id").references(() => users.id).notNull(),
   date: timestamp("date").defaultNow(),
   promotionPictures: text("promotion_pictures").array(),
+  workItemId: integer("work_item_id").references(() => workItems.id),
 });
 
 export const insertMerchandisingPromotionSchema = createInsertSchema(merchandisingPromotions).omit({
@@ -225,6 +226,7 @@ export const merchandisingItems = pgTable("merchandising_items", {
   merchandisingPromotionId: integer("merchandising_promotion_id").references(() => merchandisingPromotions.id).notNull(),
   productId: integer("product_id").references(() => products.id).notNull(),
   price: integer("price").notNull(), // In cents
+  workItemId: integer("work_item_id").references(() => workItems.id),
 });
 
 export const insertMerchandisingItemSchema = createInsertSchema(merchandisingItems).omit({
