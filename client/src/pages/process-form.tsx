@@ -326,23 +326,56 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const submitStockTake = async () => {
     setLoading(true);
     try {
-      // Combine the individual shelf images with any legacy pictures
-      const allImages = [
+      // Create FormData for proper file upload handling
+      const formData = new FormData();
+      
+      // Add basic stock take data
+      formData.append('storeId', storeId.toString());
+      formData.append('comment', comments || '');
+      formData.append('status', 'submitted');
+      formData.append('items', JSON.stringify(stockData));
+      if (workItemId) {
+        formData.append('workItemId', workItemId.toString());
+      }
+      
+      // Process images - first try to convert file objects directly
+      const imagesToProcess = [
         ...shelfImages.filter(Boolean), // Filter out null values
         ...pictures.filter(pic => !shelfImages.includes(pic)) // Add any pictures not in shelfImages
       ];
       
-      // Create or update stock take
-      const stockTakeData = {
-        storeId,
-        comment: comments,
-        pictures: allImages,
-        status: "submitted", // Submit immediately
-        items: JSON.stringify(stockData), // Convert to string as expected by server
-        workItemId // Include workItemId so server can mark it as completed
-      };
+      console.log("Processing images for upload:", {
+        shelfImagesCount: shelfImages.filter(Boolean).length,
+        picturesCount: pictures.filter(pic => !shelfImages.includes(pic)).length,
+        totalImages: imagesToProcess.length
+      });
       
-      const response = await apiRequest("POST", "/api/stock-takes", stockTakeData);
+      // Add each image to FormData
+      for (let i = 0; i < imagesToProcess.length; i++) {
+        const image = imagesToProcess[i];
+        
+        if (image instanceof File) {
+          // If it's already a File object, add it directly
+          formData.append('pictures', image);
+          console.log(`Adding file object to FormData: ${image.name}`);
+        } else if (typeof image === 'string') {
+          // For legacy string paths, add them as a JSON array
+          formData.append('pictures', image);
+          console.log(`Adding image path to FormData: ${image}`);
+        }
+      }
+      
+      // Use fetch directly for proper FormData handling
+      const response = await fetch("/api/stock-takes", {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Stock take submission failed: ${response.statusText}`);
+      }
+      
       const result = await response.json();
       
       toast({
