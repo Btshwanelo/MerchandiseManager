@@ -491,7 +491,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('pictures', 10), async (req, res) => {
+  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('promotionPictures', 10), async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
       console.log("Received files:", req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : 'No files');
@@ -553,6 +553,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Processed competitor data:", JSON.stringify(data, null, 2));
       
       try {
+        // Ensure promotion pictures is properly formatted as an array for PostgreSQL
+        const formattedPictures = data.promotionPictures && data.promotionPictures.length > 0
+          ? data.promotionPictures
+          : [];
+          
+        console.log("Formatted picture paths for database:", formattedPictures);
+          
         // Use direct SQL to ensure we're saving to the database
         const query = `
           INSERT INTO competitor_merchandising 
@@ -572,7 +579,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           data.brand,
           data.productDescription,
           data.promotionalPrice,
-          data.promotionPictures,
+          formattedPictures,
           data.workItemId
         ]);
         
@@ -959,6 +966,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       // Query the database directly using SQL to ensure we get real data
       try {
+        // Make sure uploads directory exists
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        if (!fs.existsSync(uploadsDir)) {
+          fs.mkdirSync(uploadsDir, { recursive: true });
+        }
+        
         const competitorQuery = `
           SELECT 
             cm.id, 
@@ -980,6 +993,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         
         if (competitorResult.rows && competitorResult.rows.length > 0) {
           const competitorData = competitorResult.rows[0];
+          
+          // Check if the promotion pictures is valid
+          if (competitorData.promotionPictures && Array.isArray(competitorData.promotionPictures)) {
+            // Make sure each path exists or filter it out
+            competitorData.promotionPictures = competitorData.promotionPictures.filter(picPath => {
+              if (!picPath || typeof picPath !== 'string') return false;
+              
+              // Check if file exists
+              try {
+                const fullPath = path.resolve(picPath);
+                return fs.existsSync(fullPath);
+              } catch (err) {
+                console.error(`Error checking if image exists (${picPath}):`, err);
+                return false;
+              }
+            });
+            
+            console.log(`Filtered promotion pictures to only include existing files: ${competitorData.promotionPictures.length} remain`);
+          } else {
+            // Ensure it's always an array
+            competitorData.promotionPictures = [];
+            console.log(`No promotion pictures found or invalid format, using empty array`);
+          }
+          
           console.log(`Found competitor data in database for work item ${workItemId}:`, competitorData);
           return res.json(competitorData);
         }
