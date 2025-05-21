@@ -203,7 +203,7 @@ interface StoreAssignment {
 const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLowStockItems, setShowLowStockAlert, workItem }: StockTakeSectionProps) => {
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
-  const [pictures, setPictures] = useState<string[]>([]);
+  const [pictures, setPictures] = useState<Array<File | string>>([]);
   // Add state for individual image uploads (8 placeholders) - can be either File objects or strings
   const [shelfImages, setShelfImages] = useState<Array<File | string | null>>(Array(8).fill(null));
   const [comments, setComments] = useState("");
@@ -973,7 +973,62 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   </div>
                 ))}
               </div>
-              <p className="text-sm text-muted-foreground">Upload photos of the shelf to document the stock take</p>
+              <div className="mt-4 border-t pt-4">
+                <h3 className="text-lg font-semibold mb-2">Direct Image Upload</h3>
+                <div className="bg-blue-50 border border-blue-100 rounded-md p-4 mb-4">
+                  <div className="flex items-center text-blue-700 mb-2">
+                    <Camera className="h-5 w-5 mr-2" />
+                    <span className="font-medium">Upload shelf images</span>
+                  </div>
+                  <p className="text-sm text-blue-600 mb-3">
+                    Add images by selecting any empty slot above or use the button below to add multiple images at once
+                  </p>
+                  <label htmlFor="bulk-image-upload" className="cursor-pointer">
+                    <div className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white py-2 px-4 rounded-md transition-colors">
+                      <Upload className="h-4 w-4" />
+                      <span>Add Multiple Images</span>
+                    </div>
+                    <input
+                      id="bulk-image-upload"
+                      type="file"
+                      multiple
+                      accept="image/*"
+                      className="hidden"
+                      onChange={(e) => {
+                        const files = e.target.files;
+                        if (files && files.length > 0) {
+                          // Find all empty slots
+                          const emptySlots = shelfImages
+                            .map((img, index) => img === null ? index : -1)
+                            .filter(index => index !== -1);
+                          
+                          // Store files in available slots
+                          const newShelfImages = [...shelfImages];
+                          let filesAdded = 0;
+                          
+                          for (let i = 0; i < Math.min(files.length, emptySlots.length); i++) {
+                            newShelfImages[emptySlots[i]] = files[i];
+                            filesAdded++;
+                          }
+                          
+                          // Update the shelf images
+                          setShelfImages(newShelfImages);
+                          
+                          // Show success message
+                          toast({
+                            title: "Images added",
+                            description: `Added ${filesAdded} ${filesAdded === 1 ? 'image' : 'images'} to your stock take`,
+                          });
+                          
+                          // Reset the input
+                          e.target.value = '';
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+                <p className="text-sm text-muted-foreground">Upload photos of the shelf to document the stock take</p>
+              </div>
             </div>
           )}
         </div>
