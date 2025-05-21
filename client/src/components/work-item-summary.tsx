@@ -595,6 +595,13 @@ const WorkItemSummary = ({
                             imgPath = `/uploads/${photoPath}`;
                           }
                           
+                          // Try to use the API endpoint for better error handling
+                          // Extract just the filename for use with the image API
+                          const filename = photoPath.split('/').pop();
+                          if (filename) {
+                            imgPath = `/api/images/${filename}`;
+                          }
+                          
                           console.log(`Competitor photo ${index} path:`, { original: photoPath, processed: imgPath });
                           
                           return (
@@ -606,8 +613,19 @@ const WorkItemSummary = ({
                                 onError={(e) => {
                                   console.log(`Failed to load competitor image: ${imgPath}`);
                                   const target = e.target as HTMLImageElement;
-                                  // Use SVG placeholder to avoid another potential 404
-                                  target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                  
+                                  // Try a fallback path with the uploads prefix if not already tried
+                                  const filename = photoPath.split('/').pop();
+                                  if (filename && !imgPath.includes('/uploads/')) {
+                                    target.src = `/uploads/${filename}`;
+                                    // Add a second error handler for the fallback path
+                                    target.onerror = () => {
+                                      target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                    };
+                                  } else {
+                                    // Use inline SVG placeholder to avoid another potential 404
+                                    target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                  }
                                 }}
                               />
                             </div>
