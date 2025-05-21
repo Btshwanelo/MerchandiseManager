@@ -1938,8 +1938,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Set up multer for stock take image uploads
+  const stockTakeStorage = multer.diskStorage({
+    destination: function(req, file, cb) {
+      const dir = './uploads';
+      if (!fs.existsSync(dir)) {
+        fs.mkdirSync(dir, { recursive: true });
+      }
+      cb(null, dir);
+    },
+    filename: function(req, file, cb) {
+      const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+      const ext = path.extname(file.originalname);
+      cb(null, 'stocktake-' + uniqueSuffix + ext);
+    }
+  });
+  
+  const stockTakeUpload = multer({
+    storage: stockTakeStorage,
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    fileFilter: function(req, file, cb) {
+      const filetypes = /jpeg|jpg|png|gif/;
+      const mimetype = filetypes.test(file.mimetype);
+      const extname = filetypes.test(path.extname(file.originalname).toLowerCase());
+      if (mimetype && extname) {
+        return cb(null, true);
+      }
+      cb(new Error("Only image files are allowed"));
+    }
+  });
+  
   // Create a new stock take
-  app.post("/api/stock-takes", async (req, res) => {
+  app.post("/api/stock-takes", stockTakeUpload.array('pictures', 10), async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized - Please log in" });
@@ -1993,9 +2023,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Items must be an array" });
       }
       
-      // Process pictures array that's been uploaded separately using /api/upload
+      // Process pictures from multer file uploads
       let allPictures = [];
       
+      // Process files uploaded via multer
+      if (req.files && Array.isArray(req.files)) {
+        console.log("Processing multer uploaded files:", (req.files as Express.Multer.File[]).map(f => f.path));
+        
+        // Add paths of all uploaded files
+        (req.files as Express.Multer.File[]).forEach(file => {
+          if (file && file.path) {
+            allPictures.push(file.path);
+          }
+        });
+      }
+      
+      // Also handle any existing picture paths from the request body (for backward compatibility)
       if (req.body.pictures) {
         let existingPictures = [];
         try {
@@ -2018,7 +2061,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       console.log("Pictures to save:", {
-        existing: req.body.pictures ? typeof req.body.pictures === 'string' ? [req.body.pictures] : req.body.pictures : [],
+        filesUploaded: req.files ? (req.files as Express.Multer.File[]).length : 0,
+        existingPictures: req.body.pictures ? 'yes' : 'none',
         final: allPictures
       });
       
