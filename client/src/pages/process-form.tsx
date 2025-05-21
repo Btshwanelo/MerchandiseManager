@@ -466,45 +466,20 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     if (files && files.length > 0) {
       const file = files[0];
       
-      // Create FormData for the image upload
-      const formData = new FormData();
-      formData.append('file', file);
+      // We'll store the File object directly and handle it later during form submission
+      const newShelfImages = [...shelfImages];
+      newShelfImages[index] = file;
+      setShelfImages(newShelfImages);
       
-      // Upload the file first
-      fetch('/api/upload', {
-        method: 'POST',
-        body: formData,
-      })
-      .then(response => response.json())
-      .then(data => {
-        if (data.filePath) {
-          // Create a new copy of the shelf images array
-          const newShelfImages = [...shelfImages];
-          // Store the full file path returned from the server
-          newShelfImages[index] = data.filePath;
-          setShelfImages(newShelfImages);
-          
-          // Also add to the pictures array for backward compatibility
-          setPictures(prev => [...prev, data.filePath]);
-          
-          console.log(`Image uploaded successfully at index ${index}:`, data.filePath);
-        } else {
-          console.error('Upload failed:', data.error || 'Unknown error');
-          toast({
-            title: "Image upload failed",
-            description: data.error || "Failed to upload image",
-            variant: "destructive"
-          });
-        }
-      })
-      .catch(error => {
-        console.error('Upload error:', error);
-        toast({
-          title: "Image upload failed",
-          description: "An error occurred while uploading the image",
-          variant: "destructive"
-        });
+      // Also add to the pictures array for backward compatibility
+      setPictures(prev => [...prev, file]);
+      
+      toast({
+        title: "Image added",
+        description: "Image has been added to your stock take",
       });
+      
+      console.log(`Image added successfully at index ${index}:`, file.name);
     }
   };
   
