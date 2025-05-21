@@ -204,8 +204,8 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [loading, setLoading] = useState(false);
   const [stockData, setStockData] = useState<{productId: number, quantity: number, location: string}[]>([]);
   const [pictures, setPictures] = useState<string[]>([]);
-  // Add state for individual image uploads (8 placeholders)
-  const [shelfImages, setShelfImages] = useState<Array<string | null>>(Array(8).fill(null));
+  // Add state for individual image uploads (8 placeholders) - can be either File objects or strings
+  const [shelfImages, setShelfImages] = useState<Array<File | string | null>>(Array(8).fill(null));
   const [comments, setComments] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<string>("0");
@@ -911,11 +911,30 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                     {shelfImages[index] ? (
                       // Show the image if uploaded
                       <div className="w-full h-full relative group">
-                        {/* In a real app, this would be an actual image */}
                         <div className="w-full h-full bg-muted flex items-center justify-center">
-                          <span className="text-sm text-center px-2 text-muted-foreground">
-                            {shelfImages[index]}
-                          </span>
+                          {shelfImages[index] instanceof File ? (
+                            // Show preview for File objects
+                            <img 
+                              src={URL.createObjectURL(shelfImages[index] as File)} 
+                              alt={`Shelf image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                            />
+                          ) : typeof shelfImages[index] === 'string' ? (
+                            // Show image for string paths
+                            <img 
+                              src={shelfImages[index] as string} 
+                              alt={`Shelf image ${index + 1}`}
+                              className="w-full h-full object-cover"
+                              onError={(e) => {
+                                (e.target as HTMLImageElement).src = '/placeholder-image.svg';
+                                (e.target as HTMLImageElement).className = 'w-1/2 h-1/2 object-contain opacity-50';
+                              }}
+                            />
+                          ) : (
+                            <span className="text-sm text-center px-2 text-muted-foreground">
+                              Image not available
+                            </span>
+                          )}
                         </div>
                         
                         {/* Remove button overlay */}
