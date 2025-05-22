@@ -2980,16 +2980,29 @@ export class DatabaseStorage implements IStorage {
   }
   
   async completeWorkItem(id: number): Promise<WorkItem | undefined> {
-    const [completedWorkItem] = await db
-      .update(workItems)
-      .set({
-        status: WorkItemStatus.COMPLETED,
-        completedAt: new Date(),
-        updatedAt: new Date()
-      })
-      .where(eq(workItems.id, id))
-      .returning();
-    return completedWorkItem;
+    try {
+      console.log(`Attempting to complete work item ${id}`);
+      const [completedWorkItem] = await db
+        .update(workItems)
+        .set({
+          status: WorkItemStatus.COMPLETED,
+          completedAt: new Date(),
+          updatedAt: new Date()
+        })
+        .where(eq(workItems.id, id))
+        .returning();
+      
+      if (!completedWorkItem) {
+        console.error(`No work item found with ID ${id} to complete`);
+        return undefined;
+      }
+      
+      console.log(`Successfully completed work item ${id}`);
+      return completedWorkItem;
+    } catch (error) {
+      console.error(`Error completing work item ${id}:`, error);
+      return undefined;
+    }
   }
   
   async deleteWorkItem(id: number): Promise<boolean> {

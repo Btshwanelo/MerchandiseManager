@@ -2519,18 +2519,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log(`Updating work item ${id} status to ${status} by user ${req.user!.id}`);
       
       // Update the work item status
+      let updatedWorkItem;
+      
       if (status === WorkItemStatus.COMPLETED) {
-        await storage.completeWorkItem(id);
+        updatedWorkItem = await storage.completeWorkItem(id);
+        if (!updatedWorkItem) {
+          console.error(`Failed to complete work item ${id}`);
+          return res.status(500).json({ message: "Failed to mark work item as complete" });
+        }
       } else {
-        await storage.updateWorkItemStatus(id, status);
+        updatedWorkItem = await storage.updateWorkItemStatus(id, status);
+        if (!updatedWorkItem) {
+          console.error(`Failed to update work item ${id} status to ${status}`);
+          return res.status(500).json({ message: "Failed to update work item status" });
+        }
       }
       
-      // Return the updated work item
-      const updatedWorkItem = await storage.getWorkItemById(id);
+      console.log(`Successfully updated work item ${id} status to ${status}`);
       res.json(updatedWorkItem);
     } catch (error) {
       console.error("Error updating work item status:", error);
-      res.status(500).json({ message: "Server error updating work item status" });
+      res.status(500).json({ message: "Failed to update work item status. Please try again." });
     }
   });
 
