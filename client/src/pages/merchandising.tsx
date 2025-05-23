@@ -76,10 +76,10 @@ const MerchandisingPage = () => {
 
     const productId = parseInt(selectedProduct);
     const priceInCents = Math.round(parseFloat(price) * 100);
-    
+
     // Check if product already exists in the list
     const existingItemIndex = promotionItems.findIndex(item => item.productId === productId);
-    
+
     if (existingItemIndex >= 0) {
       // Update existing item
       const updatedItems = [...promotionItems];
@@ -89,7 +89,7 @@ const MerchandisingPage = () => {
       // Add new item
       setPromotionItems([...promotionItems, { productId, price: priceInCents }]);
     }
-    
+
     // Reset selection
     setSelectedProduct("");
     setPrice("");
@@ -123,10 +123,10 @@ const MerchandisingPage = () => {
 
   // Create merchandising promotion mutation
   const createPromotionMutation = useMutation({
-    mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/merchandising-promotions", formData, {
+    mutationFn: async (promotionData) => {
+      const res = await apiRequest("POST", "/api/merchandising-promotions", promotionData, {
         headers: {
-          "Content-Type": "multipart/form-data"
+          "Content-Type": "application/json"
         }
       });
       return await res.json();
@@ -180,19 +180,14 @@ const MerchandisingPage = () => {
       return;
     }
 
-    // In a real implementation, we would upload the images to a storage service
-    // and then submit the form data with the image URLs
-    // For this prototype, we're just simulating the process
+    // Submit promotion
+    const promotionData = {
+      storeId: parseInt(selectedStore),
+      items: promotionItems,
+      pictures: fileUploads.map(file => file.name)
+    };
 
-    const formData = new FormData();
-    formData.append("storeId", selectedStore);
-    formData.append("items", JSON.stringify(promotionItems));
-    
-    fileUploads.forEach(file => {
-      formData.append("pictures", file);
-    });
-
-    createPromotionMutation.mutate(formData);
+    createPromotionMutation.mutate(promotionData);
   };
 
   return (
@@ -372,12 +367,12 @@ const MerchandisingPage = () => {
                         {promotionItems.map((item, index) => {
                           const product = products?.find(p => p.id === item.productId);
                           if (!product) return null;
-                          
+
                           // Calculate discount percentage
                           const regularPrice = product.price;
                           const promotionPrice = item.price;
                           const discountPercent = Math.round((1 - (promotionPrice / regularPrice)) * 100);
-                          
+
                           return (
                             <TableRow key={index}>
                               <TableCell className="font-medium">{product.name}</TableCell>
@@ -490,9 +485,9 @@ const MerchandisingPage = () => {
   // Helper function to calculate average discount
   function calculateAverageDiscount() {
     if (promotionItems.length === 0 || !products) return 0;
-    
+
     let totalDiscountPercent = 0;
-    
+
     promotionItems.forEach(item => {
       const product = products.find(p => p.id === item.productId);
       if (product) {
@@ -502,7 +497,7 @@ const MerchandisingPage = () => {
         totalDiscountPercent += discountPercent;
       }
     });
-    
+
     return Math.round(totalDiscountPercent / promotionItems.length);
   }
 };
