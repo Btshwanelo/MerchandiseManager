@@ -2505,8 +2505,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Work item not found" });
       }
       
-      // Check permissions: Admin or manager can update any, merchandiser can only update their own
-      if (req.user!.role !== UserRole.ADMIN && req.user!.role !== UserRole.MANAGER && workItem.userId !== req.user!.id) {
+      // Check permissions based on role
+      if (req.user!.role === UserRole.ADMIN || req.user!.role === UserRole.MANAGER) {
+        // Admins and managers can update any work item
+        console.log(`Admin/Manager ${req.user!.id} updating work item ${id}`);
+      } else if (workItem.userId === req.user!.id) {
+        // Users can always update their directly assigned work items
+        console.log(`User ${req.user!.id} updating their own work item ${id}`);
+      } else if (req.user!.role === UserRole.MERCHANDISER) {
+        // Merchandisers can also update work items for stores they're assigned to
+        try {
+          const userAssignments = await storage.getAssignmentsByUserId(req.user!.id);
+          const isAssignedToStore = userAssignments.some(a => a.storeId === workItem.storeId);
+          
+          if (isAssignedToStore) {
+            console.log(`Merchandiser ${req.user!.id} assigned to store ${workItem.storeId} is updating work item ${id}`);
+          } else {
+            console.log(`Access denied: Merchandiser ${req.user!.id} not assigned to store ${workItem.storeId}`);
+            return res.status(403).json({ 
+              message: "You can only update work items for stores you're assigned to." 
+            });
+          }
+        } catch (err) {
+          console.error("Error checking store assignments:", err);
+          return res.status(500).json({ message: "Error checking store assignments" });
+        }
+      } else {
+        console.log(`Access denied: User ${req.user!.id} with role ${req.user!.role} not authorized for work item ${id}`);
         return res.status(403).json({ message: "Not authorized to update this work item" });
       }
       
