@@ -2614,7 +2614,7 @@ const ProcessForm = () => {
             if (workItemData && workItemData.storeId) {
               console.log("Found storeId " + workItemData.storeId + " for workItemId " + workItemId);
               // Redirect with both parameters
-              navigate(`/process-form?workItemId=${workItemId}&storeId=${workItemData.storeId}`);
+              navigate("/process-form?workItemId=" + workItemId + "&storeId=" + workItemData.storeId);
               return;
             }
           } else {
