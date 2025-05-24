@@ -2736,11 +2736,11 @@ const ProcessForm = () => {
             <div>
               <h3 className="font-medium">{workItem.title}</h3>
               <p className="text-sm text-muted-foreground">
-                Status: <span className={`font-medium ${
+                Status: <span className={"font-medium " + (
                   workItem.status === WorkItemStatus.COMPLETED ? "text-green-600" : 
                   workItem.status === WorkItemStatus.IN_PROGRESS ? "text-blue-600" : 
                   "text-amber-600"
-                }`}>
+                )}>
                   {workItem.status ? 
                     workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ') 
                     : 'Unknown'}
