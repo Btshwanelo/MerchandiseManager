@@ -731,22 +731,23 @@ const dbResult = await pool.query(`
         console.log("Created order in database:", order);
 
         res.status(201).json(order);
-              INSERT INTO order_items 
-              (order_id, product_id, quantity, notes)
-              VALUES ($1, $2, $3, $4)
-              RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
-            `;
+              if (validatedData.products && validatedData.products.length > 0) {
+            for (const product of validatedData.products) {
+              const itemResult = await pool.query(`
+                INSERT INTO order_items 
+                (order_id, product_id, quantity, notes)
+                VALUES ($1, $2, $3, $4)
+                RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
+              `, [
+                order.id,
+                product.productId,
+                product.quantity,
+                null // No notes by default
+              ]);
 
-            const itemResult = await pool.query(itemQuery, [
-              order.id,
-              product.productId,
-              product.quantity,
-              null // No notes by default
-            ]);
-
-            console.log(`Added product ${product.productId} to order ${order.id}`);
+              console.log(`Added product ${product.productId} to order ${order.id}`);
+            }
           }
-        }
 
         // Update the work item status
         if (validatedData.workItemId) {
