@@ -2602,7 +2602,7 @@ const ProcessForm = () => {
   // Navigate back to assignments if no valid work item or store id
   useEffect(() => {
     const checkAndFixParams = async () => {
-      console.log(`Checking parameters: workItemId=${workItemId}, storeId=${storeId}`);;
+      console.log(`Checking parameters: workItemId=${workItemId}, storeId=${storeId}`);
 
       // Check if we have workItemId but not storeId
       if (workItemId && !storeId) {
