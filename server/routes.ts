@@ -585,16 +585,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
                    work_item_id as "workItemId"
         `;
 
-        const dbResult = await pool.query(query, [
-          data.storeId,
-          data.userId,
-          new Date(),
-          data.brand,
-          data.productDescription,
-          data.promotionalPrice,
-          formattedPictures,
-          data.workItemId
-        ]);
+        // First create table if not exists with work_item_id column
+await pool.query(`
+  ALTER TABLE competitor_merchandising 
+  ADD COLUMN IF NOT EXISTS work_item_id INTEGER;
+`);
+
+const dbResult = await pool.query(`
+  INSERT INTO competitor_merchandising 
+  (store_id, user_id, date, brand, product_description, promotional_price, promotion_pictures, work_item_id)
+  VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+  RETURNING id, store_id as "storeId", user_id as "userId", date, brand, 
+           product_description as "productDescription", 
+           promotional_price as "promotionalPrice", 
+           promotion_pictures as "promotionPictures",
+           work_item_id as "workItemId"
+`, [
+  data.storeId,
+  data.userId,
+  new Date(),
+  data.brand,
+  data.productDescription,
+  data.promotionalPrice,
+  formattedPictures,
+  data.workItemId
+]);
 
         if (!dbResult || dbResult.rows.length === 0) {
           throw new Error("Failed to save competitor data to database");
