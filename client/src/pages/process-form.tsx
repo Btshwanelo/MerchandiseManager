@@ -2608,7 +2608,7 @@ const ProcessForm = () => {
       if (workItemId && !storeId) {
         try {
           // Try to fetch the work item to get its storeId using the assigned-work-items endpoint for merchandisers
-          const response = await fetch(`/api/assigned-work-items/${workItemId}`);
+          const response = await fetch("/api/assigned-work-items/" + workItemId);
           if (response.ok) {
             const workItemData = await response.json();
             if (workItemData && workItemData.storeId) {
