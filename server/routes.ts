@@ -680,27 +680,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
           validatedData.workItemId
         ]);
 
-        // Save order items if present
-        if (validatedData.products && validatedData.products.length > 0) {
-          for (const product of validatedData.products) {
-            await pool.query(`
-              INSERT INTO order_items 
-              (order_id, product_id, quantity, notes)
-              VALUES ($1, $2, $3, $4)
-            `, [
-              orderResult.rows[0].id,
-              product.productId,
-              product.quantity,
-              product.notes || null
-            ]);
-          }
-        }
-
         if (!orderResult || orderResult.rows.length === 0) {
           throw new Error("Failed to create order record");
         }
 
         const order = orderResult.rows[0];
+        const orderItems = [];
+
+        // Save order items if present
+        if (validatedData.products && validatedData.products.length > 0) {
+          for (const product of validatedData.products) {
+            const itemResult = await pool.query(`
+              INSERT INTO order_items 
+              (order_id, product_id, quantity, notes)
+              VALUES ($1, $2, $3, $4)
+              RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
+            `, [
+              order.id,
+              product.productId,
+              product.quantity,
+              product.notes || null
+            ]);
+            orderItems.push(itemResult.rows[0]);
+          }
+        }
+
+        // Add items to the order object
+        order.items = orderItems;
         console.log("Created order in database:", order);
 
         // Save the order items if present
