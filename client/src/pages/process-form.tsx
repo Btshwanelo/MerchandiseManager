@@ -2612,7 +2612,7 @@ const ProcessForm = () => {
           if (response.ok) {
             const workItemData = await response.json();
             if (workItemData && workItemData.storeId) {
-              console.log(`Found storeId ${workItemData.storeId} for workItemId ${workItemId}`);
+              console.log("Found storeId " + workItemData.storeId + " for workItemId " + workItemId);
               // Redirect with both parameters
               navigate(`/process-form?workItemId=${workItemId}&storeId=${workItemData.storeId}`);
               return;
