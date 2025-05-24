@@ -44,8 +44,8 @@ type StockTakeSectionProps = {
   workItemId: number;
   navigate: (to: string) => void;
   setActiveStep: (step: string) => void;
-  setLowStockItems?: (items: Array<{product: Product, quantity: number, location: string}>) => setLowStockItems(items: Array<{product: Product; quantity: number; location: string;}>): void;
-  setShowLowStockAlert?: (show: boolean) => setShowLowStockAlert(show: boolean): void;
+  setLowStockItems?: (items: Array<{product: Product, quantity: number, location: string}>) => void;
+  setShowLowStockAlert?: (show: boolean) => void;
   workItem?: WorkItem; // Add workItem prop to check completion status
 };
 
