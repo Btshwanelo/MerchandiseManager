@@ -504,7 +504,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('pictures', 10), async (req, res) => {
+  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('promotionPictures', 10), async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
       console.log("Received files:", req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : 'No files');
