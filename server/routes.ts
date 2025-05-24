@@ -381,63 +381,41 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Validated merchandising data:", validatedData);
 
       try {
-        // Save merchandising data directly to database
-        const query = `
-          INSERT INTO merchandising_data 
-          (store_id, user_id, date, work_item_id)
-          VALUES ($1, $2, $3, $4)
-          RETURNING id, store_id as "storeId", user_id as "userId", date, work_item_id as "workItemId"
-        `;
+        // Create merchandising promotion first
+        const promotionResult = await pool.query(`
+          INSERT INTO merchandising_promotions 
+          (store_id, user_id, date, promotion_pictures, work_item_id)
+          VALUES ($1, $2, NOW(), $3, $4)
+          RETURNING id, store_id as "storeId", user_id as "userId", date, promotion_pictures as "promotionPictures"
+        `, [validatedData.storeId, req.user!.id, [], validatedData.workItemId]);
 
-        const dbResult = await pool.query(query, [
-          validatedData.storeId,
-          req.user!.id,
-          new Date(),
-          validatedData.workItemId
-        ]);
+        const promotion = promotionResult.rows[0];
 
-        if (!dbResult || dbResult.rows.length === 0) {
-          throw new Error("Failed to save merchandising data to database");
-        }
-
-        const merchandisingData = dbResult.rows[0];
-        const merchandisingId = merchandisingData.id;
-
-        console.log("Saved merchandising data record:", merchandisingData);
-
-        // Save each merchandising item in a separate table
+        // Create merchandising items
         const items = [];
         for (const item of validatedData.merchandisingItems) {
-          const itemQuery = `
+          const itemResult = await pool.query(`
             INSERT INTO merchandising_items 
-            (merchandising_id, product_id, price, notes, work_item_id)
-            VALUES ($1, $2, $3, $4, $5)
-            RETURNING id, merchandising_id as "merchandisingId", product_id as "productId", price, notes
-          `;
+            (merchandising_promotion_id, product_id, price, work_item_id)
+            VALUES ($1, $2, $3, $4)
+            RETURNING id, product_id as "productId", price
+          `, [promotion.id, item.productId, item.price, validatedData.workItemId]);
 
-          const itemResult = await pool.query(itemQuery, [
-            merchandisingId,
-            item.productId,
-            item.price,
-            item.notes || null,
-            validatedData.workItemId
-          ]);
-
-          if (itemResult && itemResult.rows.length > 0) {
-            items.push(itemResult.rows[0]);
-          }
+          items.push(itemResult.rows[0]);
         }
 
-        // Add items to the result
-        merchandisingData.items = items;
+        const result = {
+          ...promotion,
+          items
+        };
 
         // Update work item status
         if (validatedData.workItemId) {
           await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
         }
 
-        console.log("Successfully created merchandising data with items:", merchandisingData);
-        res.status(201).json(merchandisingData);
+        console.log("Successfully created merchandising data with items:", result);
+        res.status(201).json(result);
       } catch (dbError) {
         console.error("Database error creating merchandising data:", dbError);
 
@@ -1712,7 +1690,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
     fileFilter: (req, file, cb) => {
       // Accept images only
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$stockTakeImageUpload|extname)) {
         return cb(null, false);
       }
       cb(null, true);
@@ -2562,7 +2540,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         } catch (err) {
           console.error("Error checking store assignments:", err);
-          return res.status(500).json({ message: "Error checking store assignments" });```
+          return res.status(500).json({ message: "Error checking store assignments" });
         }
       } else {
         console.log(`Access denied: User ${req.user!.id} with role ${req.user!.role} not authorized for work item ${id}`);
