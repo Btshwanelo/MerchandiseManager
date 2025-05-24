@@ -731,10 +731,6 @@ const dbResult = await pool.query(`
         console.log("Created order in database:", order);
 
         res.status(201).json(order);
-        return;
-        if (validatedData.products && validatedData.products.length > 0) {
-          for (const product of validatedData.products) {
-            const itemQuery = `
               INSERT INTO order_items 
               (order_id, product_id, quantity, notes)
               VALUES ($1, $2, $3, $4)
