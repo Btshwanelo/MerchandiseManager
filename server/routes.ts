@@ -704,6 +704,7 @@ const dbResult = await pool.query(`
 
         // Save order items if present
         if (validatedData.products && validatedData.products.length > 0) {
+          console.log("Processing order items:", validatedData.products);
           for (const product of validatedData.products) {
             const itemResult = await pool.query(`
               INSERT INTO order_items 
@@ -716,15 +717,21 @@ const dbResult = await pool.query(`
               product.quantity,
               product.notes || null
             ]);
-            orderItems.push(itemResult.rows[0]);
+            if (itemResult.rows[0]) {
+              orderItems.push(itemResult.rows[0]);
+              console.log("Added order item:", itemResult.rows[0]);
+            }
           }
+        } else {
+          console.log("No products provided in order data");
         }
 
         // Add items to the order object
         order.items = orderItems;
         console.log("Created order in database:", order);
 
-        // Save the order items if present
+        res.status(201).json(order);
+        return;
         if (validatedData.products && validatedData.products.length > 0) {
           for (const product of validatedData.products) {
             const itemQuery = `
