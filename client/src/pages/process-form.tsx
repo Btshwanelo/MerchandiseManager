@@ -2608,7 +2608,7 @@ const ProcessForm = () => {
       if (workItemId && !storeId) {
         try {
           // Try to fetch the work item to get its storeId using the assigned-work-items endpoint for merchandisers
-          const response = await fetch("/api/assigned-work-items/" + workItemId);
+          const response = await fetch("/api/assigned-work-items/" + workItemId.toString());
           if (response.ok) {
             const workItemData = await response.json();
             if (workItemData && workItemData.storeId) {
@@ -2620,13 +2620,13 @@ const ProcessForm = () => {
           } else {
             // Fallback to admin endpoint if necessary
             console.log("First endpoint failed, trying admin endpoint as fallback");
-            const adminResponse = await fetch(`/api/work-items/${workItemId}`);
+            const adminResponse = await fetch("/api/work-items/" + workItemId.toString());
             if (adminResponse.ok) {
               const adminWorkItemData = await adminResponse.json();
               if (adminWorkItemData && adminWorkItemData.storeId) {
-                console.log(`Found storeId ${adminWorkItemData.storeId} from admin endpoint for workItemId ${workItemId}`);
+                console.log("Found storeId " + adminWorkItemData.storeId + " from admin endpoint for workItemId " + workItemId);
                 // Redirect with both parameters
-                navigate(`/process-form?workItemId=${workItemId}&storeId=${adminWorkItemData.storeId}`);
+                navigate("/process-form?workItemId=" + workItemId + "&storeId=" + adminWorkItemData.storeId);
                 return;
               }
             }
