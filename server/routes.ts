@@ -2548,7 +2548,8 @@ const dbResult = await pool.query(`
             console.log(`Merchandiser ${req.user!.id} assigned to store ${workItem.storeId} is updating work item ${id}`);
           } else {
             console.log(`Access denied: Merchandiser ${req.user!.id} not assigned to store ${workItem.storeId}`);
-            return res.status(403).json({               message: "You can only update work items for stores you're assigned to." 
+            return res.status(403).json({ 
+              message: "You can only update work items for stores you're assigned to." 
             });
           }
         } catch (err) {
