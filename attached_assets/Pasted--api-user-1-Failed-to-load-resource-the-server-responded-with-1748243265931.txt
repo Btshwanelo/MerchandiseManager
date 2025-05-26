@@ -1,0 +1,207 @@
+/api/user:1 
+            
+            
+           Failed to load resource: the server responded with a status of 401 ()
+/dashboard:1 Unchecked runtime.lastError: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+/dashboard:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+index-DcBnumrv.js:607 Form values: Object
+index-DcBnumrv.js:607 Form errors: Object
+index-DcBnumrv.js:607 Form is valid: false
+index-DcBnumrv.js:607 Submitting form values: Object
+index-DcBnumrv.js:607 Navigating to process form with workItemId: 110 storeId: 73
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 Checking parameters: workItemId=110, storeId=73
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:607 Processing images for upload: Object
+index-DcBnumrv.js:607 Adding file object to FormData: jackline.png
+index-DcBnumrv.js:607 Adding file object to FormData: Gauta.png
+index-DcBnumrv.js:607 Adding file object to FormData: Phillip.png
+index-DcBnumrv.js:607 Low stock items detected: Array(3)
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:594 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+(anonymous) @ index-DcBnumrv.js:594
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+process-form:1 Uncaught (in promise) Error: A listener indicated an asynchronous response by returning true, but the message channel closed before a response was received
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 Submitting competitor data with files
+/api/competitor-merchandising:1 
+            
+            
+           Failed to load resource: the server responded with a status of 503 ()
+index-DcBnumrv.js:608 Error submitting competitor analysis: Error: Server responded with 503: 
+    at p (index-DcBnumrv.js:608:19930)
+p @ index-DcBnumrv.js:608
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 ProcessForm initialized with: Object
+index-DcBnumrv.js:608 Submitting competitor data with files
+index-DcBnumrv.js:608 
+            
+            
+           POST https://merchandise-manager-admin2463.replit.app/api/competitor-merchandising 503 (Service Unavailable)
+p @ index-DcBnumrv.js:608
+RG @ index-DcBnumrv.js:37
+FG @ index-DcBnumrv.js:37
+BG @ index-DcBnumrv.js:37
+ZC @ index-DcBnumrv.js:37
+A3 @ index-DcBnumrv.js:37
+(anonymous) @ index-DcBnumrv.js:37
+G_ @ index-DcBnumrv.js:40
+JL @ index-DcBnumrv.js:37
+gj @ index-DcBnumrv.js:37
+w_ @ index-DcBnumrv.js:37
+rY @ index-DcBnumrv.js:37
+index-DcBnumrv.js:608 Error submitting competitor analysis: Error: Server responded with 503: 
+    at p (index-DcBnumrv.js:608:19930)
+p @ index-DcBnumrv.js:608
+await in p
+RG @ index-DcBnumrv.js:37
+FG @ index-DcBnumrv.js:37
+BG @ index-DcBnumrv.js:37
+ZC @ index-DcBnumrv.js:37
+A3 @ index-DcBnumrv.js:37
+(anonymous) @ index-DcBnumrv.js:37
+G_ @ index-DcBnumrv.js:40
+JL @ index-DcBnumrv.js:37
+gj @ index-DcBnumrv.js:37
+w_ @ index-DcBnumrv.js:37
+rY @ index-DcBnumrv.js:37
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:48 Query error for /api/inventory: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ index-DcBnumrv.js:48
+await in (anonymous)
+a @ index-DcBnumrv.js:48
+v @ index-DcBnumrv.js:48
+start @ index-DcBnumrv.js:48
+fetch @ index-DcBnumrv.js:48
+Ph @ index-DcBnumrv.js:48
+onSubscribe @ index-DcBnumrv.js:48
+subscribe @ index-DcBnumrv.js:48
+(anonymous) @ index-DcBnumrv.js:48
+q3 @ index-DcBnumrv.js:38
+e0 @ index-DcBnumrv.js:40
+Gu @ index-DcBnumrv.js:40
+CA @ index-DcBnumrv.js:40
+kl @ index-DcBnumrv.js:38
+xQ @ index-DcBnumrv.js:40
+zl @ index-DcBnumrv.js:40
+NF @ index-DcBnumrv.js:40
+w @ index-DcBnumrv.js:25
+A @ index-DcBnumrv.js:25
+index-DcBnumrv.js:48 Query error for /api/stock-take-items: SyntaxError: Unexpected token '<', "<!DOCTYPE "... is not valid JSON
+(anonymous) @ index-DcBnumrv.js:48
+await in (anonymous)
+a @ index-DcBnumrv.js:48
+v @ index-DcBnumrv.js:48
+start @ index-DcBnumrv.js:48
+fetch @ index-DcBnumrv.js:48
+Ph @ index-DcBnumrv.js:48
+setOptions @ index-DcBnumrv.js:48
+(anonymous) @ index-DcBnumrv.js:48
+e0 @ index-DcBnumrv.js:40
+Gu @ index-DcBnumrv.js:40
+xQ @ index-DcBnumrv.js:40
+zl @ index-DcBnumrv.js:40
+CA @ index-DcBnumrv.js:40
+kl @ index-DcBnumrv.js:38
+(anonymous) @ index-DcBnumrv.js:40
+setTimeout
+i @ index-DcBnumrv.js:48
+o @ index-DcBnumrv.js:48
+batch @ index-DcBnumrv.js:48
+$a @ index-DcBnumrv.js:48
+setData @ index-DcBnumrv.js:48
+onSuccess @ index-DcBnumrv.js:48
+f @ index-DcBnumrv.js:48
+Promise.then
+v @ index-DcBnumrv.js:48
+start @ index-DcBnumrv.js:48
+fetch @ index-DcBnumrv.js:48
+Ph @ index-DcBnumrv.js:48
+onSubscribe @ index-DcBnumrv.js:48
+subscribe @ index-DcBnumrv.js:48
+(anonymous) @ index-DcBnumrv.js:48
+q3 @ index-DcBnumrv.js:38
+e0 @ index-DcBnumrv.js:40
+Gu @ index-DcBnumrv.js:40
+CA @ index-DcBnumrv.js:40
+kl @ index-DcBnumrv.js:38
+xQ @ index-DcBnumrv.js:40
+zl @ index-DcBnumrv.js:40
+NF @ index-DcBnumrv.js:40
+w @ index-DcBnumrv.js:25
+A @ index-DcBnumrv.js:25
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}
+index-DcBnumrv.js:608 ProcessForm initialized with: {workItemId: 110, storeId: 73, location: '/process-form', validParams: true}

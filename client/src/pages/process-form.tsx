@@ -211,49 +211,49 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [quantity, setQuantity] = useState<string>("0");
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
-
+  
   // Flag to indicate if we're in read-only mode (completed work item)
   const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;
-
+  
   // Get current authenticated user
   const { user } = useAuth();
-
+  
   // Fetch products
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
-
+  
   // Fetch existing stock take for this store and work item
   const { data: stockTake, isLoading: isLoadingStockTake } = useQuery<StockTakeData>({
     queryKey: [`/api/stock-takes/by-work-item/${workItemId}`],
     enabled: !!workItemId && !!storeId,
   });
-
+  
   // Fetch merchandising data if available
   const { data: merchandisingData } = useQuery<MerchandisingData>({
     queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
-
+  
   // Fetch competitor data if available
   const { data: competitorData } = useQuery<CompetitorData>({
     queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
-
+  
   // Fetch order data if available
   const { data: orderData } = useQuery<OrderData>({
     queryKey: [`/api/orders/by-work-item/${workItemId}`],
     enabled: !!workItemId && isReadOnly,
   });
-
+  
   // Fetch audit trail for admin users
   const { data: auditTrail = [] } = useQuery<AuditEntry[]>({
     queryKey: [`/api/work-items/${workItemId}/audit`],
     enabled: !!workItemId && isReadOnly && user?.role === "admin",
   });
-
+  
   // Update state with stock take data when available
   useEffect(() => {
     if (stockTake) {
@@ -261,24 +261,24 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       if (stockTake.status) {
         setStockTakeStatus(stockTake.status);
       }
-
+      
       // For completed work items, populate all data from the saved stock take
       if (isReadOnly && stockTake) {
         try {
           // Parse stock take items from stockTake data (using any as a workaround for type issues)
           const anyStockTake = stockTake as any;
-
+          
           if (anyStockTake.items) {
             // Handle both string and array formats
             const parsedItems = typeof anyStockTake.items === 'string' 
               ? JSON.parse(anyStockTake.items) 
               : anyStockTake.items;
-
+              
             if (Array.isArray(parsedItems)) {
               setStockData(parsedItems);
             }
           }
-
+          
           // Set pictures if available
           if (stockTake.pictures) {
             // Handle both array and string formats
@@ -287,9 +287,9 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               : typeof stockTake.pictures === 'string' 
                 ? JSON.parse(stockTake.pictures as string) 
                 : [];
-
+            
             setPictures(pics);
-
+            
             // Also populate shelfImages from pictures for the grid display
             const newShelfImages = Array(8).fill(null);
             pics.forEach((pic: string, index: number) => {
@@ -297,7 +297,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
             });
             setShelfImages(newShelfImages);
           }
-
+          
           // Set comments if available
           if (stockTake.comment) {
             setComments(stockTake.comment);
@@ -313,22 +313,22 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       }
     }
   }, [stockTake, isReadOnly, toast]);
-
+  
   // Fetch store assignment to get stockTakeType using prop workItem
   const { data: storeAssignment } = useQuery<StoreAssignment>({
     queryKey: ['/api/assignments', workItem?.storeAssignmentId],
     enabled: !!workItem?.storeAssignmentId,
   });
-
+  
   // Determine stock take type from store assignment
   const stockTakeType = storeAssignment?.stockTakeType || 'both';
-
+  
   const submitStockTake = async () => {
     setLoading(true);
     try {
       // Create FormData for proper file upload handling
       const formData = new FormData();
-
+      
       // Add basic stock take data
       formData.append('storeId', storeId.toString());
       formData.append('comment', comments || '');
@@ -337,23 +337,23 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       if (workItemId) {
         formData.append('workItemId', workItemId.toString());
       }
-
+      
       // Process images - first try to convert file objects directly
       const imagesToProcess = [
         ...shelfImages.filter(Boolean), // Filter out null values
         ...pictures.filter(pic => !shelfImages.includes(pic)) // Add any pictures not in shelfImages
       ];
-
+      
       console.log("Processing images for upload:", {
         shelfImagesCount: shelfImages.filter(Boolean).length,
         picturesCount: pictures.filter(pic => !shelfImages.includes(pic)).length,
         totalImages: imagesToProcess.length
       });
-
+      
       // Add each image to FormData
       for (let i = 0; i < imagesToProcess.length; i++) {
         const image = imagesToProcess[i];
-
+        
         if (image instanceof File) {
           // If it's already a File object, add it directly
           formData.append('pictures', image);
@@ -364,43 +364,43 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           console.log(`Adding image path to FormData: ${image}`);
         }
       }
-
+      
       // Use fetch directly for proper FormData handling
       const response = await fetch("/api/stock-takes", {
         method: 'POST',
         body: formData,
         credentials: 'include',
       });
-
+      
       if (!response.ok) {
         throw new Error(`Stock take submission failed: ${response.statusText}`);
       }
-
+      
       const result = await response.json();
-
+      
       toast({
         title: "Stock take submitted",
         description: "Your stock take has been submitted successfully",
       });
-
+      
       // Update local status
       setStockTakeStatus("submitted");
-
+      
       // Check for low stock items
       const lowItems = detectLowStockItems();
-
+      
       // If there are low stock items, update the parent state and show alert
       if (lowItems.length > 0 && setLowStockItems && setShowLowStockAlert) {
         console.log("Low stock items detected:", lowItems);
         setLowStockItems(lowItems);
         setShowLowStockAlert(true);
       }
-
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stores', storeId, 'stock-takes'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock-takes/by-work-item', workItemId] });
-
+      
       // Move to the next step in the process form instead of navigating away
       setTimeout(() => {
         // Signal to parent component that this step is complete
@@ -417,17 +417,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       setLoading(false);
     }
   };
-
+  
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-
+        
         // Create FormData for the image upload
         const formData = new FormData();
         formData.append('file', file);
-
+        
         // Upload the file first
         fetch('/api/upload', {
           method: 'POST',
@@ -459,30 +459,30 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       }
     }
   };
-
+  
   // Handle individual shelf image upload
   const handleShelfImageUpload = (index: number, event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
       const file = files[0];
-
+      
       // We'll store the File object directly and handle it later during form submission
       const newShelfImages = [...shelfImages];
       newShelfImages[index] = file;
       setShelfImages(newShelfImages);
-
+      
       // Also add to the pictures array for backward compatibility
       setPictures(prev => [...prev, file]);
-
+      
       toast({
         title: "Image added",
         description: "Image has been added to your stock take",
       });
-
+      
       console.log(`Image added successfully at index ${index}:`, file.name);
     }
   };
-
+  
   // Handle image removal
   const handleRemoveShelfImage = (index: number) => {
     const newShelfImages = [...shelfImages];
@@ -491,25 +491,25 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     // Set the slot to null
     newShelfImages[index] = null;
     setShelfImages(newShelfImages);
-
+    
     // Also remove from pictures array if it exists
     if (removedImage) {
       setPictures(prev => prev.filter(pic => pic !== removedImage));
     }
   };
-
+  
   const handleAddProduct = () => {
     if (!selectedProduct) return;
-
+    
     const numQuantity = parseInt(quantity) || 0;
-
+    
     // Determine if we're adding shelf, back store, or both based on stockTakeType
     if (stockTakeType === 'shelf' || stockTakeType === 'both') {
       const newStockData = [...stockData];
       const existingIndex = newStockData.findIndex(
         item => item.productId === selectedProduct.id && item.location === "shelf"
       );
-
+      
       if (existingIndex >= 0) {
         newStockData[existingIndex].quantity = numQuantity;
       } else {
@@ -519,17 +519,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           location: "shelf"
         });
       }
-
+      
       setStockData(newStockData);
     }
-
+    
     if (stockTakeType === 'store' || stockTakeType === 'both') {
       // For back store, we only add if it's a store or both type
       const newStockData = [...stockData];
       const existingIndex = newStockData.findIndex(
         item => item.productId === selectedProduct.id && item.location === "back_store"
       );
-
+      
       if (existingIndex >= 0) {
         newStockData[existingIndex].quantity = numQuantity;
       } else {
@@ -539,32 +539,32 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           location: "back_store"
         });
       }
-
+      
       setStockData(newStockData);
     }
-
+    
     // Reset form
     setSelectedProduct(null);
     setQuantity("0");
-
+    
     toast({
       title: "Product added",
       description: `Added ${selectedProduct.name} with quantity ${numQuantity}`,
     });
   };
-
+  
   // Function to get all unique products that have been added
   const getAddedProducts = () => {
     const productIds = new Set<number>();
     stockData.forEach(item => productIds.add(item.productId));
-
+    
     return Array.from(productIds).map(id => {
       const product = products.find(p => p.id === id);
       if (!product) return null;
-
+      
       const shelfItem = stockData.find(item => item.productId === id && item.location === "shelf");
       const backStoreItem = stockData.find(item => item.productId === id && item.location === "back_store");
-
+      
       return {
         product,
         shelfQuantity: shelfItem?.quantity || 0,
@@ -572,15 +572,15 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       };
     }).filter(Boolean);
   };
-
+  
   // Function to detect products with low stock (below threshold)
   const detectLowStockItems = () => {
     const lowItems: Array<{product: Product, quantity: number, location: string}> = [];
-
+    
     stockData.forEach(item => {
       const product = products.find(p => p.id === item.productId);
       if (!product) return;
-
+      
       // Check if the current quantity is below the minimum stock level threshold
       if (item.quantity < product.minStockLevel) {
         lowItems.push({
@@ -590,13 +590,13 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
         });
       }
     });
-
+    
     return lowItems;
   };
-
+  
   // Get products that have been added to the stock take
   const addedProducts = getAddedProducts();
-
+  
   return (
     <div className="space-y-6">
       {/* Status and Stock Take Type Badges */}
@@ -626,14 +626,14 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               : 'Shelf & Back Store'}
         </Badge>
       </div>
-
+    
       {/* Product Availability Section */}
       <div className="bg-card border rounded-lg p-6">
         <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
           <h2 className="text-2xl font-bold">Product Availability</h2>
           {/* Barcode scanner button has been hidden */}
         </div>
-
+        
         <div className="grid md:grid-cols-12 gap-4 mb-6">
           {isReadOnly ? (
             // Read-only mode shows a message instead of the product selector
@@ -678,7 +678,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   )}
                 />
               </div>
-
+              
               <div className="md:col-span-2">
                 <label className="text-base font-medium mb-2 block">Quantity</label>
                 <Input
@@ -689,7 +689,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   className="h-10"
                 />
               </div>
-
+              
               <div className="md:col-span-2 flex items-end">
                 <Button 
                   className="w-full h-10"
@@ -703,7 +703,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
             </>
           )}
         </div>
-
+        
         {/* No Products State */}
         {addedProducts.length === 0 ? (
           <div className="bg-muted/50 rounded-lg p-8 text-center">
@@ -728,7 +728,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                 </p>
               </div>
             )}
-
+            
             {/* Product list - enhanced for read-only mode */}
             <div className={isReadOnly ? "grid gap-4 sm:grid-cols-2 lg:grid-cols-3" : "space-y-4"}>
               {addedProducts.map(item => (
@@ -749,7 +749,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       <p className="text-sm text-muted-foreground">SKU: {item?.product.sku}</p>
                     )}
                   </div>
-
+                  
                   <div className="grid gap-3">
                     {/* Show shelf quantity if applicable */}
                     {(stockTakeType === 'shelf' || stockTakeType === 'both') && (
@@ -768,7 +768,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                         </Badge>
                       </div>
                     )}
-
+                    
                     {/* Show back store quantity if applicable */}
                     {(stockTakeType === 'store' || stockTakeType === 'both') && (
                       <div className="flex justify-between items-center p-2 rounded-md bg-gray-50 border border-gray-100">
@@ -786,7 +786,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                         </Badge>
                       </div>
                     )}
-
+                    
                     {/* Show min stock level in read-only view */}
                     {isReadOnly && (
                       <div className="flex justify-between items-center p-2 rounded-md bg-yellow-50 border border-yellow-100">
@@ -806,7 +806,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           </div>
         )}
       </div>
-
+      
       {/* Shelf Images Grid and Comments Section */}
       <div className="space-y-6">
         <div className="bg-card border rounded-lg p-6">
@@ -818,7 +818,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
               </Badge>
             )}
           </div>
-
+          
           {isReadOnly ? (
             // Read-only mode for shelf images
             <div>
@@ -878,7 +878,6 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       </div>
                       {user?.role === "admin" && image && (
                         <div className="absolute top-2 right-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                          ```text
                           <Button 
                             size="icon" 
                             variant="secondary" 
@@ -937,7 +936,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             </span>
                           )}
                         </div>
-
+                        
                         {/* Remove button overlay */}
                         <div className="absolute inset-0 bg-black/60 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
                           <Button 
@@ -1002,25 +1001,25 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                           const emptySlots = shelfImages
                             .map((img, index) => img === null ? index : -1)
                             .filter(index => index !== -1);
-
+                          
                           // Store files in available slots
                           const newShelfImages = [...shelfImages];
                           let filesAdded = 0;
-
+                          
                           for (let i = 0; i < Math.min(files.length, emptySlots.length); i++) {
                             newShelfImages[emptySlots[i]] = files[i];
                             filesAdded++;
                           }
-
+                          
                           // Update the shelf images
                           setShelfImages(newShelfImages);
-
+                          
                           // Show success message
                           toast({
                             title: "Images added",
                             description: `Added ${filesAdded} ${filesAdded === 1 ? 'image' : 'images'} to your stock take`,
                           });
-
+                          
                           // Reset the input
                           e.target.value = '';
                         }
@@ -1033,12 +1032,12 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
             </div>
           )}
         </div>
-
+        
         <div className="bg-card border rounded-lg p-6">
           <h2 className="text-2xl font-bold mb-4">
             {isReadOnly ? 'Merchandiser Comments' : 'Comments'}
           </h2>
-
+          
           {isReadOnly ? (
             /* Enhanced read-only comment display */
             <div>
@@ -1085,7 +1084,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           )}
         </div>
       </div>
-
+      
       {!isReadOnly && (
         <Button 
           onClick={submitStockTake} 
@@ -1096,7 +1095,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           Submit Stock Take
         </Button>
       )}
-
+      
       {isReadOnly && (
         <div className="bg-green-50 border border-green-200 rounded-lg p-4 text-center">
           <div className="flex justify-center mb-2">
@@ -1108,13 +1107,13 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
           </p>
         </div>
       )}
-
+      
       {/* Admin Data Overview section - Only visible to admins */}
       {isReadOnly && user?.role === "admin" && (
         <div className="mt-8 border-t pt-8">
           <h2 className="text-2xl font-bold mb-6 text-primary">Admin Data Overview</h2>
           <p className="text-sm text-muted-foreground mb-4">Comprehensive view of all data submitted by the merchandiser for this work item.</p>
-
+          
           <div className="space-y-6">
             {/* Tabs for different data types */}
             <Tabs defaultValue="stock-take" className="w-full">
@@ -1136,7 +1135,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   <span>Order Data</span>
                 </TabsTrigger>
               </TabsList>
-
+              
               {/* Stock Take Data Tab */}
               <TabsContent value="stock-take" className="mt-4">
                 <Card>
@@ -1163,7 +1162,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                           </Badge>
                         </div>
                       </div>
-
+                      
                       {stockTake.items && stockTake.items.length > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-2">Inventory Items ({stockTake.items.length})</h3>
@@ -1201,7 +1200,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                           </div>
                         </div>
                       )}
-
+                      
                       {/* Show shelf images if available */}
                       {stockTake.pictures && stockTake.pictures.length > 0 && (
                         <div>
@@ -1231,7 +1230,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   </CardContent>
                 </Card>
               </TabsContent>
-
+              
               {/* Merchandising Data Tab */}
               <TabsContent value="merchandising" className="mt-4">
                 <Card>
@@ -1261,7 +1260,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             <p>{merchandisingData.createdAt ? new Date(merchandisingData.createdAt).toLocaleString() : 'Not available'}</p>
                           </div>
                         </div>
-
+                        
                         {merchandisingData.items && merchandisingData.items.length > 0 && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">Promotional Items</h3>
@@ -1287,7 +1286,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             </div>
                           </div>
                         )}
-
+                        
                         {merchandisingData.comment && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">Additional Notes</h3>
@@ -1301,7 +1300,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   </CardContent>
                 </Card>
               </TabsContent>
-
+              
               {/* Competitor Data Tab */}
               <TabsContent value="competitor" className="mt-4">
                 <Card>
@@ -1331,7 +1330,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             <p>{competitorData.competitorName || 'Not specified'}</p>
                           </div>
                         </div>
-
+                        
                         {competitorData.items && competitorData.items.length > 0 && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">Competitor Products</h3>
@@ -1359,7 +1358,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             </div>
                           </div>
                         )}
-
+                        
                         {competitorData.generalNotes && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">General Observations</h3>
@@ -1373,7 +1372,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   </CardContent>
                 </Card>
               </TabsContent>
-
+              
               {/* Order Data Tab */}
               <TabsContent value="order" className="mt-4">
                 <Card>
@@ -1415,7 +1414,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             <p>{orderData.items?.length || 0}</p>
                           </div>
                         </div>
-
+                        
                         {orderData.items && orderData.items.length > 0 && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">Ordered Items</h3>
@@ -1447,7 +1446,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             </div>
                           </div>
                         )}
-
+                        
                         {orderData.notes && (
                           <div>
                             <h3 className="text-sm font-medium mb-2">Order Notes</h3>
@@ -1477,12 +1476,12 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [price, setPrice] = useState<string>("0.00");
   const { toast } = useToast();
-
+  
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
-
+  
   const submitMerchandising = async () => {
     setLoading(true);
     try {
@@ -1493,7 +1492,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
           title: "Step skipped",
           description: "Merchandising step was skipped",
         });
-
+        
         // Move to the next step in the process
         setTimeout(() => {
           setActiveStep("competitor-analysis");
@@ -1501,7 +1500,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
         setLoading(false);
         return;
       }
-
+      
       // Create merchandising promotion
       const merchandisingData = {
         storeId,
@@ -1512,24 +1511,24 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
           notes: item.notes || '' // Add empty notes if not present
         }))
       };
-
+      
       // Include pictures if available (not required by server but stored for future reference)
       if (promotionPictures.length > 0) {
         // @ts-ignore - we're adding an extra field that the server will ignore
         merchandisingData.promotionPictures = promotionPictures;
       }
-
+      
       const response = await apiRequest("POST", "/api/merchandising", merchandisingData);
       const result = await response.json();
-
+      
       toast({
         title: "Merchandising data submitted",
         description: "Your merchandising information has been submitted successfully",
       });
-
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
-
+      
       // Move to the next step in the process
       setTimeout(() => {
         setActiveStep("competitor-analysis");
@@ -1545,7 +1544,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       setLoading(false);
     }
   };
-
+  
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -1556,15 +1555,15 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       setPromotionPictures(newPictures);
     }
   };
-
+  
   const handleAddPromotionItem = () => {
     if (!selectedProduct) return;
-
+    
     const numPrice = parseFloat(price) || 0;
-
+    
     const newItems = [...promotionItems];
     const existingIndex = newItems.findIndex(item => item.productId === selectedProduct.id);
-
+    
     if (existingIndex >= 0) {
       newItems[existingIndex].price = Math.round(numPrice * 100); // Convert to cents
     } else {
@@ -1574,35 +1573,35 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
         notes: '' // Add empty notes by default
       });
     }
-
+    
     setPromotionItems(newItems);
-
+    
     // Reset form
     setSelectedProduct(null);
     setPrice("0.00");
-
+    
     toast({
       title: "Promotion product added",
       description: `Added ${selectedProduct.name} with price R${numPrice.toFixed(2)}`,
     });
   };
-
+  
   // Function to get added promotion products
   const getAddedProducts = () => {
     return promotionItems.map(item => {
       const product = products.find(p => p.id === item.productId);
       if (!product) return null;
-
+      
       return {
         product,
         price: item.price
       };
     }).filter(Boolean);
   };
-
+  
   // Get products added to the promotion
   const addedPromotionProducts = getAddedProducts();
-
+  
   return (
     <div className="space-y-6">
       {/* Promotion Products & Pricing Section */}
@@ -1624,7 +1623,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
             className="hidden"
           />
         </div>
-
+        
         <div className="grid md:grid-cols-12 gap-4 mb-6">
           <div className="md:col-span-7">
             <label className="text-base font-medium mb-2 block">Product</label>
@@ -1651,7 +1650,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
               )}
             />
           </div>
-
+          
           <div className="md:col-span-3">
             <label className="text-base font-medium mb-2 block">Price (R)</label>
             <div className="relative">
@@ -1666,7 +1665,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
               />
             </div>
           </div>
-
+          
           <div className="md:col-span-2 flex items-end">
             <Button 
               className="w-full h-10"
@@ -1678,10 +1677,10 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
             </Button>
           </div>
         </div>
-
+        
         <div>
           <h3 className="text-lg font-medium mb-4">Promotion Products</h3>
-
+          
           {/* No Products State */}
           {addedPromotionProducts.length === 0 ? (
             <div className="bg-muted/50 rounded-lg p-8 text-center">
@@ -1711,7 +1710,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
           )}
         </div>
       </div>
-
+      
       {/* Show selected promotion pictures */}
       {promotionPictures.length > 0 && (
         <div className="space-y-2">
@@ -1723,7 +1722,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
           </ul>
         </div>
       )}
-
+      
       <Button 
         onClick={submitMerchandising} 
         disabled={loading}
@@ -1744,7 +1743,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
   const [promotionalPrice, setPromotionalPrice] = useState<number | null>(null);
   const [pictures, setPictures] = useState<string[]>([]);
   const { toast } = useToast();
-
+  
   const submitCompetitorAnalysis = async () => {
     setLoading(true);
     try {
@@ -1755,7 +1754,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           title: "Step skipped",
           description: "Competitor analysis step was skipped",
         });
-
+        
         // Move to the next step in the process
         setTimeout(() => {
           setActiveStep("order-placement");
@@ -1763,7 +1762,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
         setLoading(false);
         return;
       }
-
+      
       // Create a FormData object for file uploads
       const formData = new FormData();
       formData.append('storeId', storeId.toString());
@@ -1773,7 +1772,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       if (promotionalPrice !== null) {
         formData.append('promotionalPrice', promotionalPrice.toString());
       }
-
+      
       // Get file inputs and append to FormData if available
       const fileInput = document.getElementById('competitor-pictures') as HTMLInputElement;
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
@@ -1782,31 +1781,31 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           formData.append('pictures', files[i]);
         }
       }
-
+      
       console.log("Submitting competitor data with files");
-
+      
       // Use fetch directly for multipart/form-data
       const response = await fetch('/api/competitor-merchandising', {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
-
+      
       if (!response.ok) {
         throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
       }
-
+      
       const result = await response.json();
-
+      
       toast({
         title: "Competitor analysis submitted",
         description: "Your competitor analysis has been submitted successfully",
       });
-
+      
       // Invalidate related queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: [`/api/competitor-merchandising/by-work-item/${workItemId}`] });
-
+      
       // Move to the next step in the process
       setTimeout(() => {
         setActiveStep("order-placement");
@@ -1822,7 +1821,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       setLoading(false);
     }
   };
-
+  
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -1833,7 +1832,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       setPictures(newPictures);
     }
   };
-
+  
   return (
     <div className="space-y-4">
       <div className="space-y-2">
@@ -1845,7 +1844,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           onChange={(e) => setBrand(e.target.value)}
         />
       </div>
-
+      
       <div className="space-y-2">
         <Label htmlFor="product-description">Product Description</Label>
         <Textarea 
@@ -1855,7 +1854,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           onChange={(e) => setProductDescription(e.target.value)}
         />
       </div>
-
+      
       <div className="space-y-2">
         <Label htmlFor="promotional-price">Promotional Price (cents)</Label>
         <Input 
@@ -1866,7 +1865,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           onChange={(e) => setPromotionalPrice(parseInt(e.target.value) || null)}
         />
       </div>
-
+      
       <div className="space-y-2">
         <Label htmlFor="competitor-pictures">Upload Pictures</Label>
         <Input id="competitor-pictures" type="file" multiple onChange={handleFileUpload} />
@@ -1881,7 +1880,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
           </div>
         )}
       </div>
-
+      
       <Button 
         onClick={submitCompetitorAnalysis} 
         disabled={loading}
@@ -1904,19 +1903,19 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
   const [quantity, setQuantity] = useState("1");
   const [itemNotes, setItemNotes] = useState("");
   const { toast } = useToast();
-
+  
   // Fetch products and low stock data
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
     enabled: !!storeId,
   });
-
+  
   // Get stock take data to identify low stock items
   const { data: stockTakes = [] } = useQuery<StockTakeData[]>({
     queryKey: ['/api/stock-takes'],
     enabled: !!storeId,
   });
-
+  
   // Process low stock items from parent component when the component mounts
   useEffect(() => {
     if (lowStockItems && lowStockItems.length > 0) {
@@ -1926,14 +1925,14 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         quantity: Math.max(item.product.minStockLevel - item.quantity, 1), // Order enough to reach min threshold
         notes: `Auto-added from stock take - ${item.location} (Current: ${item.quantity}, Min: ${item.product.minStockLevel})`
       }));
-
+      
       setOrderItems(prevItems => {
         // Merge with any existing items, avoiding duplicates
         const existingProductIds = prevItems.map(item => item.productId);
         const uniqueNewItems = newOrderItems.filter(item => !existingProductIds.includes(item.productId));
         return [...prevItems, ...uniqueNewItems];
       });
-
+      
       if (newOrderItems.length > 0) {
         toast({
           title: "Low stock items added",
@@ -1942,22 +1941,22 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       }
     }
   }, [lowStockItems, toast]);
-
+  
   const { data: stockTakeItems = [] } = useQuery<StockTakeDataItem[]>({
     queryKey: ['/api/stock-take-items'],
     enabled: stockTakes.length > 0,
   });
-
+  
   // Get inventory data related to this store
   const { data: inventory = [] } = useQuery<Inventory[]>({
     queryKey: ['/api/inventory', { storeId }],
     enabled: !!storeId,
   });
-
+  
   // Helper function to identify items below threshold from inventory data
   const getInventoryLowStockItems = useCallback(() => {
     if (!products.length || !inventory.length) return [];
-
+    
     return inventory
       .filter(item => {
         const product = products.find(p => p.id === item.productId);
@@ -1974,14 +1973,14 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         };
       });
   }, [products, inventory]);
-
+  
   const systemLowStockItems = getInventoryLowStockItems();
-
+  
   // Add a system-detected low stock item to the order
   const addSystemLowStockItem = (item: any) => {
     // Check if the item is already in the order
     const existingItem = orderItems.find(orderItem => orderItem.productId === item.productId);
-
+    
     if (existingItem) {
       // Update the existing item quantity
       setOrderItems(prev => 
@@ -1991,7 +1990,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
             : orderItem
         )
       );
-
+      
       toast({
         title: "Order updated",
         description: `Updated ${item.productName} quantity to ${item.quantityToOrder}`,
@@ -2006,31 +2005,31 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           notes: `Auto-added due to low stock (${item.currentStock}/${item.minStockLevel})`
         }
       ]);
-
+      
       toast({
         title: "Item added",
         description: `Added ${item.productName} to order`,
       });
     }
   };
-
+  
   // Add all system-detected low stock items to the order at once
   const addAllSystemLowStockItems = () => {
     if (systemLowStockItems.length === 0) return;
-
+    
     // Create a map of existing order items by productId for quick lookup
     const existingItemsMap = new Map(
       orderItems.map(item => [item.productId, item])
     );
-
+    
     // Process all low stock items
     const updatedOrderItems = [...orderItems];
     let addedCount = 0;
     let updatedCount = 0;
-
+    
     systemLowStockItems.forEach(lowStockItem => {
       const existingItem = existingItemsMap.get(lowStockItem.productId);
-
+      
       if (existingItem) {
         // Update existing item
         const itemIndex = updatedOrderItems.findIndex(
@@ -2053,23 +2052,23 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         addedCount++;
       }
     });
-
+    
     // Update the state with all changes at once
     setOrderItems(updatedOrderItems);
-
+    
     // Show toast notification with results
     toast({
       title: "Low stock items processed",
       description: `Added ${addedCount} new items and updated ${updatedCount} existing items`,
     });
   };
-
+  
   // Add manual item to order
   const addItemToOrder = () => {
     if (!selectedProduct) return;
-
+    
     const numQuantity = parseInt(quantity) || 1;
-
+    
     // Add the selected product to order items
     setOrderItems(prev => [
       ...prev, 
@@ -2079,20 +2078,20 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         notes: itemNotes
       }
     ]);
-
+    
     // Reset form
     setSelectedProduct(null);
     setQuantity("1");
     setItemNotes("");
-
+    
     toast({
       title: "Item added",
       description: `Added ${selectedProduct.name} to order`
     });
   };
+  
 
-
-
+  
   const submitOrder = async () => {
     setLoading(true);
     try {
@@ -2102,23 +2101,23 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           title: "Step skipped",
           description: "Order step was skipped, completing work item",
         });
-
+        
         // Skip order creation, but still mark the work item as completed
         try {
           // Call the API to mark the work item as completed
           await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
             status: WorkItemStatus.COMPLETED 
           });
-
+          
           // Invalidate queries to refresh data
           queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
           queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
-
+          
           toast({
             title: "Work item completed",
             description: "Your work item has been marked as completed",
           });
-
+          
           // Move to the final success step
           setTimeout(() => {
             setActiveStep("completed");
@@ -2136,7 +2135,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           return;
         }
       }
-
+      
       // Create order if we have notes, pictures, or order items
       const orderData = {
         storeId,
@@ -2148,41 +2147,41 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         date: new Date(),
         orderItems: orderItems
       };
-
+      
       // Add pictures if any
       if (pictures.length > 0) {
         // @ts-ignore
         orderData.pictures = pictures;
       }
-
+      
       const response = await apiRequest("POST", "/api/orders", orderData);
       const result = await response.json();
-
+      
       toast({
         title: "Order submitted",
         description: "Your order has been submitted successfully",
       });
-
+      
       // Invalidate queries to refresh data
       queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
       queryClient.invalidateQueries({ queryKey: ['/api/orders'] });
-
+      
       // Mark the work item as completed and move to the success step
       try {
         // Call the API to mark the work item as completed
         await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
           status: WorkItemStatus.COMPLETED 
         });
-
+        
         // Invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
         queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
-
+        
         toast({
           title: "Work item completed",
           description: "Your work item has been marked as completed",
         });
-
+        
         // Move to the final success step
         setTimeout(() => {
           setActiveStep("completed");
@@ -2206,7 +2205,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       setLoading(false);
     }
   };
-
+  
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
     const files = event.target.files;
     if (files && files.length > 0) {
@@ -2217,7 +2216,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
       setPictures(newPictures);
     }
   };
-
+  
   return (
     <div className="space-y-8">
       {/* Low Stock Items Section */}
@@ -2234,7 +2233,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
             </Button>
           )}
         </div>
-
+        
         {systemLowStockItems.length === 0 ? (
           <div className="text-center p-4 bg-muted rounded-md">
             <ShoppingBasket className="h-8 w-8 mx-auto text-muted-foreground mb-2" />
@@ -2266,7 +2265,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           </div>
         )}
       </div>
-
+      
       {/* Manual Order Items Section */}
       <div className="space-y-4">
         <h3 className="font-semibold text-lg">Add Items Manually</h3>
@@ -2308,7 +2307,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
             <Plus className="h-4 w-4" />
           </Button>
         </div>
-
+        
         <div className="space-y-2">
           <Label htmlFor="item-notes">Item Notes</Label>
           <Textarea 
@@ -2320,7 +2319,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           />
         </div>
       </div>
-
+      
       {/* Added Items List */}
       {orderItems.length > 0 && (
         <div className="space-y-2">
@@ -2357,7 +2356,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           </div>
         </div>
       )}
-
+      
       {/* Order Notes Section */}
       <div className="space-y-2">
         <Label htmlFor="order-notes">General Order Notes</Label>
@@ -2368,7 +2367,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           onChange={(e) => setNotes(e.target.value)}
         />
       </div>
-
+      
       <div className="space-y-2">
         <Label htmlFor="order-pictures">Upload Pictures (optional)</Label>
         <Input id="order-pictures" type="file" multiple onChange={handleFileUpload} />
@@ -2383,7 +2382,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
           </div>
         )}
       </div>
-
+      
       <Button 
         onClick={submitOrder} 
         disabled={loading}
@@ -2405,7 +2404,7 @@ interface Store {
 // Main Process Form component
 const ProcessForm = () => {
   const [location, navigate] = useLocation();
-
+  
   // Extract parameters from URL using a function for clarity
   const extractParams = () => {
     let extractedWorkItemId = 0;
@@ -2416,15 +2415,15 @@ const ProcessForm = () => {
       const windowParams = new URLSearchParams(window.location.search);
       const windowWorkItemId = windowParams.get("workItemId");
       const windowStoreId = windowParams.get("storeId");
-
+      
       if (windowWorkItemId && !isNaN(Number(windowWorkItemId))) {
         extractedWorkItemId = parseInt(windowWorkItemId);
       }
-
+      
       if (windowStoreId && !isNaN(Number(windowStoreId))) {
         extractedStoreId = parseInt(windowStoreId);
       }
-
+      
       // If parameters are still missing, try the location from wouter
       if (extractedWorkItemId === 0 || extractedStoreId === 0) {
         let queryString = "";
@@ -2433,10 +2432,10 @@ const ProcessForm = () => {
         } else if (location.includes("#") && location.split("#")[1]?.includes("?")) {
           queryString = location.split("#")[1].split("?")[1];
         }
-
+        
         if (queryString) {
           const routerParams = new URLSearchParams(queryString);
-
+          
           // Get work item ID if still missing
           if (extractedWorkItemId === 0) {
             const paramWorkItemId = routerParams.get("workItemId");
@@ -2444,7 +2443,7 @@ const ProcessForm = () => {
               extractedWorkItemId = parseInt(paramWorkItemId);
             }
           }
-
+          
           // Get store ID if still missing
           if (extractedStoreId === 0) {
             const paramStoreId = routerParams.get("storeId");
@@ -2457,13 +2456,13 @@ const ProcessForm = () => {
     } catch (error) {
       console.error("Error parsing URL parameters:", error);
     }
-
+    
     return { extractedWorkItemId, extractedStoreId };
   };
-
+  
   // Get the parameters
   const { extractedWorkItemId: workItemId, extractedStoreId: storeId } = extractParams();
-
+  
   // Log parameters for debugging
   console.log("ProcessForm initialized with:", { 
     workItemId, 
@@ -2477,7 +2476,7 @@ const ProcessForm = () => {
   const [activeStep, setActiveStep] = useState<string>("stock-take");
   const [lowStockItems, setLowStockItems] = useState<Array<{product: Product, quantity: number, location: string}>>([]);
   const [showLowStockAlert, setShowLowStockAlert] = useState(false);
-
+  
   // Fetch work item data
   const { 
     data: workItem, 
@@ -2487,14 +2486,14 @@ const ProcessForm = () => {
     queryKey: ['/api/work-items', workItemId],
     enabled: !!workItemId,
   });
-
+  
   // Set activeStep to "completed" if work item is already completed
   useEffect(() => {
     if (workItem && workItem.status === WorkItemStatus.COMPLETED) {
       setActiveStep("completed");
     }
   }, [workItem]);
-
+  
   // Fetch store data using all stores and filtering for the right store ID
   // This approach works around the authentication issue for single store endpoint
   const {
@@ -2505,10 +2504,10 @@ const ProcessForm = () => {
     queryKey: ['/api/stores'],
     enabled: !!storeId,
   });
-
+  
   // Find the specific store from the list
   const store = storeList?.find(s => s.id === storeId);
-
+  
   // Update work item status mutation
   const startWorkItemMutation = useMutation({
     mutationFn: async ({ id, status }: { id: number; status: string }) => {
@@ -2534,7 +2533,7 @@ const ProcessForm = () => {
       });
     }
   });
-
+  
   // Complete work item mutation
   const completeWorkItemMutation = useMutation({
     mutationFn: async ({ id }: { id: number }) => {
@@ -2560,7 +2559,7 @@ const ProcessForm = () => {
       });
     }
   });
-
+  
   // Handle starting the work item
   const handleStartWorkItem = async () => {
     if (workItem && workItem.status === WorkItemStatus.PENDING) {
@@ -2577,17 +2576,16 @@ const ProcessForm = () => {
             status: WorkItemStatus.IN_PROGRESS
           });
         }
-
+        
         // Manually invalidate queries to refresh data
         queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
         queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
         queryClient.invalidateQueries({ queryKey: ['/api/assigned-work-items', workItemId] });
-
+        
         toast({
           title: "Work item updated",
           description: "Work item status has been updated to in progress",
-        });```text
-
+        });
       } catch (error) {
         console.error("Error updating work item:", error);
         toast({
@@ -2598,35 +2596,35 @@ const ProcessForm = () => {
       }
     }
   };
-
+  
   // Navigate back to assignments if no valid work item or store id
   useEffect(() => {
     const checkAndFixParams = async () => {
-      console.log("Checking parameters: workItemId=" + workItemId + ", storeId=" + storeId);
-
+      console.log(`Checking parameters: workItemId=${workItemId}, storeId=${storeId}`);
+      
       // Check if we have workItemId but not storeId
       if (workItemId && !storeId) {
         try {
           // Try to fetch the work item to get its storeId using the assigned-work-items endpoint for merchandisers
-          const response = await fetch("/api/assigned-work-items/" + workItemId.toString());
+          const response = await fetch(`/api/assigned-work-items/${workItemId}`);
           if (response.ok) {
             const workItemData = await response.json();
             if (workItemData && workItemData.storeId) {
-              console.log("Found storeId " + workItemData.storeId + " for workItemId " + workItemId);
+              console.log(`Found storeId ${workItemData.storeId} for workItemId ${workItemId}`);
               // Redirect with both parameters
-              navigate("/process-form?workItemId=" + workItemId + "&storeId=" + workItemData.storeId);
+              navigate(`/process-form?workItemId=${workItemId}&storeId=${workItemData.storeId}`);
               return;
             }
           } else {
             // Fallback to admin endpoint if necessary
             console.log("First endpoint failed, trying admin endpoint as fallback");
-            const adminResponse = await fetch("/api/work-items/" + workItemId.toString());
+            const adminResponse = await fetch(`/api/work-items/${workItemId}`);
             if (adminResponse.ok) {
               const adminWorkItemData = await adminResponse.json();
               if (adminWorkItemData && adminWorkItemData.storeId) {
-                console.log("Found storeId " + adminWorkItemData.storeId + " from admin endpoint for workItemId " + workItemId);
+                console.log(`Found storeId ${adminWorkItemData.storeId} from admin endpoint for workItemId ${workItemId}`);
                 // Redirect with both parameters
-                navigate("/process-form?workItemId=" + workItemId + "&storeId=" + adminWorkItemData.storeId);
+                navigate(`/process-form?workItemId=${workItemId}&storeId=${adminWorkItemData.storeId}`);
                 return;
               }
             }
@@ -2635,7 +2633,7 @@ const ProcessForm = () => {
           console.error("Error fetching work item:", err);
         }
       }
-
+      
       // If we still don't have valid parameters, go back to assignments
       if (!workItemId || !storeId) {
         toast({
@@ -2646,10 +2644,10 @@ const ProcessForm = () => {
         navigate("/my-assignments");
       }
     };
-
+    
     checkAndFixParams();
   }, [workItemId, storeId, navigate, toast]);
-
+  
   // Loading state
   if (isLoadingWorkItem || isLoadingStore) {
     return (
@@ -2662,7 +2660,7 @@ const ProcessForm = () => {
       </div>
     );
   }
-
+  
   // Error state
   if (workItemError || storeError || !workItem || !store) {
     return (
@@ -2690,11 +2688,11 @@ const ProcessForm = () => {
       </div>
     );
   }
-
+  
   // Since the server now handles the permission checks and updates workItem.userId if needed,
   // we don't need to block access here - the server will have already returned a 403 error
   // if the user doesn't have access to this work item
-
+  
   return (
     <div className="container mx-auto py-2 px-2 sm:py-4 sm:px-4">
       <Card>
@@ -2710,7 +2708,7 @@ const ProcessForm = () => {
               Back to Assignments
             </Button>
           </div>
-
+          
           <div className="flex justify-between items-start">
             <div>
               <CardTitle className="text-2xl">Process Form</CardTitle>
@@ -2718,7 +2716,7 @@ const ProcessForm = () => {
                 Store: {store.name} | {store.location}
               </CardDescription>
             </div>
-
+            
             {/* Desktop Back Button - Right Side */}
             <div className="hidden sm:block">
               <Button 
@@ -2736,11 +2734,11 @@ const ProcessForm = () => {
             <div>
               <h3 className="font-medium">{workItem.title}</h3>
               <p className="text-sm text-muted-foreground">
-                Status: <span className={"font-medium " + (
+                Status: <span className={`font-medium ${
                   workItem.status === WorkItemStatus.COMPLETED ? "text-green-600" : 
                   workItem.status === WorkItemStatus.IN_PROGRESS ? "text-blue-600" : 
                   "text-amber-600"
-                )}>
+                }`}>
                   {workItem.status ? 
                     workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ') 
                     : 'Unknown'}
@@ -2752,14 +2750,14 @@ const ProcessForm = () => {
                 </p>
               )}
             </div>
-
+            
             {workItem.status === WorkItemStatus.PENDING && (
               <Button onClick={handleStartWorkItem}>
                 Start Work
               </Button>
             )}
           </div>
-
+          
           {/* Progress stepper - Desktop view (hidden on mobile) */}
           <div className="mb-8 hidden md:block">
             <div className="grid grid-cols-4 gap-4">
@@ -2769,21 +2767,21 @@ const ProcessForm = () => {
                 <h3 className={`font-medium ${activeStep === 'stock-take' || activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-blue-600' : ''}`}>Stock Take</h3>
                 <p className="text-sm text-muted-foreground">Stock taking at shelf or Store</p>
               </div>
-
+              
               {/* Step 2: Merchandising */}
               <div className="flex flex-col">
                 <div className={`h-2 rounded-full mb-2 ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
                 <h3 className={`font-medium ${activeStep === 'merchandising' || activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-[#7ccd57]' : ''}`}>Merchandising</h3>
                 <p className="text-sm text-muted-foreground">Promotions for any of our products</p>
               </div>
-
+              
               {/* Step 3: Competitor Promotions */}
               <div className="flex flex-col">
                 <div className={`h-2 rounded-full mb-2 ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
                 <h3 className={`font-medium ${activeStep === 'competitor-analysis' || activeStep === 'order-placement' || activeStep === 'completed' ? 'text-[#7ccd57]' : ''}`}>Competitor Promotions</h3>
                 <p className="text-sm text-muted-foreground">Any promotions from competitors</p>
               </div>
-
+              
               {/* Step 4: Orders */}
               <div className="flex flex-col">
                 <div className={`h-2 rounded-full mb-2 ${activeStep === 'order-placement' || activeStep === 'completed' ? 'bg-[#7ccd57]' : 'bg-gray-200'}`}></div>
@@ -2792,7 +2790,7 @@ const ProcessForm = () => {
               </div>
             </div>
           </div>
-
+          
           {/* Mobile only stepper - Shows only current step */}
           <div className="mb-6 md:hidden w-full">
             <div className="flex flex-col items-center w-full">
@@ -2804,7 +2802,7 @@ const ProcessForm = () => {
  4: Stock taking at shelf or Store</p>
                 </>
               )}
-
+              
               {activeStep === 'merchandising' && (
                 <>
                   <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
@@ -2812,7 +2810,7 @@ const ProcessForm = () => {
                   <p className="text-sm text-muted-foreground text-center">Step 2 of 4: Promotions for any of our products</p>
                 </>
               )}
-
+              
               {activeStep === 'competitor-analysis' && (
                 <>
                   <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
@@ -2820,7 +2818,7 @@ const ProcessForm = () => {
                   <p className="text-sm text-muted-foreground text-center">Step 3 of 4: Any promotions from competitors</p>
                 </>
               )}
-
+              
               {activeStep === 'order-placement' && (
                 <>
                   <div className="h-2 w-full rounded-full mb-2 bg-[#7ccd57]"></div>
@@ -2828,7 +2826,7 @@ const ProcessForm = () => {
                   <p className="text-sm text-muted-foreground text-center">Step 4 of 4: Orders of stock that is depleted</p>
                 </>
               )}
-
+              
               {activeStep === 'completed' && (
                 <>
                   <div className="h-2 w-32 rounded-full mb-2 bg-green-600"></div>
@@ -2864,7 +2862,7 @@ const ProcessForm = () => {
           ) : (
             <div className="mt-4">
               {/* Just show the current step content based on activeStep */}
-
+              
               {activeStep === "stock-take" && (
                 <StockTakeSection 
                   storeId={storeId} 
@@ -2876,7 +2874,7 @@ const ProcessForm = () => {
                   workItem={workItem}
                 />
               )}
-
+              
               {activeStep === "merchandising" && (
                 <MerchandisingSection 
                   storeId={storeId} 
@@ -2885,7 +2883,7 @@ const ProcessForm = () => {
                   setActiveStep={setActiveStep}
                 />
               )}
-
+              
               {activeStep === "competitor-analysis" && (
                 <CompetitorAnalysisSection 
                   storeId={storeId} 
@@ -2894,7 +2892,7 @@ const ProcessForm = () => {
                   setActiveStep={setActiveStep}
                 />
               )}
-
+              
               {activeStep === "order-placement" && (
                 <OrderPlacementSection 
                   storeId={storeId} 
@@ -2904,14 +2902,14 @@ const ProcessForm = () => {
                   lowStockItems={lowStockItems}
                 />
               )}
-
+              
               {/* Show completed screen if activeStep is "completed" or if work item is already in completed status */}
               {(activeStep === "completed" || (workItem && workItem.status === WorkItemStatus.COMPLETED)) && (
                 <div className="text-center py-10">
                   <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-green-100 text-green-600 mb-6">
                     <CheckCircle2 className="h-10 w-10" />
                   </div>
-
+                  
                   {/* Different display for already-completed work items vs just completed ones */}
                   {workItem && workItem.status === WorkItemStatus.COMPLETED && activeStep !== "completed" ? (
                     <>
@@ -2955,7 +2953,7 @@ const ProcessForm = () => {
           <Button variant="outline" onClick={() => navigate("/my-assignments")}>
             Cancel
           </Button>
-
+          
           {workItem.status !== WorkItemStatus.COMPLETED && (
             <Button variant="destructive" onClick={() => setShowConfirmDialog(true)}>
               Cancel Task
@@ -2963,7 +2961,7 @@ const ProcessForm = () => {
           )}
         </CardFooter>
       </Card>
-
+      
       {/* Confirmation dialog for canceling a task */}
       <Dialog open={showConfirmDialog} onOpenChange={setShowConfirmDialog}>
         <DialogContent>
@@ -2983,13 +2981,13 @@ const ProcessForm = () => {
                   await apiRequest("PUT", `/api/work-items/${workItemId}/status`, { 
                     status: WorkItemStatus.CANCELLED 
                   });
-
+                  
                   queryClient.invalidateQueries({ queryKey: ['/api/my-work-items'] });
                   toast({
                     title: "Task canceled",
                     description: "The task has been canceled successfully",
                   });
-
+                  
                   setShowConfirmDialog(false);
                   navigate("/my-assignments");
                 } catch (error) {
@@ -3007,7 +3005,7 @@ const ProcessForm = () => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
+      
       {/* Low Stock Alert Dialog */}
       <Dialog open={showLowStockAlert} onOpenChange={setShowLowStockAlert}>
         <DialogContent className="max-w-md">
@@ -3059,5 +3057,7 @@ const ProcessForm = () => {
     </div>
   );
 };
+
+
 
 export default ProcessForm;
