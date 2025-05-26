@@ -731,41 +731,13 @@ const dbResult = await pool.query(`
         console.log("Created order in database:", order);
 
         res.status(201).json(order);
-              if (validatedData.products && validatedData.products.length > 0) {
-            for (const product of validatedData.products) {
-              const itemResult = await pool.query(`
-                INSERT INTO order_items 
-                (order_id, product_id, quantity, notes)
-                VALUES ($1, $2, $3, $4)
-                RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
-              `, [
-                order.id,
-                product.productId,
-                product.quantity,
-                null // No notes by default
-              ]);
-
-              console.log(`Added product ${product.productId} to order ${order.id}`);
-            }
-          }
-
+              
         // Update the work item status
         if (validatedData.workItemId) {
           await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
         }
 
-        // Add the items to the response
-        const items = validatedData.products?.map(p => ({
-          productId: p.productId,
-          quantity: p.quantity
-        })) || [];
-
-        const result = {
-          ...order,
-          items
-        };
-
-        res.status(201).json(result);
+        res.status(201).json(order);
       } catch (dbError) {
         console.error("Database error creating order:", dbError);
 
@@ -881,7 +853,7 @@ const dbResult = await pool.query(`
         if (fallbackResult.rows && fallbackResult.rows.length > 0) {
           const order = fallbackResult.rows[0];
 
-          // Add workItemId to match client expectations
+          // Add workItemId tomatch client expectations
           order.workItemId = workItemId;
 
           // Get the order items
@@ -1712,6 +1684,7 @@ const dbResult = await pool.query(`
       const lowStockItems = await storage.getLowStockItems();
       res.json(lowStockItems);
     } catch (error) {
+```text
       res.status(500).json({ message: "Failed to get low stock items" });
     }
   });
@@ -2575,8 +2548,7 @@ const dbResult = await pool.query(`
             console.log(`Merchandiser ${req.user!.id} assigned to store ${workItem.storeId} is updating work item ${id}`);
           } else {
             console.log(`Access denied: Merchandiser ${req.user!.id} not assigned to store ${workItem.storeId}`);
-            return res.status(403).json({ 
-              message: "You can only update work items for stores you're assigned to." 
+            return res.status(403).json({               message: "You can only update work items for stores you're assigned to." 
             });
           }
         } catch (err) {
