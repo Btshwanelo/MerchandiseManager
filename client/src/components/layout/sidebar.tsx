@@ -315,7 +315,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                   {/* Merchandising Section - Collapsible */}
                   <div className="mb-4">
                     <div 
-                      className="px-4 py-1 flex items-center justify-between cursor-pointer"
+                      className="px-4 py-1 flex items-center justify-between cursor-pointer hover:bg-neutral-50 rounded-md"
                       onClick={toggleMerchandisingMenu}
                     >
                       <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider">
