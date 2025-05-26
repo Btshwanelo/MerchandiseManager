@@ -312,8 +312,7 @@ export const Sidebar = ({ className }: SidebarProps) => {
                     </ul>
                   </div>
 
-                  {/* Merchandising Section - Hidden */}
-                  {false && (
+                  {/* Merchandising Section - Collapsible */}
                   <div className="mb-4">
                     <div 
                       className="px-4 py-1 flex items-center justify-between cursor-pointer hover:bg-neutral-50 rounded-md"
@@ -362,7 +361,6 @@ export const Sidebar = ({ className }: SidebarProps) => {
                       </ul>
                     )}
                   </div>
-                  )}
 
                   {/* Documents Section */}
                   {navigationItems.filter(item => 
