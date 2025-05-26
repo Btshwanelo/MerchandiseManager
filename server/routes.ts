@@ -737,7 +737,7 @@ const dbResult = await pool.query(`
           await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
         }
 
-        res.status(201).json(order);
+        return res.status(201).json(order);
       } catch (dbError) {
         console.error("Database error creating order:", dbError);
 
@@ -750,7 +750,7 @@ const dbResult = await pool.query(`
           date: new Date()
         });
 
-        res.status(201).json(result);
+        return res.status(201).json(result);
       }
     } catch (error) {
       if (error instanceof z.ZodError) {
