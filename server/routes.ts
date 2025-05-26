@@ -729,8 +729,6 @@ const dbResult = await pool.query(`
         // Add items to the order object
         order.items = orderItems;
         console.log("Created order in database:", order);
-
-        res.status(201).json(order);
               
         // Update the work item status
         if (validatedData.workItemId) {
