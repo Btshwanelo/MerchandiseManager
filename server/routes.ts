@@ -47,7 +47,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       console.log("Executing SQL query for ALL work items");
       const directItemsQuery = await pool.query(query);
-      console.log(`Query executed successfully, found ${directItemsQuery.rows.length} work items`);
+      console.log("Query executed successfully, found " + directItemsQuery.rows.length + " work items");
 
       if (directItemsQuery.rows.length === 0) {
         console.log("No work items found in database");
@@ -86,7 +86,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         } : null
       }));
 
-      console.log(`Processed ${allWorkItems.length} total work items`);
+      console.log("Processed " + allWorkItems.length + " total work items");
 
       return res.json(allWorkItems);
     } catch (error) {
@@ -1684,7 +1684,7 @@ const dbResult = await pool.query(`
       const lowStockItems = await storage.getLowStockItems();
       res.json(lowStockItems);
     } catch (error) {
-```text
+      console.error("Error getting low stock items:", error);
       res.status(500).json({ message: "Failed to get low stock items" });
     }
   });
@@ -1815,11 +1815,11 @@ const dbResult = await pool.query(`
       // Check if user has permission to view this work item
       const user = req.user!;
       if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER && workItem.userId !== user.id) {
-        console.log(`Access denied: User ${user.id} (${user.role}) attempted to access work item ${workItemId} assigned to user ${workItem.userId}`);
+        console.log("Access denied: User " + user.id + " (" + user.role + ") attempted to access work item " + workItemId + " assigned to user " + workItem.userId);
         return res.status(403).json({ message: "Not authorized to view this work item" });
       }
 
-      console.log(`Fetching stock take data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
+      console.log("Fetching stock take data for work item " + workItemId + " (store: " + workItem.storeId + ", user: " + workItem.userId + ")");
 
       try {
         // Get all stock takes for this store
@@ -1833,17 +1833,17 @@ const dbResult = await pool.query(`
 
         if (filteredStockTakes.length === 0) {
           // No stock takes found for this work item
-          console.log(`No stock takes found for work item ${workItemId}`);
+          console.log("No stock takes found for work item " + workItemId);
           return res.json(null);
         }
 
         // Return the most recent stock take with its items
         const stockTake = await storage.getStockTakeWithItems(filteredStockTakes[0].id);
-        console.log(`Found stock take ${stockTake?.id} for work item ${workItemId}`);
+        console.log("Found stock take " + stockTake?.id + " for work item " + workItemId);
         res.json(stockTake);
       } catch (innerError) {
         // Handle missing tables or other database errors by returning null
-        console.error(`Inner error fetching stock take data: ${innerError}`);
+        console.error("Inner error fetching stock take data:", innerError);
         return res.json(null);
       }
     } catch (error) {
@@ -2154,7 +2154,7 @@ const dbResult = await pool.query(`
                 shelfId: shelf.id,
                 type: 'low-stock',
                 status: 'active',
-                message: `Low stock for ${product.name} (${quantity}/${product.minStockLevel})`
+                message: "Low stock for " + product.name + " (" + quantity + "/" + product.minStockLevel + ")"
               });
             }
           }
@@ -2184,7 +2184,7 @@ const dbResult = await pool.query(`
             userId: req.user!.id,
             quantity,
             status: 'completed',
-            notes: `Back store stock take: ${comment}`
+            notes: "Back store stock take: " + comment
           });
         }
       }
@@ -2203,11 +2203,11 @@ const dbResult = await pool.query(`
               workItem.type === 'stock_take' && 
               workItem.status !== 'completed') {
 
-            console.log(`Completing work item ${workItemId} as part of stock take submission`);
+            console.log("Completing work item " + workItemId + " as part of stock take submission");
             await storage.completeWorkItem(workItemId);
-            console.log(`Updated work item ${workItemId} to completed status`);
+            console.log("Updated work item " + workItemId + " to completed status");
           } else {
-            console.log(`Work item ${workItemId} not updated: either not found, not owned by this user, or already completed`);
+            console.log("Work item " + workItemId + " not updated: either not found, not owned by this user, or already completed");
           }
         } else {
           console.log("No valid work item ID provided in the request");
@@ -2331,16 +2331,16 @@ const dbResult = await pool.query(`
             // Create a new product with the SKU
             try {
               product = await storage.createProduct({
-                name: `Product ${item.productSku}`,
+                name: "Product " + item.productSku,
                 sku: item.productSku,
-                description: `Auto-created from inventory upload`,
+                description: "Auto-created from inventory upload",
                 category: item.category || 'Other', // Use provided category or default to 'Other'
                 price: 0, // Default price, can be updated later
                 minStockLevel: 5
               });
-              console.log(`Created new product with SKU ${item.productSku}`);
+              console.log("Created new product with SKU " + item.productSku);
             } catch (error) {
-              errors.push({ item, error: `Failed to create product with SKU ${item.productSku}: ${error instanceof Error ? error.message : 'Unknown error'}` });
+              errors.push({ item, error: "Failed to create product with SKU " + item.productSku + ": " + (error instanceof Error ? error.message : 'Unknown error') });
               continue;
             }
           }
@@ -2354,7 +2354,7 @@ const dbResult = await pool.query(`
           );
 
           if (!store) {
-            errors.push({ item, error: `Store with name "${item.storeName}" not found. Available stores: ${stores.map(s => s.name).join(', ')}` });
+            errors.push({ item, error: "Store with name \"" + item.storeName + "\" not found. Available stores: " + stores.map(s => s.name).join(', ') });
             continue;
           }
 
@@ -2545,9 +2545,9 @@ const dbResult = await pool.query(`
           const isAssignedToStore = userAssignments.some(a => a.storeId === workItem.storeId);
 
           if (isAssignedToStore) {
-            console.log(`Merchandiser ${req.user!.id} assigned to store ${workItem.storeId} is updating work item ${id}`);
+            console.log("Merchandiser " + req.user!.id + " assigned to store " + workItem.storeId + " is updating work item " + id);
           } else {
-            console.log(`Access denied: Merchandiser ${req.user!.id} not assigned to store ${workItem.storeId}`);
+            console.log("Access denied: Merchandiser " + req.user!.id + " not assigned to store " + workItem.storeId);
             return res.status(403).json({ 
               message: "You can only update work items for stores you're assigned to." 
             });
@@ -2557,7 +2557,7 @@ const dbResult = await pool.query(`
           return res.status(500).json({ message: "Error checking store assignments" });
         }
       } else {
-        console.log(`Access denied: User ${req.user!.id} with role ${req.user!.role} not authorized for work item ${id}`);
+        console.log("Access denied: User " + req.user!.id + " with role " + req.user!.role + " not authorized for work item " + id);
         return res.status(403).json({ message: "Not authorized to update this work item" });
       }
 
@@ -2567,7 +2567,7 @@ const dbResult = await pool.query(`
         return res.status(400).json({ message: "Invalid status value" });
       }
 
-      console.log(`Updating work item ${id} status to ${status} by user ${req.user!.id}`);
+      console.log("Updating work item " + id + " status to " + status + " by user " + req.user!.id);
 
       // Update the work item status
       let updatedWorkItem;
@@ -2575,18 +2575,18 @@ const dbResult = await pool.query(`
       if (status === WorkItemStatus.COMPLETED) {
         updatedWorkItem = await storage.completeWorkItem(id);
         if (!updatedWorkItem) {
-          console.error(`Failed to complete work item ${id}`);
+          console.error("Failed to complete work item " + id);
           return res.status(500).json({ message: "Failed to mark work item as complete" });
         }
       } else {
         updatedWorkItem = await storage.updateWorkItemStatus(id, status);
         if (!updatedWorkItem) {
-          console.error(`Failed to update work item ${id} status to ${status}`);
+          console.error("Failed to update work item " + id + " status to " + status);
           return res.status(500).json({ message: "Failed to update work item status" });
         }
       }
 
-      console.log(`Successfully updated work item ${id} status to ${status}`);
+      console.log("Successfully updated work item " + id + " status to " + status);
       res.json(updatedWorkItem);
     } catch (error) {
       console.error("Error updating work item status:", error);
