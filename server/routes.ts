@@ -530,7 +530,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.array('promotionPictures', 10), async (req, res) => {
+  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.fields([
+    { name: 'promotionPictures', maxCount: 10 },
+    { name: 'competitor_0_pictures', maxCount: 10 },
+    { name: 'competitor_1_pictures', maxCount: 10 },
+    { name: 'competitor_2_pictures', maxCount: 10 },
+    { name: 'competitor_3_pictures', maxCount: 10 },
+    { name: 'competitor_4_pictures', maxCount: 10 }
+  ]), async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
       console.log("Received files:", req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : 'No files');
@@ -574,8 +581,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Product description is required" });
       }
 
-      // Get all uploaded file paths
-      const files = (req.files as Express.Multer.File[]) || [];
+      // Get all uploaded file paths from multiple possible field names
+      let files: Express.Multer.File[] = [];
+      
+      if (req.files) {
+        if (Array.isArray(req.files)) {
+          // If req.files is an array (from .array() method)
+          files = req.files;
+        } else {
+          // If req.files is an object (from .fields() method)
+          const fileFields = req.files as { [fieldname: string]: Express.Multer.File[] };
+          files = Object.values(fileFields).flat();
+        }
+      }
+      
       const filePaths = files.map(file => file.path);
 
       // Create the data object for storage
