@@ -724,34 +724,52 @@ const WorkItemSummary = ({
               )}
               
               {/* Order Photos */}
-              {order.pictures && (
+              {(order.pictures || stockTake?.pictures) && (
                 <>
                   <Separator className="my-4" />
                   <h3 className="font-medium text-sm mb-2">Photos</h3>
                   <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                     {(() => {
                       console.log("Order photos data:", order.pictures);
+                      console.log("Stock take photos data (for order):", stockTake?.pictures);
                       
-                      // Get the photos array
+                      // Get the photos array - prioritize order pictures, fallback to stock take pictures
                       let photoArray: string[] = [];
                       
-                      if (typeof order.pictures === 'string') {
-                        // If it's a JSON string, try to parse it
-                        try {
-                          const parsed = JSON.parse(order.pictures);
-                          photoArray = Array.isArray(parsed) ? parsed : [order.pictures];
-                        } catch (e) {
-                          // If parsing fails, it's just a single string path
-                          photoArray = [order.pictures];
+                      // First try order pictures
+                      if (order.pictures) {
+                        if (typeof order.pictures === 'string') {
+                          try {
+                            const parsed = JSON.parse(order.pictures);
+                            photoArray = Array.isArray(parsed) ? parsed : [order.pictures];
+                          } catch (e) {
+                            photoArray = [order.pictures];
+                          }
+                        } else if (Array.isArray(order.pictures)) {
+                          photoArray = order.pictures;
+                        } else if (order.pictures && typeof order.pictures === 'object') {
+                          photoArray = Object.keys(order.pictures).length > 0 
+                            ? Object.values(order.pictures).map(v => String(v))
+                            : [];
                         }
-                      } else if (Array.isArray(order.pictures)) {
-                        // If it's already an array, use it directly
-                        photoArray = order.pictures;
-                      } else if (order.pictures && typeof order.pictures === 'object') {
-                        // If it's a non-null object but not an array, might be empty object from database
-                        photoArray = Object.keys(order.pictures).length > 0 
-                          ? Object.values(order.pictures).map(v => String(v))
-                          : [];
+                      }
+                      
+                      // If no order pictures, try stock take pictures (since orders are often generated from stock takes)
+                      if (photoArray.length === 0 && stockTake?.pictures) {
+                        if (typeof stockTake.pictures === 'string') {
+                          try {
+                            const parsed = JSON.parse(stockTake.pictures);
+                            photoArray = Array.isArray(parsed) ? parsed : [stockTake.pictures];
+                          } catch (e) {
+                            photoArray = [stockTake.pictures];
+                          }
+                        } else if (Array.isArray(stockTake.pictures)) {
+                          photoArray = stockTake.pictures;
+                        } else if (stockTake.pictures && typeof stockTake.pictures === 'object') {
+                          photoArray = Object.keys(stockTake.pictures).length > 0 
+                            ? Object.values(stockTake.pictures).map(v => String(v))
+                            : [];
+                        }
                       }
                       
                       // Filter out falsy values and empty strings
@@ -762,7 +780,7 @@ const WorkItemSummary = ({
                       // Ensure all entries are strings
                       photoArray = photoArray.map(p => String(p));
                       
-                      console.log("Order pictures to render:", photoArray);
+                      console.log("Final order pictures to render:", photoArray);
                       
                       return photoArray.length > 0 ? (
                         photoArray.map((pic: string, index: number) => {
@@ -801,8 +819,19 @@ const WorkItemSummary = ({
                                 onError={(e) => {
                                   console.log(`Failed to load order image: ${imgPath}`);
                                   const target = e.target as HTMLImageElement;
-                                  // Use SVG placeholder to avoid another potential 404
-                                  target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                  
+                                  // Try a fallback path with the uploads prefix if not already tried
+                                  const filename = pic.split('/').pop();
+                                  if (filename && !imgPath.includes('/uploads/')) {
+                                    target.src = `/uploads/${filename}`;
+                                    // Add a second error handler for the fallback path
+                                    target.onerror = () => {
+                                      target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                    };
+                                  } else {
+                                    // Use inline SVG placeholder to avoid another potential 404
+                                    target.src = "data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 24 24' fill='none' stroke='currentColor' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><rect x='3' y='3' width='18' height='18' rx='2' ry='2'></rect><circle cx='8.5' cy='8.5' r='1.5'></circle><polyline points='21 15 16 10 5 21'></polyline></svg>";
+                                  }
                                 }}
                               />
                             </div>
