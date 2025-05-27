@@ -23,6 +23,32 @@ import { registerUserRoutes } from "./user-routes";
 import { registerAssignmentRoutes } from "./assignments-routes";
 import { userAlertsRouter } from "./routes/alerts";
 
+// Set up multer storage configuration at the top of the file
+const storage_config = multer.diskStorage({
+  destination: (req, file, cb) => {
+    const dir = './uploads';
+    if (!fs.existsSync(dir)) {
+      fs.mkdirSync(dir, { recursive: true });
+    }
+    cb(null, dir);
+  },
+  filename: (req, file, cb) => {
+    cb(null, Date.now() + '-' + file.originalname);
+  }
+});
+
+const upload = multer({ 
+  storage: storage_config,
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  fileFilter: (req, file, cb) => {
+    // Accept images only
+    if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
+      return cb(null, false);
+    }
+    cb(null, true);
+  }
+});
+
 export async function registerRoutes(app: Express): Promise<Server> {
   // Set up authentication routes first
   setupAuth(app);
@@ -1694,26 +1720,6 @@ const dbResult = await pool.query(`
   });
 
   // Stock Takes API
-  // Set up multer storage
-  const storage_config = multer.diskStorage({
-    destination: (req, file, cb) => {      cb(null, path.join(process.cwd(), 'uploads'));
-    },
-    filename: (req, file, cb) => {
-      cb(null, Date.now() + '-' + file.originalname);
-    }
-  });
-
-  const upload = multer({ 
-    storage: storage_config,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
-    fileFilter: (req, file, cb) => {
-      // Accept images only
-      if (!file.originalname.match(/\.(jpg|jpeg|png|gif)$/)) {
-        return cb(null, false);
-      }
-      cb(null, true);
-    }
-  });
 
   // Generic file upload endpoint
   app.post("/api/upload", isAuthenticated, upload.single('file'), (req, res) => {
