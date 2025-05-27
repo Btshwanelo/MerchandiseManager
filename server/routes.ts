@@ -657,9 +657,10 @@ const dbResult = await pool.query(`
   });
 
   // Orders Information
-  app.post("/api/orders", isAuthenticated, async (req, res) => {
+  app.post("/api/orders", isAuthenticated, upload.any(), async (req, res) => {
     try {
       console.log("Received order data:", req.body);
+      console.log("Received files:", req.files);
 
       const orderSchema = z.object({
         storeId: z.number(),
@@ -674,6 +675,11 @@ const dbResult = await pool.query(`
 
       const validatedData = orderSchema.parse(req.body);
       console.log("Validated order data:", validatedData);
+
+      // Process uploaded files
+      const uploadedFiles = req.files as Express.Multer.File[];
+      const picturePaths = uploadedFiles?.map(file => file.path) || [];
+      console.log("Picture paths to save:", picturePaths);
 
       // Use direct SQL to ensure we're saving to the database
       let orderResult;
@@ -690,7 +696,7 @@ const dbResult = await pool.query(`
           req.user!.id,
           "pending",
           validatedData.notes || null,
-          [], // Empty array for pictures
+          picturePaths, // Save the actual file paths
           new Date(),
           validatedData.workItemId
         ]);
