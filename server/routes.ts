@@ -540,7 +540,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   ]), async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
-      console.log("Received files:", req.files ? (req.files as Express.Multer.File[]).map(f => f.path) : 'No files');
+      console.log("Received files:", req.files);
+      
+      // Handle files properly when using multer.fields()
+      let promotionPictures: string[] = [];
+      if (req.files && typeof req.files === 'object') {
+        const files = req.files as { [fieldname: string]: Express.Multer.File[] };
+        if (files.promotionPictures) {
+          promotionPictures = files.promotionPictures.map(file => file.path);
+        }
+      }
+      console.log("Promotion pictures paths:", promotionPictures);
 
       // Parse numeric values from form data
       const storeId = parseInt(req.body.storeId);
@@ -581,22 +591,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Product description is required" });
       }
 
-      // Get all uploaded file paths from multiple possible field names
-      let files: Express.Multer.File[] = [];
-      
-      if (req.files) {
-        if (Array.isArray(req.files)) {
-          // If req.files is an array (from .array() method)
-          files = req.files;
-        } else {
-          // If req.files is an object (from .fields() method)
-          const fileFields = req.files as { [fieldname: string]: Express.Multer.File[] };
-          files = Object.values(fileFields).flat();
-        }
-      }
-      
-      const filePaths = files.map(file => file.path);
-
       // Create the data object for storage
       const data = {
         storeId,
@@ -604,7 +598,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         brand: req.body.brand.trim(),
         productDescription: req.body.productDescription.trim(),
         promotionalPrice,
-        promotionPictures: filePaths,
+        promotionPictures: promotionPictures,
         workItemId
       };
 
