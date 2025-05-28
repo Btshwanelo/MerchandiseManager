@@ -1778,7 +1778,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
         const files = fileInput.files;
         for (let i = 0; i < files.length; i++) {
-          formData.append('pictures', files[i]);
+          formData.append('promotionPictures', files[i]);
         }
       }
       
