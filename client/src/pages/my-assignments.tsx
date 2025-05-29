@@ -247,19 +247,58 @@ const MyAssignmentsPage = () => {
   const filterWorkItems = (items: WorkItemWithRelations[] | undefined, status: string, search: string) => {
     if (!items) return [];
     
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of today
+    const tomorrow = new Date(today);
+    tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
+    
     return items
-      .filter(item => 
-        (status === "active" 
+      .filter(item => {
+        // Basic status filter
+        const statusMatch = status === "active" 
           ? item.status !== WorkItemStatus.COMPLETED 
-          : item.status === WorkItemStatus.COMPLETED) &&
-        (search === "" || 
+          : item.status === WorkItemStatus.COMPLETED;
+        
+        // Search filter
+        const searchMatch = search === "" || 
           (item.title.toLowerCase().includes(search.toLowerCase()) ||
-           item.store?.name.toLowerCase().includes(search.toLowerCase())))
-      )
+           item.store?.name.toLowerCase().includes(search.toLowerCase()));
+        
+        // For active items, only show today's tasks or overdue tasks
+        if (status === "active" && item.dueDate) {
+          const dueDate = new Date(item.dueDate);
+          dueDate.setHours(0, 0, 0, 0);
+          
+          // Show if due today or overdue (before today)
+          const isDueToday = dueDate.getTime() === today.getTime();
+          const isOverdue = dueDate.getTime() < today.getTime();
+          
+          return statusMatch && searchMatch && (isDueToday || isOverdue);
+        }
+        
+        // For completed items, show all that match other filters
+        return statusMatch && searchMatch;
+      })
       .sort((a, b) => {
-        // Sort by due date (if available)
+        // Sort overdue items first, then today's items
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        
         if (a.dueDate && b.dueDate) {
-          return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime();
+          const dueDateA = new Date(a.dueDate);
+          const dueDateB = new Date(b.dueDate);
+          dueDateA.setHours(0, 0, 0, 0);
+          dueDateB.setHours(0, 0, 0, 0);
+          
+          const isOverdueA = dueDateA.getTime() < today.getTime();
+          const isOverdueB = dueDateB.getTime() < today.getTime();
+          
+          // Overdue items first
+          if (isOverdueA && !isOverdueB) return -1;
+          if (!isOverdueA && isOverdueB) return 1;
+          
+          // Then sort by due date
+          return dueDateA.getTime() - dueDateB.getTime();
         } else if (a.dueDate) {
           return -1;
         } else if (b.dueDate) {
@@ -375,6 +414,16 @@ const MyAssignmentsPage = () => {
             {/* Desktop View */}
             <div className="hidden md:block">
               <TabsContent value="active" className="space-y-4">
+                {/* Today's Tasks Info Banner */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mb-4">
+                  <div className="flex items-center space-x-2 text-blue-800">
+                    <CalendarDays className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      Showing today's tasks and overdue items ({new Date().toLocaleDateString()})
+                    </span>
+                  </div>
+                </div>
+                
                 {activeItems.length > 0 ? (
                   <div>
                     <div className="rounded-md border">
@@ -613,6 +662,16 @@ const MyAssignmentsPage = () => {
             {/* Mobile View */}
             <div className="block md:hidden">
               <TabsContent value="active" className="space-y-0">
+                {/* Today's Tasks Info Banner - Mobile */}
+                <div className="bg-blue-50 border border-blue-200 rounded-lg p-3 mx-4 mb-4">
+                  <div className="flex items-center space-x-2 text-blue-800">
+                    <CalendarDays className="h-4 w-4" />
+                    <span className="text-sm font-medium">
+                      Today's tasks ({new Date().toLocaleDateString()})
+                    </span>
+                  </div>
+                </div>
+                
                 {activeItems.length > 0 ? (
                   <div>
                     <div className="border-t">
