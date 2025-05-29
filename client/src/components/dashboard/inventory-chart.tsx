@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
-  LineChart,
-  Line,
+  BarChart,
+  Bar,
   XAxis,
   YAxis,
   CartesianGrid,
@@ -93,7 +93,7 @@ export const InventoryChart = () => {
       <CardContent>
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
-            <LineChart
+            <BarChart
               data={chartData}
               margin={{
                 top: 5,
@@ -114,23 +114,14 @@ export const InventoryChart = () => {
               />
               <Legend />
               {stores.map((store, index) => (
-                <Line
+                <Bar
                   key={store}
-                  type="monotone"
                   dataKey={store}
-                  stroke={getStoreColor(index)}
-                  activeDot={{ r: 8 }}
-                  strokeWidth={2}
+                  fill={getStoreColor(index)}
+                  radius={[2, 2, 0, 0]}
                 />
               ))}
-              <Line
-                type="monotone"
-                dataKey="avg"
-                stroke="#9e9e9e"
-                strokeDasharray="5 5"
-                strokeWidth={2}
-              />
-            </LineChart>
+            </BarChart>
           </ResponsiveContainer>
         </div>
 
