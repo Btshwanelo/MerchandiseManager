@@ -1890,32 +1890,20 @@ const dbResult = await pool.query(`
   // Get inventory trend data from stock take submissions
   app.get("/api/inventory/trends", isAuthenticated, async (req, res) => {
     try {
-      // Check if we have any stock take data first
-      const countQuery = `SELECT COUNT(*) as count FROM stock_takes`;
-      const countResult = await pool.query(countQuery);
-      
-      if (parseInt(countResult.rows[0].count) === 0) {
-        // Return empty but valid structure if no data
-        return res.json({ 
-          chartData: [], 
-          stores: [] 
-        });
-      }
-
       // Get inventory trends from stock take data grouped by month and store
       const trendsQuery = `
         SELECT 
-          TO_CHAR(st.created_at, 'Mon') as month,
-          TO_CHAR(st.created_at, 'MM') as month_num,
+          TO_CHAR(st.date, 'Mon') as month,
+          TO_CHAR(st.date, 'MM') as month_num,
           stores.name as store_name,
           AVG(sti.quantity) as avg_quantity,
           COUNT(sti.id) as total_items
         FROM stock_takes st
         JOIN stock_take_items sti ON st.id = sti.stock_take_id
         JOIN stores ON st.store_id = stores.id
-        WHERE st.created_at >= NOW() - INTERVAL '6 months'
-        GROUP BY TO_CHAR(st.created_at, 'Mon'), TO_CHAR(st.created_at, 'MM'), stores.name
-        ORDER BY TO_CHAR(st.created_at, 'MM'), stores.name
+        WHERE st.date >= NOW() - INTERVAL '6 months'
+        GROUP BY TO_CHAR(st.date, 'Mon'), TO_CHAR(st.date, 'MM'), stores.name
+        ORDER BY TO_CHAR(st.date, 'MM'), stores.name
       `;
 
       const result = await pool.query(trendsQuery);
@@ -1929,14 +1917,14 @@ const dbResult = await pool.query(`
       
       // Get unique months and stores
       const monthsData = result.rows.reduce((acc: any[], row: any) => {
-        const existing = acc.find(m => m.month === row.month);
+        const existing = acc.find((m: any) => m.month === row.month);
         if (!existing) {
           acc.push({ month: row.month, monthNum: row.month_num });
         }
         return acc;
-      }, []).sort((a, b) => a.monthNum - b.monthNum);
+      }, []).sort((a: any, b: any) => parseInt(a.monthNum) - parseInt(b.monthNum));
       
-      const months = monthsData.map(m => m.month);
+      const months = monthsData.map((m: any) => m.month);
       const storesSet = new Set();
       result.rows.forEach((row: any) => storesSet.add(row.store_name));
       const stores = Array.from(storesSet) as string[];
