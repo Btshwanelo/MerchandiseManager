@@ -1888,57 +1888,41 @@ const dbResult = await pool.query(`
   });
 
   // Get inventory trend data from stock take submissions
-  app.get("/api/inventory/trends", isAuthenticated, async (req, res) => {
+  app.get("/api/dashboard/inventory-trends", isAuthenticated, async (req, res) => {
     try {
-      // Get inventory trends from stock take data grouped by month and store
-      const trendsQuery = `
+      const result = await pool.query(`
         SELECT 
           TO_CHAR(st.date, 'Mon') as month,
           TO_CHAR(st.date, 'MM') as month_num,
           stores.name as store_name,
-          AVG(sti.quantity) as avg_quantity,
-          COUNT(sti.id) as total_items
+          AVG(sti.quantity) as avg_quantity
         FROM stock_takes st
         JOIN stock_take_items sti ON st.id = sti.stock_take_id
         JOIN stores ON st.store_id = stores.id
         WHERE st.date >= NOW() - INTERVAL '6 months'
         GROUP BY TO_CHAR(st.date, 'Mon'), TO_CHAR(st.date, 'MM'), stores.name
         ORDER BY TO_CHAR(st.date, 'MM'), stores.name
-      `;
-
-      const result = await pool.query(trendsQuery);
+      `);
       
       if (result.rows.length === 0) {
-        return res.json({ 
-          chartData: [], 
-          stores: [] 
-        });
+        return res.json({ chartData: [], stores: [] });
       }
       
-      // Get unique months and stores
-      const monthsData = result.rows.reduce((acc: any[], row: any) => {
-        const existing = acc.find((m: any) => m.month === row.month);
-        if (!existing) {
-          acc.push({ month: row.month, monthNum: row.month_num });
-        }
-        return acc;
-      }, []).sort((a: any, b: any) => parseInt(a.monthNum) - parseInt(b.monthNum));
+      // Process data
+      const months = Array.from(new Set(result.rows.map(row => row.month)));
+      const stores = Array.from(new Set(result.rows.map(row => row.store_name)));
       
-      const months = monthsData.map((m: any) => m.month);
-      const storesSet = new Set();
-      result.rows.forEach((row: any) => storesSet.add(row.store_name));
-      const stores = Array.from(storesSet) as string[];
-      
-      const chartData = months.map((month: string) => {
+      const chartData = months.map(month => {
         const monthData: any = { name: month };
         let totalAvg = 0;
         let storeCount = 0;
         
-        stores.forEach((store: string) => {
-          const storeData = result.rows.find((row: any) => row.month === month && row.store_name === store);
+        stores.forEach(store => {
+          const storeData = result.rows.find(row => row.month === month && row.store_name === store);
           if (storeData) {
-            monthData[store] = Math.round(parseFloat(storeData.avg_quantity));
-            totalAvg += parseFloat(storeData.avg_quantity);
+            const value = Math.round(parseFloat(storeData.avg_quantity));
+            monthData[store] = value;
+            totalAvg += value;
             storeCount++;
           } else {
             monthData[store] = 0;
@@ -1951,8 +1935,8 @@ const dbResult = await pool.query(`
 
       res.json({ chartData, stores });
     } catch (error) {
-      console.error("Error getting inventory trends:", error);
-      res.status(500).json({ message: "Failed to get inventory trends" });
+      console.error("Dashboard inventory trends error:", error);
+      res.status(500).json({ message: "Failed to get trends" });
     }
   });
 

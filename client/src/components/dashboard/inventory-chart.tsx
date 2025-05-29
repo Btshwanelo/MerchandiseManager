@@ -33,7 +33,7 @@ export const InventoryChart = () => {
     chartData: Array<{ name: string; [key: string]: any }>;
     stores: string[];
   }>({
-    queryKey: ["/api/inventory/trends"],
+    queryKey: ["/api/dashboard/inventory-trends"],
   });
 
   // Generate colors for stores dynamically
