@@ -8,7 +8,7 @@ async function checkAssignmentConflicts(assignmentData: any) {
   const conflicts: any[] = [];
   
   // Get all active assignments for this user
-  const existingAssignments = await storage.getStoreAssignmentsByUser(assignmentData.userId);
+  const existingAssignments = await storage.getAssignmentsByUserId(assignmentData.userId);
   
   // Filter to only active assignments
   const activeAssignments = existingAssignments.filter(assignment => 
