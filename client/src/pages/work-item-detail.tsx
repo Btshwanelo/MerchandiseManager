@@ -242,7 +242,7 @@ const WorkItemDetailPage = () => {
     data: merchandising,
     isLoading: isLoadingMerchandising
   } = useQuery<Merchandising>({
-    queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
+    queryKey: [`/api/merchandising-promotions/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
 

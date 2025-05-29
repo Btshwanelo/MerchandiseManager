@@ -1432,12 +1432,12 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                                 <tbody className="bg-card divide-y divide-border">
                                   {orderData.items.map((item: any, index: number) => (
                                     <tr key={index}>
-                                      <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
-                                      <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.productName || 'Unknown Product'}</td>
+                                      <td className="px-4 py-3 text-sm">{item.productSku || 'N/A'}</td>
                                       <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                                      <td className="px-4 py-3 text-sm">R {item.product?.price ? (item.product.price / 100).toFixed(2) : '0.00'}</td>
+                                      <td className="px-4 py-3 text-sm">R {item.productPrice ? (item.productPrice / 100).toFixed(2) : '0.00'}</td>
                                       <td className="px-4 py-3 text-sm font-medium">
-                                        R {item.product?.price && item.quantity ? ((item.product.price * item.quantity) / 100).toFixed(2) : '0.00'}
+                                        R {item.productPrice && item.quantity ? ((item.productPrice * item.quantity) / 100).toFixed(2) : '0.00'}
                                       </td>
                                     </tr>
                                   ))}
