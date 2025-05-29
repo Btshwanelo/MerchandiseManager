@@ -3516,32 +3516,26 @@ export class DatabaseStorage implements IStorage {
     activeStores: number,
     inventoryValue: number
   }> {
-    // Total products: Count of all products that have inventory records (reflecting merchandiser submissions)
     const [{ value: totalProducts }] = await db
-      .select({ value: countDistinct(inventory.productId) })
-      .from(inventory)
-      .innerJoin(products, eq(inventory.productId, products.id));
+      .select({ value: count() })
+      .from(products);
 
-    // Low stock items: Count of inventory items where quantity is at or below minimum stock level
     const [{ value: lowStockItems }] = await db
       .select({ value: count() })
       .from(inventory)
       .innerJoin(products, eq(inventory.productId, products.id))
       .where(lte(inventory.quantity, products.minStockLevel));
 
-    // Active stores: Count of all stores in the system
     const [{ value: activeStores }] = await db
       .select({ value: count() })
       .from(stores);
 
-    // Inventory value: Sum of (quantity × price) for all inventory items
     const inventoryValueResult = await db
       .select({
         value: sum(sql`${inventory.quantity} * ${products.price}`)
       })
       .from(inventory)
-      .innerJoin(products, eq(inventory.productId, products.id))
-      .where(gt(inventory.quantity, 0)); // Only count items with positive inventory
+      .innerJoin(products, eq(inventory.productId, products.id));
 
     const inventoryValue = Number(inventoryValueResult[0]?.value || 0);
 
