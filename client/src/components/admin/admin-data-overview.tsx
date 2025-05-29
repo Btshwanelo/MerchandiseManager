@@ -247,7 +247,7 @@ export function AdminDataOverview({
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                       <div>
                         <h3 className="text-sm font-medium mb-1">Created Date</h3>
-                        <p>{merchandisingData.createdAt ? new Date(merchandisingData.createdAt).toLocaleString() : 'Not available'}</p>
+                        <p>{merchandisingData.date ? new Date(merchandisingData.date).toLocaleString() : 'Not available'}</p>
                       </div>
                     </div>
                     
@@ -258,21 +258,23 @@ export function AdminDataOverview({
                           <thead className="bg-muted">
                             <tr>
                               <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Product</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Price</th>
-                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Notes</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">SKU</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Promotional Price</th>
+                              <th className="px-4 py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Base Price</th>
                             </tr>
                           </thead>
                           <tbody className="bg-card divide-y divide-border">
-                            {merchandisingData.items?.map((item: any, index: number) => (
+                            {(merchandisingData.merchandisingItems || merchandisingData.items)?.map((item: any, index: number) => (
                               <tr key={index}>
-                                <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
-                                <td className="px-4 py-3 text-sm">R {item.price.toFixed(2)}</td>
-                                <td className="px-4 py-3 text-sm">{item.notes || 'No notes'}</td>
+                                <td className="px-4 py-3 text-sm">{item.productName || item.product?.name || 'Unknown Product'}</td>
+                                <td className="px-4 py-3 text-sm">{item.sku || item.product?.sku || 'N/A'}</td>
+                                <td className="px-4 py-3 text-sm">R {(item.price / 100).toFixed(2)}</td>
+                                <td className="px-4 py-3 text-sm">R {item.basePrice ? (item.basePrice / 100).toFixed(2) : 'N/A'}</td>
                               </tr>
                             ))}
-                            {!merchandisingData.items?.length && (
+                            {!(merchandisingData.merchandisingItems || merchandisingData.items)?.length && (
                               <tr>
-                                <td colSpan={3} className="px-4 py-6 text-center text-muted-foreground">
+                                <td colSpan={4} className="px-4 py-6 text-center text-muted-foreground">
                                   No promotional items recorded
                                 </td>
                               </tr>

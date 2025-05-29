@@ -971,39 +971,105 @@ const dbResult = await pool.query(`
 
       console.log(`Fetching merchandising data for work item ${workItemId} (store: ${workItem.storeId}, user: ${workItem.userId})`);
 
-      // For the first version, we'll use the createMerchandisingData call that's stored with the work item completion
+      // Query the merchandising_promotions table directly with work_item_id
       try {
-        // Get the merchandising data by workItemId from storage
-        const merchandisingData = await storage.getMerchandisingDataByWorkItemId(workItemId);
-        console.log(`Found merchandising data for work item ${workItemId}:`, merchandisingData);
+        const merchandisingQuery = `
+          SELECT 
+            mp.id, 
+            mp.store_id as "storeId", 
+            mp.user_id as "userId", 
+            mp.date,
+            mp.promotion_pictures as "promotionPictures",
+            mp.work_item_id as "workItemId"
+          FROM merchandising_promotions mp
+          WHERE mp.work_item_id = $1
+          ORDER BY mp.date DESC
+          LIMIT 1
+        `;
 
-        if (merchandisingData) {
-          res.json(merchandisingData);
-        } else {
-          // Provide a basic structure even when no data exists
-          console.log(`No merchandising data found for work item ${workItemId}. Returning basic structure.`);
-          res.json({
-            id: `default-${workItemId}`,
-            workItemId: workItemId,
-            storeId: workItem.storeId,
-            userId: workItem.userId,
-            date: workItem.createdAt,
-            items: [],
-            promotionPictures: []
-          });
+        const merchandisingResult = await pool.query(merchandisingQuery, [workItemId]);
+
+        if (merchandisingResult.rows && merchandisingResult.rows.length > 0) {
+          const merchandising = merchandisingResult.rows[0];
+
+          // Get the merchandising items
+          const itemsQuery = `
+            SELECT 
+              mi.id, 
+              mi.merchandising_promotion_id as "merchandisingPromotionId", 
+              mi.product_id as "productId",
+              mi.price,
+              p.name as "productName",
+              p.sku as "productSku",
+              p.category as "productCategory"
+            FROM merchandising_items mi
+            JOIN products p ON p.id = mi.product_id
+            WHERE mi.merchandising_promotion_id = $1
+          `;
+
+          const itemsResult = await pool.query(itemsQuery, [merchandising.id]);
+
+          // Add the items to the merchandising data
+          merchandising.merchandisingItems = itemsResult.rows || [];
+
+          console.log(`Found real merchandising data in database for work item ${workItemId}:`, merchandising);
+          return res.json(merchandising);
         }
-      } catch (err) {
-        console.log("Error fetching merchandising data (expected if not found):", err);
-        // Return a structured response even in case of error
-        res.json({
-          id: `default-${workItemId}`,
-          workItemId: workItemId,
-          storeId: workItem.storeId,
-          userId: workItem.userId,
-          date: workItem.createdAt,
-          items: [],
-          promotionPictures: []
-        });
+
+        // If no merchandising found with work_item_id, check if we have any for this store and user
+        // This is a fallback for older data
+        const fallbackQuery = `
+          SELECT 
+            mp.id, 
+            mp.store_id as "storeId", 
+            mp.user_id as "userId", 
+            mp.date,
+            mp.promotion_pictures as "promotionPictures"
+          FROM merchandising_promotions mp
+          WHERE mp.store_id = $1 AND mp.user_id = $2
+          ORDER BY mp.date DESC
+          LIMIT 1
+        `;
+
+        const fallbackResult = await pool.query(fallbackQuery, [workItem.storeId, workItem.userId]);
+
+        if (fallbackResult.rows && fallbackResult.rows.length > 0) {
+          const merchandising = fallbackResult.rows[0];
+
+          // Add workItemId to match client expectations
+          merchandising.workItemId = workItemId;
+
+          // Get the merchandising items
+          const itemsQuery = `
+            SELECT 
+              mi.id, 
+              mi.merchandising_promotion_id as "merchandisingPromotionId", 
+              mi.product_id as "productId",
+              mi.price,
+              p.name as "productName",
+              p.sku as "productSku",
+              p.category as "productCategory"
+            FROM merchandising_items mi
+            JOIN products p ON p.id = mi.product_id
+            WHERE mi.merchandising_promotion_id = $1
+          `;
+
+          const itemsResult = await pool.query(itemsQuery, [merchandising.id]);
+
+          // Add the items to the merchandising data
+          merchandising.merchandisingItems = itemsResult.rows || [];
+
+          console.log(`Found fallback merchandising data for work item ${workItemId}:`, merchandising);
+          return res.json(merchandising);
+        }
+
+        // No merchandising data found
+        console.log(`No merchandising data found for work item ${workItemId}`);
+        return res.json(null);
+
+      } catch (dbError) {
+        console.error("Database error fetching merchandising data:", dbError);
+        return res.json(null);
       }
     } catch (error) {
       console.error("Error getting merchandising data by work item:", error);

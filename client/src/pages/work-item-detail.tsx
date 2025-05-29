@@ -142,9 +142,15 @@ type StockTake = {
 };
 
 type MerchandisingItem = {
+  id: number;
+  merchandisingPromotionId: number;
   productId: number;
   price: number;
-  notes: string;
+  productName: string;
+  sku: string;
+  category: string;
+  basePrice: number;
+  minStockLevel: number;
   product?: {
     id: number;
     name: string;
@@ -159,7 +165,9 @@ type Merchandising = {
   userId: number;
   date: string;
   workItemId: number;
-  merchandisingItems: MerchandisingItem[];
+  promotionPictures: string[];
+  merchandisingItems?: MerchandisingItem[];
+  items?: MerchandisingItem[];
   store?: Store;
   user?: User;
 };
@@ -242,7 +250,7 @@ const WorkItemDetailPage = () => {
     data: merchandising,
     isLoading: isLoadingMerchandising
   } = useQuery<Merchandising>({
-    queryKey: [`/api/merchandising-promotions/by-work-item/${workItemId}`],
+    queryKey: [`/api/merchandising/by-work-item/${workItemId}`],
     enabled: !!workItem && !!workItemId
   });
 
