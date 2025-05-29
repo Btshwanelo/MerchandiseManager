@@ -409,6 +409,18 @@ export enum StockTakeType {
   BOTH = "both" // Default - check both shelf and back store
 }
 
+export enum AssignmentFrequency {
+  DAILY = "daily",
+  WEEKLY = "weekly", 
+  MONTHLY = "monthly"
+}
+
+export enum DurationLimit {
+  ONE_MONTH = 1,
+  TWO_MONTHS = 2,
+  THREE_MONTHS = 3
+}
+
 // Store Assignments table to connect merchandisers to stores
 export const storeAssignments = pgTable("store_assignments", {
   id: serial("id").primaryKey(),
@@ -419,6 +431,11 @@ export const storeAssignments = pgTable("store_assignments", {
   endDate: timestamp("end_date"), // Optional end date (can be null for ongoing assignments)
   status: text("status").notNull().default("active"), // active, completed, cancelled 
   stockTakeType: text("stock_take_type").notNull().default(StockTakeType.BOTH), // Type of stock take: shelf, store, or both
+  isRecurring: boolean("is_recurring").notNull().default(false), // Whether this is a recurring assignment
+  frequency: text("frequency", { enum: ["daily", "weekly", "monthly"] }), // How often it repeats
+  daysOfWeek: integer("days_of_week").array(), // Array of day numbers (0=Sunday, 1=Monday, etc.)
+  durationLimit: integer("duration_limit"), // Duration in months (1, 2, or 3)
+  parentAssignmentId: integer("parent_assignment_id"), // Links to original assignment for series
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {

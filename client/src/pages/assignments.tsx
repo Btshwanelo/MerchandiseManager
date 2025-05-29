@@ -74,7 +74,7 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Textarea } from "@/components/ui/textarea";
-import { StoreAssignment, User as UserType, UserRole, WorkItem, Store as StoreType, WorkItemType, insertStoreAssignmentSchema, insertWorkItemSchema } from "@shared/schema";
+import { StoreAssignment, User as UserType, UserRole, WorkItem, Store as StoreType, WorkItemType, insertStoreAssignmentSchema, insertWorkItemSchema, AssignmentFrequency, DurationLimit } from "@shared/schema";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
@@ -113,6 +113,10 @@ const AssignmentsPage = () => {
     startDate: z.coerce.date(),
     endDate: z.coerce.date().nullable().optional(),
     stockTakeType: z.enum(['shelf', 'store', 'both']),
+    isRecurring: z.boolean().default(false),
+    frequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
+    daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+    durationLimit: z.number().min(1).max(3).optional(),
     workItems: z.array(
       z.object({
         title: z.string().min(1, "Title is required"),
