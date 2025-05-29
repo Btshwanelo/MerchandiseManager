@@ -2771,6 +2771,7 @@ export class DatabaseStorage implements IStorage {
       .where(
         and(
           eq(storeAssignments.userId, userId),
+          eq(storeAssignments.status, 'active'),
           sql`${storeAssignments.startDate} <= ${endOfDay}`,
           sql`(${storeAssignments.endDate} IS NULL OR ${storeAssignments.endDate} >= ${startOfDay})`
         )
