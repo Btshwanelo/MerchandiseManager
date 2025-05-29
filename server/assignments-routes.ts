@@ -5,35 +5,36 @@ import { z } from "zod";
 
 // Helper function to check for assignment conflicts
 async function checkAssignmentConflicts(assignmentData: any) {
-  const conflicts = [];
+  const conflicts: any[] = [];
   
-  if (!assignmentData.isRecurring || !assignmentData.frequency || !assignmentData.durationLimit) {
-    return conflicts;
-  }
-
-  const startDate = new Date(assignmentData.startDate);
-  const endDate = new Date(startDate);
-  endDate.setMonth(endDate.getMonth() + assignmentData.durationLimit);
-
-  // Generate all dates for the recurring assignment
-  const assignmentDates = generateAssignmentDates(
-    startDate, 
-    endDate, 
-    assignmentData.frequency, 
-    assignmentData.daysOfWeek || []
+  // Get all active assignments for this user
+  const existingAssignments = await storage.getStoreAssignmentsByUser(assignmentData.userId);
+  
+  // Filter to only active assignments
+  const activeAssignments = existingAssignments.filter(assignment => 
+    assignment.status === 'active'
   );
 
-  // Check each date for conflicts
-  for (const date of assignmentDates) {
-    const existingAssignments = await storage.getStoreAssignmentsByUserAndDate(
-      assignmentData.userId, 
-      date
-    );
-    
-    if (existingAssignments.length > 0) {
+  // Check for day overlap conflicts
+  for (const existingAssignment of activeAssignments) {
+    // Skip if it's the same assignment (for updates)
+    if (assignmentData.id && existingAssignment.id === assignmentData.id) {
+      continue;
+    }
+
+    // Get days of week for both assignments
+    const newDays = assignmentData.daysOfWeek || [];
+    const existingDays = existingAssignment.daysOfWeek || [];
+
+    // Check if any days overlap
+    const hasOverlappingDays = newDays.some((day: number) => existingDays.includes(day));
+
+    if (hasOverlappingDays) {
       conflicts.push({
-        date: date.toISOString(),
-        conflictingAssignments: existingAssignments
+        assignmentId: existingAssignment.id,
+        storeId: existingAssignment.storeId,
+        overlappingDays: newDays.filter((day: number) => existingDays.includes(day)),
+        conflictingAssignment: existingAssignment
       });
     }
   }
