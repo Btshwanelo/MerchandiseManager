@@ -82,9 +82,32 @@ const StockItem = ({ id, name, location, level, maxLevel, severity, onRestock }:
   );
 };
 
+interface StockTakeItem {
+  id: number;
+  productId: number;
+  quantity: number;
+  location: string;
+  product: {
+    id: number;
+    name: string;
+    minStockLevel: number;
+    price: number;
+  };
+  shelf: {
+    id: number;
+    name: string;
+    section: string;
+  };
+  store: {
+    id: number;
+    name: string;
+    location: string;
+  };
+}
+
 export const LowStockList = () => {
-  const { data, isLoading, error } = useQuery<(Alert & { product: any, store: any })[]>({
-    queryKey: ["/api/lowstock"],
+  const { data, isLoading, error } = useQuery<StockTakeItem[]>({
+    queryKey: ["/api/stock-take-items/low-stock"],
   });
   
   const handleRestock = (id: number) => {
@@ -130,33 +153,28 @@ export const LowStockList = () => {
       );
     }
     
-    // Sample data for now - in a real app, we'd map through the API data
-    const items = [
-      {
-        id: 1,
-        name: "Premium Coffee Beans",
-        location: "Store #23 - Main Shelf",
-        level: 3,
-        maxLevel: 25,
-        severity: "critical" as const
-      },
-      {
-        id: 2,
-        name: "Organic Honey 12oz",
-        location: "Store #08 - End Cap",
-        level: 14,
-        maxLevel: 50,
-        severity: "low" as const
-      },
-      {
-        id: 3,
-        name: "Whole Grain Bread",
-        location: "Store #12 - Bakery Section",
-        level: 8,
-        maxLevel: 25,
-        severity: "low" as const
-      }
-    ];
+    // Map real stock take data to component props
+    const items = data
+      .filter(item => item.quantity < item.product.minStockLevel) // Only show items below threshold
+      .map(item => {
+        const percentage = (item.quantity / item.product.minStockLevel) * 100;
+        let severity: "critical" | "low" | "normal" = "normal";
+        
+        if (percentage <= 20) {
+          severity = "critical";
+        } else if (percentage <= 50) {
+          severity = "low";
+        }
+        
+        return {
+          id: item.id,
+          name: item.product.name,
+          location: `${item.store.name} - ${item.shelf.name} (${item.shelf.section})`,
+          level: item.quantity,
+          maxLevel: item.product.minStockLevel,
+          severity
+        };
+      });
     
     return items.map(item => (
       <StockItem key={item.id} {...item} onRestock={handleRestock} />

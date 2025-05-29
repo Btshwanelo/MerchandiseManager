@@ -1820,6 +1820,73 @@ const dbResult = await pool.query(`
     }
   });
 
+  // Get low stock items from stock take data
+  app.get("/api/stock-take-items/low-stock", isAuthenticated, async (req, res) => {
+    try {
+      // Query to get stock take items that are below minimum stock level
+      const lowStockQuery = `
+        SELECT 
+          sti.id,
+          sti.product_id as "productId",
+          sti.quantity,
+          sti.location,
+          p.id as "product.id",
+          p.name as "product.name", 
+          p.min_stock_level as "product.minStockLevel",
+          p.price as "product.price",
+          s.id as "shelf.id",
+          s.name as "shelf.name",
+          s.section as "shelf.section",
+          st.id as "store.id",
+          st.name as "store.name",
+          st.location as "store.location"
+        FROM stock_take_items sti
+        JOIN products p ON sti.product_id = p.id
+        JOIN stock_takes stock_take ON sti.stock_take_id = stock_take.id
+        JOIN stores st ON stock_take.store_id = st.id
+        LEFT JOIN shelves s ON st.id = s.store_id
+        WHERE sti.quantity < p.min_stock_level
+        ORDER BY sti.quantity ASC, p.name
+        LIMIT 20
+      `;
+
+      const result = await pool.query(lowStockQuery);
+      
+      // Transform the flat result into nested objects
+      const lowStockItems = result.rows.map(row => ({
+        id: row.id,
+        productId: row.productId,
+        quantity: row.quantity,
+        location: row.location,
+        product: {
+          id: row['product.id'],
+          name: row['product.name'],
+          minStockLevel: row['product.minStockLevel'],
+          price: row['product.price']
+        },
+        shelf: row['shelf.id'] ? {
+          id: row['shelf.id'],
+          name: row['shelf.name'],
+          section: row['shelf.section']
+        } : {
+          id: 0,
+          name: 'Unknown',
+          section: 'Unknown'
+        },
+        store: {
+          id: row['store.id'],
+          name: row['store.name'],
+          location: row['store.location']
+        }
+      }));
+
+      res.json(lowStockItems);
+    } catch (error) {
+      console.error("Error getting low stock items from stock takes:", error);
+      res.status(500).json({ message: "Failed to get low stock items" });
+    }
+  });
+
   // Get stock takes by work item ID
   app.get("/api/stock-takes/by-work-item/:workItemId", async (req, res) => {
     try {
