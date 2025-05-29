@@ -146,9 +146,10 @@ export const LowStockList = () => {
       );
     }
     
-    // Map real stock take data to component props
+    // Map real stock take data to component props and limit to 10 items
     const items = data
       .filter(item => item.quantity < item.product.minStockLevel) // Only show items below threshold
+      .slice(0, 10) // Limit to 10 items
       .map(item => {
         const percentage = (item.quantity / item.product.minStockLevel) * 100;
         let severity: "critical" | "low" | "normal" = "normal";
@@ -183,7 +184,7 @@ export const LowStockList = () => {
         </div>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
+        <div className="space-y-4 max-h-96 overflow-y-auto">
           {renderContent()}
         </div>
       </CardContent>
