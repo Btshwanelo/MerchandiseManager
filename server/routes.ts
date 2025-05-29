@@ -1940,6 +1940,41 @@ const dbResult = await pool.query(`
     }
   });
 
+  // Get store inventory data for chart
+  app.get("/api/dashboard/store-inventory", async (req, res) => {
+    try {
+      if (!req.user) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+
+      // Get inventory totals by store from stock take data
+      const result = await pool.query(`
+        SELECT 
+          stores.id as store_id,
+          stores.name as store_name,
+          COALESCE(SUM(sti.quantity), 0) as total_inventory
+        FROM stores
+        LEFT JOIN stock_takes st ON stores.id = st.store_id
+        LEFT JOIN stock_take_items sti ON st.id = sti.stock_take_id
+        GROUP BY stores.id, stores.name
+        HAVING COALESCE(SUM(sti.quantity), 0) > 0
+        ORDER BY total_inventory DESC
+        LIMIT 10
+      `);
+      
+      const chartData = result.rows.map(row => ({
+        name: row.store_name,
+        totalInventory: parseInt(row.total_inventory),
+        storeId: row.store_id
+      }));
+
+      res.json({ chartData, stores: [] });
+    } catch (error) {
+      console.error("Dashboard store inventory error:", error);
+      res.status(500).json({ message: "Failed to get store inventory" });
+    }
+  });
+
   // Get stock takes by work item ID
   app.get("/api/stock-takes/by-work-item/:workItemId", async (req, res) => {
     try {

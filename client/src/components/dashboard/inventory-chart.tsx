@@ -30,10 +30,10 @@ export const InventoryChart = () => {
   const isDark = theme === "dark";
 
   const { data: trendsData, isLoading, error } = useQuery<{
-    chartData: Array<{ name: string; [key: string]: any }>;
+    chartData: Array<{ name: string; totalInventory: number; storeId: number }>;
     stores: string[];
   }>({
-    queryKey: ["/api/dashboard/inventory-trends"],
+    queryKey: ["/api/dashboard/store-inventory"],
   });
 
   // Generate colors for stores dynamically
@@ -72,18 +72,12 @@ export const InventoryChart = () => {
     );
   }
 
-  const { chartData, stores } = trendsData;
+  const { chartData } = trendsData;
 
   // Calculate metrics from real data
-  const totalStock = chartData.reduce((sum: number, month: any) => {
-    return sum + stores.reduce((monthSum: number, store: string) => monthSum + (month[store] || 0), 0);
-  }, 0);
-  
-  const avgStockLevel = chartData.length > 0 && stores.length > 0 
-    ? Math.round((totalStock / (chartData.length * stores.length)))
-    : 0;
-
-  const stockTurnover = stores.length > 0 ? (totalStock / stores.length / 100).toFixed(1) : "0.0";
+  const totalStock = chartData.reduce((sum: number, store: any) => sum + store.totalInventory, 0);
+  const avgStockLevel = chartData.length > 0 ? Math.round(totalStock / chartData.length) : 0;
+  const highestStore = chartData.length > 0 ? Math.max(...chartData.map(store => store.totalInventory)) : 0;
 
   return (
     <Card className="col-span-2">
@@ -94,7 +88,7 @@ export const InventoryChart = () => {
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
-              data={chartData}
+              data={chartData.slice(0, 10)} // Show only top 10 stores
               margin={{
                 top: 5,
                 right: 10,
@@ -103,31 +97,37 @@ export const InventoryChart = () => {
               }}
             >
               <CartesianGrid strokeDasharray="3 3" stroke={isDark ? "#333" : "#eee"} />
-              <XAxis dataKey="name" stroke={isDark ? "#888" : "#666"} />
-              <YAxis stroke={isDark ? "#888" : "#666"} />
+              <XAxis 
+                dataKey="name" 
+                stroke={isDark ? "#888" : "#666"} 
+                angle={-45}
+                textAnchor="end"
+                height={60}
+              />
+              <YAxis 
+                stroke={isDark ? "#888" : "#666"}
+                label={{ value: 'Inventory Units', angle: -90, position: 'insideLeft' }}
+              />
               <Tooltip
                 contentStyle={{
                   backgroundColor: isDark ? "#333" : "#fff",
                   border: `1px solid ${isDark ? "#444" : "#ddd"}`,
                   color: isDark ? "#eee" : "#333",
                 }}
+                formatter={(value) => [`${value} units`, 'Total Inventory']}
               />
-              <Legend />
-              {stores.map((store, index) => (
-                <Bar
-                  key={store}
-                  dataKey={store}
-                  fill={getStoreColor(index)}
-                  radius={[2, 2, 0, 0]}
-                />
-              ))}
+              <Bar
+                dataKey="totalInventory"
+                fill="#1976d2"
+                radius={[2, 2, 0, 0]}
+              />
             </BarChart>
           </ResponsiveContainer>
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4">
           <Metric label="Average Stock Level" value={`${avgStockLevel} units`} />
-          <Metric label="Stock Turnover Rate" value={`${stockTurnover}x`} />
+          <Metric label="Highest Store Inventory" value={`${highestStore} units`} />
         </div>
       </CardContent>
     </Card>
