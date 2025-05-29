@@ -52,6 +52,7 @@ export interface IStorage {
   getStoreAssignmentsByUserId(userId: number): Promise<(StoreAssignment & { store: Store })[]>;
   getStoreAssignmentsByStoreId(storeId: number): Promise<(StoreAssignment & { user: User })[]>;
   getActiveStoreAssignments(): Promise<(StoreAssignment & { user: User, store: Store })[]>;
+  getStoreAssignmentsByUserAndDate(userId: number, date: Date): Promise<StoreAssignment[]>;
   createStoreAssignment(assignment: InsertStoreAssignment): Promise<StoreAssignment>;
   updateStoreAssignment(id: number, assignment: Partial<InsertStoreAssignment>): Promise<StoreAssignment | undefined>;
   deleteStoreAssignment(id: number): Promise<boolean>;
@@ -2756,6 +2757,26 @@ export class DatabaseStorage implements IStorage {
       user,
       store
     }));
+  }
+
+  async getStoreAssignmentsByUserAndDate(userId: number, date: Date): Promise<StoreAssignment[]> {
+    const startOfDay = new Date(date);
+    startOfDay.setHours(0, 0, 0, 0);
+    
+    const endOfDay = new Date(date);
+    endOfDay.setHours(23, 59, 59, 999);
+
+    const assignments = await db.select()
+      .from(storeAssignments)
+      .where(
+        and(
+          eq(storeAssignments.userId, userId),
+          sql`${storeAssignments.startDate} <= ${endOfDay}`,
+          sql`(${storeAssignments.endDate} IS NULL OR ${storeAssignments.endDate} >= ${startOfDay})`
+        )
+      );
+
+    return assignments;
   }
   
   async createStoreAssignment(assignment: InsertStoreAssignment): Promise<StoreAssignment> {
