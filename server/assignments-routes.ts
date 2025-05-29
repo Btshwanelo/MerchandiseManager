@@ -90,6 +90,9 @@ async function createRecurringAssignments(assignmentData: any) {
   });
 
   createdAssignments.push(parentAssignment);
+  
+  // Create work items for the parent assignment
+  await createWorkItemsForAssignment(parentAssignment);
 
   // Create child assignments for remaining dates
   for (let i = 1; i < assignmentDates.length; i++) {
@@ -104,9 +107,50 @@ async function createRecurringAssignments(assignmentData: any) {
     });
 
     createdAssignments.push(childAssignment);
+    
+    // Create work items for each child assignment
+    await createWorkItemsForAssignment(childAssignment);
   }
 
   return createdAssignments;
+}
+
+// Helper function to create work items for an assignment
+async function createWorkItemsForAssignment(assignment: any) {
+  const dueDate = new Date(assignment.startDate);
+  dueDate.setHours(23, 59, 59, 999); // Set due date to end of the day
+
+  // Create Shelf stock take work item
+  const shelfWorkItem = {
+    title: "Shelf Stock Take",
+    description: `Complete stock take for shelf inventory at store ${assignment.storeId}`,
+    type: "stock_take" as WorkItemType,
+    userId: assignment.userId,
+    storeId: assignment.storeId,
+    storeAssignmentId: assignment.id,
+    dueDate: dueDate,
+    priority: "medium",
+    status: "pending",
+    createdBy: assignment.assignedBy
+  };
+
+  // Create Backstore stock take work item
+  const backstoreWorkItem = {
+    title: "Backstore Stock Take",
+    description: `Complete stock take for backstore inventory at store ${assignment.storeId}`,
+    type: "stock_take" as WorkItemType,
+    userId: assignment.userId,
+    storeId: assignment.storeId,
+    storeAssignmentId: assignment.id,
+    dueDate: dueDate,
+    priority: "medium",
+    status: "pending",
+    createdBy: assignment.assignedBy
+  };
+
+  // Create both work items
+  await storage.createWorkItem(shelfWorkItem);
+  await storage.createWorkItem(backstoreWorkItem);
 }
 
 export function registerAssignmentRoutes(app: express.Express) {
@@ -288,6 +332,9 @@ export function registerAssignmentRoutes(app: express.Express) {
         // Create single assignment
         const newAssignment = await storage.createStoreAssignment(assignmentData);
         createdAssignments = [newAssignment];
+        
+        // Create work items for the single assignment
+        await createWorkItemsForAssignment(newAssignment);
       }
       
       // If work items are specified, create them for each assignment
