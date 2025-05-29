@@ -20,14 +20,7 @@ const StockItem = ({ id, name, location, level, maxLevel, severity, onRestock }:
   const percentage = Math.round((level / maxLevel) * 100);
   
   const getBgColor = () => {
-    switch (severity) {
-      case "critical":
-        return "bg-destructive bg-opacity-5 border-destructive border-opacity-20";
-      case "low":
-        return "bg-warning bg-opacity-5 border-warning border-opacity-20";
-      default:
-        return "bg-muted";
-    }
+    return "bg-card border";
   };
   
   const getBadgeColor = () => {
