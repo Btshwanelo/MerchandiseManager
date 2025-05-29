@@ -2145,7 +2145,7 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
         status: "submitted",
         priority: "medium",
         date: new Date(),
-        orderItems: orderItems
+        products: orderItems
       };
       
       // Add pictures if any
