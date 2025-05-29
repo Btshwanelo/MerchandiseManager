@@ -10,17 +10,8 @@ import {
   Legend,
 } from "recharts";
 import { useTheme } from "next-themes";
-
-// Sample data - in a real app, this would come from API
-const data = [
-  { name: "Jan", "Store A": 65, "Store B": 78, "Store C": 42, avg: 62 },
-  { name: "Feb", "Store A": 59, "Store B": 73, "Store C": 45, avg: 59 },
-  { name: "Mar", "Store A": 80, "Store B": 67, "Store C": 52, avg: 66 },
-  { name: "Apr", "Store A": 81, "Store B": 90, "Store C": 59, avg: 77 },
-  { name: "May", "Store A": 56, "Store B": 86, "Store C": 63, avg: 68 },
-  { name: "Jun", "Store A": 55, "Store B": 79, "Store C": 70, avg: 68 },
-  { name: "Jul", "Store A": 60, "Store B": 83, "Store C": 72, avg: 72 },
-];
+import { useQuery } from "@tanstack/react-query";
+import { Loader2 } from "lucide-react";
 
 interface MetricProps {
   label: string;
@@ -38,12 +29,61 @@ export const InventoryChart = () => {
   const { theme } = useTheme();
   const isDark = theme === "dark";
 
-  const chartColors = {
-    "Store A": "#1976d2",
-    "Store B": "#f57c00",
-    "Store C": "#4caf50",
-    avg: "#9e9e9e",
+  const { data: trendsData, isLoading, error } = useQuery<{
+    chartData: Array<{ name: string; [key: string]: any }>;
+    stores: string[];
+  }>({
+    queryKey: ["/api/inventory/trends"],
+  });
+
+  // Generate colors for stores dynamically
+  const getStoreColor = (index: number) => {
+    const colors = ["#1976d2", "#f57c00", "#4caf50", "#9c27b0", "#e91e63", "#00bcd4"];
+    return colors[index % colors.length];
   };
+
+  if (isLoading) {
+    return (
+      <Card className="col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle>Inventory Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 w-full flex items-center justify-center">
+            <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !trendsData) {
+    return (
+      <Card className="col-span-2">
+        <CardHeader className="pb-2">
+          <CardTitle>Inventory Trend</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="h-64 w-full flex items-center justify-center text-muted-foreground">
+            No inventory trend data available
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  const { chartData, stores } = trendsData;
+
+  // Calculate metrics from real data
+  const totalStock = chartData.reduce((sum: number, month: any) => {
+    return sum + stores.reduce((monthSum: number, store: string) => monthSum + (month[store] || 0), 0);
+  }, 0);
+  
+  const avgStockLevel = chartData.length > 0 && stores.length > 0 
+    ? Math.round((totalStock / (chartData.length * stores.length)))
+    : 0;
+
+  const stockTurnover = stores.length > 0 ? (totalStock / stores.length / 100).toFixed(1) : "0.0";
 
   return (
     <Card className="col-span-2">
@@ -54,7 +94,7 @@ export const InventoryChart = () => {
         <div className="h-64 w-full">
           <ResponsiveContainer width="100%" height="100%">
             <LineChart
-              data={data}
+              data={chartData}
               margin={{
                 top: 5,
                 right: 10,
@@ -73,29 +113,20 @@ export const InventoryChart = () => {
                 }}
               />
               <Legend />
-              <Line
-                type="monotone"
-                dataKey="Store A"
-                stroke={chartColors["Store A"]}
-                activeDot={{ r: 8 }}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="Store B"
-                stroke={chartColors["Store B"]}
-                strokeWidth={2}
-              />
-              <Line
-                type="monotone"
-                dataKey="Store C"
-                stroke={chartColors["Store C"]}
-                strokeWidth={2}
-              />
+              {stores.map((store, index) => (
+                <Line
+                  key={store}
+                  type="monotone"
+                  dataKey={store}
+                  stroke={getStoreColor(index)}
+                  activeDot={{ r: 8 }}
+                  strokeWidth={2}
+                />
+              ))}
               <Line
                 type="monotone"
                 dataKey="avg"
-                stroke={chartColors.avg}
+                stroke="#9e9e9e"
                 strokeDasharray="5 5"
                 strokeWidth={2}
               />
@@ -104,8 +135,8 @@ export const InventoryChart = () => {
         </div>
 
         <div className="mt-4 grid grid-cols-2 gap-4">
-          <Metric label="Average Stock Level" value="74.3%" />
-          <Metric label="Stock Turnover Rate" value="3.8x" />
+          <Metric label="Average Stock Level" value={`${avgStockLevel} units`} />
+          <Metric label="Stock Turnover Rate" value={`${stockTurnover}x`} />
         </div>
       </CardContent>
     </Card>

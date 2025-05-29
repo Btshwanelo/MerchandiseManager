@@ -49,8 +49,8 @@ const StockItem = ({ id, name, location, level, maxLevel, severity, onRestock }:
     <div className={`p-3 rounded border ${getBgColor()}`}>
       <div className="flex items-start justify-between">
         <div>
-          <p className="font-medium text-foreground">{name}</p>
-          <p className="text-sm text-muted-foreground">{location}</p>
+          <p className="text-sm text-foreground">{name}</p>
+          <p className="text-xs text-muted-foreground">{location}</p>
         </div>
         <Badge className={getBadgeColor()}>
           {severity === "critical" ? "Critical" : severity === "low" ? "Low" : "Normal"}
