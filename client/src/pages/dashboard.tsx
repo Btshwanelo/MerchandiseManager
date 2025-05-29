@@ -34,7 +34,7 @@ const Dashboard = () => {
       <Alert variant="info" className="bg-info/10 border-info">
         <AlertCircle className="h-4 w-4 text-info" />
         <div className="ml-2">
-          <h3 className="font-medium text-foreground">Welcome to InvenTrack</h3>
+          <h3 className="font-medium text-foreground">Welcome {user?.role || 'Guest'}</h3>
           <p className="text-muted-foreground">
             Your current role is <span className="font-medium">{user?.role || 'Guest'}</span>.
             {user?.role === UserRole.ADMIN 
