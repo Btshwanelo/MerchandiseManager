@@ -1435,9 +1435,9 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                                       <td className="px-4 py-3 text-sm">{item.productName || 'Unknown Product'}</td>
                                       <td className="px-4 py-3 text-sm">{item.productSku || 'N/A'}</td>
                                       <td className="px-4 py-3 text-sm">{item.quantity}</td>
-                                      <td className="px-4 py-3 text-sm">R {item.productPrice ? (item.productPrice / 100).toFixed(2) : '0.00'}</td>
+                                      <td className="px-4 py-3 text-sm">R {item.productPrice ? item.productPrice.toFixed(2) : '0.00'}</td>
                                       <td className="px-4 py-3 text-sm font-medium">
-                                        R {item.productPrice && item.quantity ? ((item.productPrice * item.quantity) / 100).toFixed(2) : '0.00'}
+                                        R {item.productPrice && item.quantity ? (item.productPrice * item.quantity).toFixed(2) : '0.00'}
                                       </td>
                                     </tr>
                                   ))}
