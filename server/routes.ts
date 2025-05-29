@@ -858,8 +858,12 @@ const dbResult = await pool.query(`
               oi.quantity,
               oi.notes,
               p.name as "productName",
-              p.sku as "productSku",
-              p.price as "productPrice"
+              p.sku,
+              p.price,
+              p.category,
+              p.min_stock_level as "minStockLevel",
+              p.description,
+              p.image
             FROM order_items oi
             JOIN products p ON p.id = oi.product_id
             WHERE oi.order_id = $1
@@ -867,8 +871,24 @@ const dbResult = await pool.query(`
 
           const itemsResult = await pool.query(itemsQuery, [order.id]);
 
-          // Add the items to the order
-          order.items = itemsResult.rows || [];
+          // Structure the items with nested product object
+          order.items = (itemsResult.rows || []).map(item => ({
+            id: item.id,
+            orderId: item.orderId,
+            productId: item.productId,
+            quantity: item.quantity,
+            notes: item.notes,
+            product: {
+              id: item.productId,
+              name: item.productName,
+              sku: item.sku,
+              price: item.price,
+              category: item.category,
+              minStockLevel: item.minStockLevel,
+              description: item.description,
+              image: item.image
+            }
+          }));
 
           console.log(`Found real order data in database for work item ${workItemId}:`, order);
           return res.json(order);
@@ -908,8 +928,12 @@ const dbResult = await pool.query(`
               oi.quantity,
               oi.notes,
               p.name as "productName",
-              p.sku as "productSku",
-              p.price as "productPrice"
+              p.sku,
+              p.price,
+              p.category,
+              p.min_stock_level as "minStockLevel",
+              p.description,
+              p.image
             FROM order_items oi
             JOIN products p ON p.id = oi.product_id
             WHERE oi.order_id = $1
@@ -917,8 +941,24 @@ const dbResult = await pool.query(`
 
           const itemsResult = await pool.query(itemsQuery, [order.id]);
 
-          // Add the items to the order
-          order.items = itemsResult.rows || [];
+          // Structure the items with nested product object
+          order.items = (itemsResult.rows || []).map(item => ({
+            id: item.id,
+            orderId: item.orderId,
+            productId: item.productId,
+            quantity: item.quantity,
+            notes: item.notes,
+            product: {
+              id: item.productId,
+              name: item.productName,
+              sku: item.sku,
+              price: item.price,
+              category: item.category,
+              minStockLevel: item.minStockLevel,
+              description: item.description,
+              image: item.image
+            }
+          }));
 
           console.log(`Found fallback order data in database for store ${workItem.storeId} and user ${workItem.userId}:`, order);
           return res.json(order);
