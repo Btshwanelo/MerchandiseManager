@@ -140,6 +140,10 @@ const AssignmentsPage = () => {
       endDate: null,
       status: "active",
       stockTakeType: "both", // Default to checking both shelf and store
+      isRecurring: false,
+      frequency: undefined,
+      daysOfWeek: [],
+      durationLimit: undefined,
       workItems: [] // No pre-filled work items
     }
   });
@@ -895,6 +899,141 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                   )}
                 />
               </div>
+
+              {/* Recurring Assignment Section */}
+              <FormField
+                control={assignmentForm.control}
+                name="isRecurring"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Recurring Assignment
+                      </FormLabel>
+                      <FormDescription>
+                        Create multiple assignments based on a schedule
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
+              {assignmentForm.watch("isRecurring") && (
+                <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <FormField
+                      control={assignmentForm.control}
+                      name="frequency"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Frequency</FormLabel>
+                          <Select
+                            value={field.value}
+                            onValueChange={field.onChange}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select frequency" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="daily">Daily</SelectItem>
+                              <SelectItem value="weekly">Weekly</SelectItem>
+                              <SelectItem value="monthly">Monthly</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <FormField
+                      control={assignmentForm.control}
+                      name="durationLimit"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Duration (Months)</FormLabel>
+                          <Select
+                            value={field.value?.toString()}
+                            onValueChange={(value) => field.onChange(parseInt(value))}
+                          >
+                            <FormControl>
+                              <SelectTrigger>
+                                <SelectValue placeholder="Select duration" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="1">1 Month</SelectItem>
+                              <SelectItem value="2">2 Months</SelectItem>
+                              <SelectItem value="3">3 Months</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormDescription>
+                            Maximum duration to prevent database overflow
+                          </FormDescription>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+
+                  {(assignmentForm.watch("frequency") === "weekly" || assignmentForm.watch("frequency") === "monthly") && (
+                    <FormField
+                      control={assignmentForm.control}
+                      name="daysOfWeek"
+                      render={({ field }) => {
+                        const daysOfWeek = [
+                          { value: 0, label: "Sunday" },
+                          { value: 1, label: "Monday" },
+                          { value: 2, label: "Tuesday" },
+                          { value: 3, label: "Wednesday" },
+                          { value: 4, label: "Thursday" },
+                          { value: 5, label: "Friday" },
+                          { value: 6, label: "Saturday" },
+                        ];
+
+                        return (
+                          <FormItem>
+                            <FormLabel>
+                              {assignmentForm.watch("frequency") === "weekly" ? "Days of Week" : "Days of Month"}
+                            </FormLabel>
+                            <FormDescription>
+                              Select which days to create assignments
+                            </FormDescription>
+                            <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
+                              {daysOfWeek.map((day) => (
+                                <div key={day.value} className="flex items-center space-x-2">
+                                  <Checkbox
+                                    checked={field.value?.includes(day.value) || false}
+                                    onCheckedChange={(checked) => {
+                                      const currentDays = field.value || [];
+                                      if (checked) {
+                                        field.onChange([...currentDays, day.value]);
+                                      } else {
+                                        field.onChange(currentDays.filter((d) => d !== day.value));
+                                      }
+                                    }}
+                                  />
+                                  <label className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                                    {day.label}
+                                  </label>
+                                </div>
+                              ))}
+                            </div>
+                            <FormMessage />
+                          </FormItem>
+                        );
+                      }}
+                    />
+                  )}
+                </div>
+              )}
 
               <div className="space-y-4">
                 <div className="flex items-center justify-between">

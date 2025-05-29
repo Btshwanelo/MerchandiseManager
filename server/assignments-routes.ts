@@ -3,6 +3,112 @@ import { storage } from "./storage";
 import { insertStoreAssignmentSchema, insertWorkItemSchema, WorkItemType } from "@shared/schema";
 import { z } from "zod";
 
+// Helper function to check for assignment conflicts
+async function checkAssignmentConflicts(assignmentData: any) {
+  const conflicts = [];
+  
+  if (!assignmentData.isRecurring || !assignmentData.frequency || !assignmentData.durationLimit) {
+    return conflicts;
+  }
+
+  const startDate = new Date(assignmentData.startDate);
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + assignmentData.durationLimit);
+
+  // Generate all dates for the recurring assignment
+  const assignmentDates = generateAssignmentDates(
+    startDate, 
+    endDate, 
+    assignmentData.frequency, 
+    assignmentData.daysOfWeek || []
+  );
+
+  // Check each date for conflicts
+  for (const date of assignmentDates) {
+    const existingAssignments = await storage.getStoreAssignmentsByUserAndDate(
+      assignmentData.userId, 
+      date
+    );
+    
+    if (existingAssignments.length > 0) {
+      conflicts.push({
+        date: date.toISOString(),
+        conflictingAssignments: existingAssignments
+      });
+    }
+  }
+
+  return conflicts;
+}
+
+// Helper function to generate assignment dates based on frequency
+function generateAssignmentDates(startDate: Date, endDate: Date, frequency: string, daysOfWeek: number[]) {
+  const dates = [];
+  const current = new Date(startDate);
+
+  while (current <= endDate) {
+    if (frequency === 'daily') {
+      dates.push(new Date(current));
+      current.setDate(current.getDate() + 1);
+    } else if (frequency === 'weekly') {
+      if (daysOfWeek.length === 0 || daysOfWeek.includes(current.getDay())) {
+        dates.push(new Date(current));
+      }
+      current.setDate(current.getDate() + 1);
+    } else if (frequency === 'monthly') {
+      if (daysOfWeek.length === 0 || daysOfWeek.includes(current.getDay())) {
+        dates.push(new Date(current));
+      }
+      current.setDate(current.getDate() + 1);
+    }
+  }
+
+  return dates;
+}
+
+// Helper function to create recurring assignments
+async function createRecurringAssignments(assignmentData: any) {
+  const createdAssignments = [];
+  
+  const startDate = new Date(assignmentData.startDate);
+  const endDate = new Date(startDate);
+  endDate.setMonth(endDate.getMonth() + assignmentData.durationLimit!);
+
+  // Generate all dates for the recurring assignment
+  const assignmentDates = generateAssignmentDates(
+    startDate, 
+    endDate, 
+    assignmentData.frequency!, 
+    assignmentData.daysOfWeek || []
+  );
+
+  // Create the parent assignment (first assignment in the series)
+  const parentAssignment = await storage.createStoreAssignment({
+    ...assignmentData,
+    endDate: assignmentDates.length > 1 ? assignmentDates[1] : endDate,
+    parentAssignmentId: null
+  });
+
+  createdAssignments.push(parentAssignment);
+
+  // Create child assignments for remaining dates
+  for (let i = 1; i < assignmentDates.length; i++) {
+    const assignmentDate = assignmentDates[i];
+    const nextDate = i + 1 < assignmentDates.length ? assignmentDates[i + 1] : endDate;
+
+    const childAssignment = await storage.createStoreAssignment({
+      ...assignmentData,
+      startDate: assignmentDate,
+      endDate: nextDate,
+      parentAssignmentId: parentAssignment.id
+    });
+
+    createdAssignments.push(childAssignment);
+  }
+
+  return createdAssignments;
+}
+
 export function registerAssignmentRoutes(app: express.Express) {
   // Middleware to check if user is admin or manager
   const isAdminOrManager = (req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -134,6 +240,10 @@ export function registerAssignmentRoutes(app: express.Express) {
         startDate: z.coerce.date(),
         endDate: z.coerce.date().nullable().optional(),
         stockTakeType: z.enum(['shelf', 'store', 'both']).default('both'),
+        isRecurring: z.boolean().default(false),
+        frequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
+        daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
+        durationLimit: z.number().min(1).max(3).optional(),
       });
       
       // Add assignedBy to request body using current user
@@ -158,70 +268,97 @@ export function registerAssignmentRoutes(app: express.Express) {
       const assignmentData = parseResult.data;
       console.log("Parsed assignment data:", JSON.stringify(assignmentData, null, 2));
       
-      const newAssignment = await storage.createStoreAssignment(assignmentData);
+      // Check for conflicts first
+      if (assignmentData.isRecurring) {
+        const conflicts = await checkAssignmentConflicts(assignmentData);
+        if (conflicts.length > 0) {
+          return res.status(409).json({
+            error: "Assignment conflicts detected",
+            conflicts: conflicts
+          });
+        }
+      }
       
-      // If work items are specified, create them automatically
+      let createdAssignments = [];
+      
+      if (assignmentData.isRecurring) {
+        // Create recurring assignments
+        createdAssignments = await createRecurringAssignments(assignmentData);
+      } else {
+        // Create single assignment
+        const newAssignment = await storage.createStoreAssignment(assignmentData);
+        createdAssignments = [newAssignment];
+      }
+      
+      // If work items are specified, create them for each assignment
       if (req.body.workItems && Array.isArray(req.body.workItems)) {
         console.log("Processing work items:", JSON.stringify(req.body.workItems, null, 2));
-        const createdWorkItems = [];
+        const allCreatedWorkItems = [];
         
-        for (const workItemData of req.body.workItems) {
-          console.log("Processing work item:", JSON.stringify(workItemData, null, 2));
-          // Default due date: 1 week from now
-          const defaultDueDate = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-          
-          // Handle different date formats
-          let dueDate;
-          try {
-            if (workItemData.dueDate) {
-              if (workItemData.dueDate instanceof Date) {
-                dueDate = workItemData.dueDate;
-              } else if (typeof workItemData.dueDate === 'string') {
-                dueDate = new Date(workItemData.dueDate);
+        for (const assignment of createdAssignments) {
+          for (const workItemData of req.body.workItems) {
+            console.log("Processing work item:", JSON.stringify(workItemData, null, 2));
+            // Default due date: 1 week from assignment start date
+            const defaultDueDate = new Date(assignment.startDate);
+            defaultDueDate.setDate(defaultDueDate.getDate() + 7);
+            
+            // Handle different date formats
+            let dueDate;
+            try {
+              if (workItemData.dueDate) {
+                if (workItemData.dueDate instanceof Date) {
+                  dueDate = workItemData.dueDate;
+                } else if (typeof workItemData.dueDate === 'string') {
+                  dueDate = new Date(workItemData.dueDate);
+                } else {
+                  console.log("Invalid due date format, using default");
+                  dueDate = defaultDueDate;
+                }
               } else {
-                console.log("Invalid due date format, using default");
                 dueDate = defaultDueDate;
               }
-            } else {
+              
+              // Validate date is valid
+              if (isNaN(dueDate.getTime())) {
+                console.log("Invalid date detected, using default");
+                dueDate = defaultDueDate;
+              }
+            } catch (error) {
+              console.error("Error processing due date:", error);
               dueDate = defaultDueDate;
             }
             
-            // Validate date is valid
-            if (isNaN(dueDate.getTime())) {
-              console.log("Invalid date detected, using default");
-              dueDate = defaultDueDate;
-            }
-          } catch (error) {
-            console.error("Error processing due date:", error);
-            dueDate = defaultDueDate;
+            const workItem = await storage.createWorkItem({
+              title: workItemData.title || `Work at ${assignment.storeId}`,
+              description: workItemData.description || null,
+              type: workItemData.type || WorkItemType.STOCK_TAKE,
+              userId: assignment.userId,
+              storeId: assignment.storeId,
+              storeAssignmentId: assignment.id,
+              priority: workItemData.priority || "medium",
+              dueDate: dueDate,
+              createdBy: req.user!.id,
+              status: "pending",
+              notes: workItemData.notes || null,
+              attachments: workItemData.attachments || []
+            });
+            
+            allCreatedWorkItems.push(workItem);
           }
-          
-          const workItem = await storage.createWorkItem({
-            title: workItemData.title || `Work at ${newAssignment.storeId}`,
-            description: workItemData.description || null,
-            type: workItemData.type || WorkItemType.STOCK_TAKE,
-            userId: newAssignment.userId,
-            storeId: newAssignment.storeId,
-            storeAssignmentId: newAssignment.id,
-            priority: workItemData.priority || "medium",
-            dueDate: dueDate,
-            createdBy: req.user!.id,
-            status: "pending",
-            notes: workItemData.notes || null,
-            attachments: workItemData.attachments || []
-          });
-          
-          createdWorkItems.push(workItem);
         }
         
-        // Return assignment with created work items
+        // Return assignments with created work items
         return res.status(201).json({
-          assignment: newAssignment,
-          workItems: createdWorkItems
+          assignments: createdAssignments,
+          workItems: allCreatedWorkItems,
+          count: createdAssignments.length
         });
       }
       
-      res.status(201).json(newAssignment);
+      res.status(201).json({
+        assignments: createdAssignments,
+        count: createdAssignments.length
+      });
     } catch (error) {
       console.error("Error creating store assignment:", error);
       res.status(500).json({ error: "Failed to create store assignment" });
