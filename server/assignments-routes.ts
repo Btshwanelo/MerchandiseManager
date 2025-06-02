@@ -7,6 +7,11 @@ import { z } from "zod";
 async function checkAssignmentConflicts(assignmentData: any) {
   const conflicts: any[] = [];
   
+  // Skip conflict checking if this is a roving assignment
+  if (assignmentData.isRoving) {
+    return conflicts;
+  }
+  
   // Get all active assignments for this user
   const existingAssignments = await storage.getAssignmentsByUserId(assignmentData.userId);
   
@@ -19,6 +24,11 @@ async function checkAssignmentConflicts(assignmentData: any) {
   for (const existingAssignment of activeAssignments) {
     // Skip if it's the same assignment (for updates)
     if (assignmentData.id && existingAssignment.id === assignmentData.id) {
+      continue;
+    }
+
+    // Skip if the existing assignment is roving (no conflicts with roving assignments)
+    if (existingAssignment.isRoving) {
       continue;
     }
 

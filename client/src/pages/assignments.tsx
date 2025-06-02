@@ -114,6 +114,7 @@ const AssignmentsPage = () => {
     endDate: z.coerce.date().nullable().optional(),
     stockTakeType: z.enum(['shelf', 'store', 'both']),
     isRecurring: z.boolean().default(false),
+    isRoving: z.boolean().default(false),
     frequency: z.enum(['daily', 'weekly', 'monthly']).optional(),
     daysOfWeek: z.array(z.number().min(0).max(6)).optional(),
     durationLimit: z.number().min(1).max(3).optional(),
@@ -141,6 +142,7 @@ const AssignmentsPage = () => {
       status: "active",
       stockTakeType: "both", // Default to checking both shelf and store
       isRecurring: false,
+      isRoving: false,
       frequency: undefined,
       daysOfWeek: [],
       durationLimit: undefined,

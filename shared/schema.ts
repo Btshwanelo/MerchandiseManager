@@ -436,6 +436,7 @@ export const storeAssignments = pgTable("store_assignments", {
   daysOfWeek: integer("days_of_week").array(), // Array of day numbers (0=Sunday, 1=Monday, etc.)
   durationLimit: integer("duration_limit"), // Duration in months (1, 2, or 3)
   parentAssignmentId: integer("parent_assignment_id"), // Links to original assignment for series
+  isRoving: boolean("is_roving").notNull().default(false), // Whether this is a roving assignment (can work multiple stores per day)
   createdAt: timestamp("created_at").defaultNow(),
 }, (table) => {
   return {
