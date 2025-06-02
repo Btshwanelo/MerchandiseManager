@@ -127,6 +127,15 @@ const AssignmentsPage = () => {
         dueDate: z.coerce.date(),
       })
     ).optional(),
+  }).refine((data) => {
+    // If recurring is true, require frequency and durationLimit
+    if (data.isRecurring) {
+      return data.frequency && data.durationLimit;
+    }
+    return true;
+  }, {
+    message: "Frequency and duration are required for recurring assignments",
+    path: ["frequency"]
   });
 
   type AssignmentFormValues = z.infer<typeof assignmentFormSchema>;
@@ -145,7 +154,7 @@ const AssignmentsPage = () => {
       isRoving: false,
       frequency: undefined,
       daysOfWeek: [],
-      durationLimit: undefined,
+      durationLimit: 1, // Default to 1 month
       workItems: [] // No pre-filled work items
     }
   });
