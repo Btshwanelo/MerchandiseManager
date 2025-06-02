@@ -2826,8 +2826,8 @@ const ProcessForm = () => {
                 </Button>
               )}
               
-              {/* Save Draft button - only show for in-progress work items */}
-              {workItem.status === WorkItemStatus.IN_PROGRESS && (
+              {/* Save Draft button - show for pending and in-progress work items */}
+              {(workItem.status === WorkItemStatus.PENDING || workItem.status === WorkItemStatus.IN_PROGRESS) && workItem.status !== WorkItemStatus.COMPLETED && (
                 <Button 
                   variant="outline" 
                   onClick={handleSaveDraft}
