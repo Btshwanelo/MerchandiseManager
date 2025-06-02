@@ -214,16 +214,55 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
 
-  // Save draft mutation
+  // Save draft mutation - saves actual stock take data to database
   const saveDraftMutation = useMutation({
-    mutationFn: async ({ workItemId, draftData, currentStep }: { workItemId: number, draftData: string, currentStep: string }) => {
-      const response = await apiRequest("PUT", `/api/work-items/${workItemId}/draft`, {
-        draftData,
-        currentStep
+    mutationFn: async () => {
+      // Format stock data to match server expectations
+      const formattedItems = stockData.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity,
+        location: item.location
+      }));
+
+      // Create FormData to match the server's expectation
+      const formData = new FormData();
+      formData.append('storeId', storeId.toString());
+      formData.append('workItemId', workItemId.toString());
+      formData.append('items', JSON.stringify(formattedItems));
+      formData.append('comment', comments || '');
+      formData.append('status', 'draft');
+
+      // Add existing picture paths
+      const picturePaths = pictures.filter(p => typeof p === 'string');
+      if (picturePaths.length > 0) {
+        formData.append('pictures', JSON.stringify(picturePaths));
+      }
+
+      const response = await fetch("/api/stock-takes", {
+        method: "POST",
+        body: formData,
+        credentials: "include"
       });
-      return response.json();
+
+      if (!response.ok) {
+        let errorMessage = "Failed to save draft";
+        try {
+          const errorData = await response.json();
+          errorMessage = errorData.message || errorMessage;
+        } catch (e) {
+          const errorText = await response.text().catch(() => "");
+          if (errorText) errorMessage = errorText;
+        }
+        throw new Error(errorMessage);
+      }
+
+      return await response.json();
     },
     onSuccess: () => {
+      // Invalidate queries to refresh the UI
+      queryClient.invalidateQueries({ queryKey: ['/api/stock-takes/by-work-item', workItemId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      
       toast({
         title: "Draft saved",
         description: "Your progress has been saved and you can resume later.",
@@ -241,25 +280,19 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   // Listen for save draft events and capture current form state
   useEffect(() => {
     const handleSaveDraft = (event: CustomEvent) => {
-      const { workItemId, activeStep } = event.detail;
+      const { activeStep } = event.detail;
       
       if (activeStep === 'stock-take') {
-        // Collect current form state
-        const draftData = {
-          activeStep,
-          stockData,
-          comments,
-          pictures,
-          shelfImages,
-          stockTakeStatus
-        };
-        
-        // Call the mutation to save the draft
-        saveDraftMutation.mutate({
-          workItemId,
-          draftData: JSON.stringify(draftData),
-          currentStep: activeStep
-        });
+        // Check if we have any data to save
+        if (stockData.length > 0 || comments.trim() || pictures.length > 0) {
+          saveDraftMutation.mutate();
+        } else {
+          toast({
+            title: "Nothing to save",
+            description: "Add some stock items, comments, or pictures before saving.",
+            variant: "destructive"
+          });
+        }
       }
     };
 
@@ -268,7 +301,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     return () => {
       window.removeEventListener('saveDraft', handleSaveDraft as EventListener);
     };
-  }, [stockData, comments, pictures, shelfImages, stockTakeStatus, saveDraftMutation]);
+  }, [stockData, comments, pictures, saveDraftMutation, toast]);
   
   // Flag to indicate if we're in read-only mode (completed work item)
   const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;

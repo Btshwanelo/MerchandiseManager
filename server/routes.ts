@@ -2435,13 +2435,16 @@ const dbResult = await pool.query(`
         final: allPictures
       });
 
+      // Get status from request body, default to 'completed' for backward compatibility
+      const status = req.body.status || 'completed';
+      
       // Create the stock take record in the database
       const stockTake = await storage.createStockTake({
         storeId,
         userId: req.user!.id,
         comment,
         pictures: allPictures,
-        status: 'completed'
+        status
       });
 
       // Create stock take items
