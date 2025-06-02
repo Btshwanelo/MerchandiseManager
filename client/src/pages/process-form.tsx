@@ -237,6 +237,38 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
       });
     }
   });
+
+  // Listen for save draft events and capture current form state
+  useEffect(() => {
+    const handleSaveDraft = (event: CustomEvent) => {
+      const { workItemId, activeStep } = event.detail;
+      
+      if (activeStep === 'stock-take') {
+        // Collect current form state
+        const draftData = {
+          activeStep,
+          stockData,
+          comments,
+          pictures,
+          shelfImages,
+          stockTakeStatus
+        };
+        
+        // Call the mutation to save the draft
+        saveDraftMutation.mutate({
+          workItemId,
+          draftData: JSON.stringify(draftData),
+          currentStep: activeStep
+        });
+      }
+    };
+
+    window.addEventListener('saveDraft', handleSaveDraft as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveDraft', handleSaveDraft as EventListener);
+    };
+  }, [stockData, comments, pictures, shelfImages, stockTakeStatus, saveDraftMutation]);
   
   // Flag to indicate if we're in read-only mode (completed work item)
   const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;
@@ -2848,10 +2880,7 @@ const ProcessForm = () => {
                     workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ') 
                     : 'Unknown'}
                 </span>
-                {/* Debug info */}
-                <span className="ml-2 text-xs bg-yellow-100 px-1 rounded">
-                  Debug: {workItem.status} | Pending={WorkItemStatus.PENDING} | InProgress={WorkItemStatus.IN_PROGRESS}
-                </span>
+
               </p>
               {workItem.dueDate && (
                 <p className="text-sm text-muted-foreground">
