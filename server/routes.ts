@@ -373,6 +373,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save draft data for a work item
+  app.put("/api/work-items/:id/draft", async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { draftData, currentStep } = req.body;
+
+      if (!req.user) {
+        return res.status(401).json({ message: "Not authenticated" });
+      }
+
+      // Verify the work item exists and user has access
+      const workItem = await storage.getWorkItem(id);
+      if (!workItem) {
+        return res.status(404).json({ message: "Work item not found" });
+      }
+
+      // Check if user has access to this work item
+      if (workItem.userId !== req.user.id && req.user.role !== UserRole.ADMIN) {
+        return res.status(403).json({ message: "Not authorized to update this work item" });
+      }
+
+      // Update the work item with draft data
+      const updatedWorkItem = await storage.updateWorkItem(id, {
+        draftData,
+        currentStep
+      });
+
+      res.json(updatedWorkItem);
+    } catch (error) {
+      console.error("Error saving draft:", error);
+      res.status(500).json({ message: "Failed to save draft" });
+    }
+  });
+
   // Get audit trail for a work item (admin only)
   app.get("/api/work-items/:id/audit", checkRole(UserRole.ADMIN), async (req, res) => {
     try {

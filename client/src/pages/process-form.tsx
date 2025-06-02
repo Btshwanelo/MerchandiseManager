@@ -2502,36 +2502,27 @@ const ProcessForm = () => {
     }
   }, [workItem]);
 
-  // Restore draft data when work item is loaded
-  useEffect(() => {
-    if (workItem && workItem.draftData) {
-      try {
-        const draftData = JSON.parse(workItem.draftData);
-        
-        // Restore stock data if available
-        if (draftData.stockData) {
-          setStockData(draftData.stockData);
-        }
-        
-        // Restore other form state as needed
-        if (draftData.comments) {
-          setComments(draftData.comments);
-        }
-        
-        if (draftData.pictures) {
-          setPictures(draftData.pictures);
-        }
-        
-        if (draftData.shelfImages) {
-          setShelfImages(draftData.shelfImages);
-        }
-        
-        console.log("Restored draft data:", draftData);
-      } catch (error) {
-        console.error("Error parsing draft data:", error);
-      }
-    }
-  }, [workItem]);
+  // Handle saving draft data
+  const handleSaveDraft = () => {
+    if (!workItemId) return;
+    
+    setIsSaving(true);
+    
+    // Collect current form state from all sections
+    const draftData = {
+      activeStep,
+      // Note: Individual sections will need to implement their own save logic
+      // since state is scoped to each component
+    };
+    
+    saveDraftMutation.mutate({
+      workItemId,
+      draftData: JSON.stringify(draftData),
+      currentStep: activeStep
+    });
+    
+    setIsSaving(false);
+  };
   
   // Fetch store data using all stores and filtering for the right store ID
   // This approach works around the authentication issue for single store endpoint
@@ -2594,6 +2585,36 @@ const ProcessForm = () => {
       toast({
         title: "Error",
         description: "Failed to mark work item as completed",
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Save draft mutation
+  const saveDraftMutation = useMutation({
+    mutationFn: async ({ workItemId, draftData, currentStep }: { 
+      workItemId: number; 
+      draftData: any; 
+      currentStep: string; 
+    }) => {
+      const res = await apiRequest("PUT", `/api/work-items/${workItemId}/draft`, {
+        draftData,
+        currentStep
+      });
+      return await res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      toast({
+        title: "Draft saved",
+        description: "Your progress has been saved. You can resume later.",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Error saving draft:", error);
+      toast({
+        title: "Error",
+        description: "Failed to save draft",
         variant: "destructive",
       });
     }
@@ -2790,11 +2811,25 @@ const ProcessForm = () => {
               )}
             </div>
             
-            {workItem.status === WorkItemStatus.PENDING && (
-              <Button onClick={handleStartWorkItem}>
-                Start Work
-              </Button>
-            )}
+            <div className="flex gap-2">
+              {workItem.status === WorkItemStatus.PENDING && (
+                <Button onClick={handleStartWorkItem}>
+                  Start Work
+                </Button>
+              )}
+              
+              {/* Save Draft button - only show for in-progress work items */}
+              {workItem.status === WorkItemStatus.IN_PROGRESS && (
+                <Button 
+                  variant="outline" 
+                  onClick={handleSaveDraft}
+                  disabled={isSaving || saveDraftMutation.isPending}
+                >
+                  {isSaving || saveDraftMutation.isPending ? "Saving..." : 
+                   workItem.draftData ? "Save Progress" : "Save Draft"}
+                </Button>
+              )}
+            </div>
           </div>
           
           {/* Progress stepper - Desktop view (hidden on mobile) */}
