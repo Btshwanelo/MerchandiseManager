@@ -387,6 +387,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Save work item draft
+  app.put("/api/work-items/:id/draft", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      const { draftData, currentStep } = req.body;
+
+      const workItem = await storage.getWorkItem(id);
+      if (!workItem) {
+        return res.status(404).json({ error: "Work item not found" });
+      }
+
+      // Check if user has permission to save draft (assigned user or admin/manager)
+      const canSaveDraft = req.user!.id === workItem.userId || 
+                          req.user!.role === 'admin' || 
+                          req.user!.role === 'manager';
+
+      if (!canSaveDraft) {
+        return res.status(403).json({ error: "Not authorized to save draft for this work item" });
+      }
+
+      // Update draft data and current step
+      const updatedWorkItem = await storage.updateWorkItem(id, {
+        draftData: JSON.stringify(draftData),
+        currentStep: currentStep,
+        status: "in_progress" // Mark as in progress when saving draft
+      });
+
+      res.json({ message: "Draft saved successfully", workItem: updatedWorkItem });
+    } catch (error) {
+      console.error("Error saving work item draft:", error);
+      res.status(500).json({ error: "Failed to save draft" });
+    }
+  });
+
   // Process Form Routes for Merchandising, Competitors, and Orders
 
   // Merchandising Information

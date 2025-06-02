@@ -180,6 +180,8 @@ interface WorkItem {
   completedAt?: string;
   notes?: string;
   attachments?: string[];
+  draftData?: string;
+  currentStep?: string;
   createdBy: number;
   createdAt: string;
   updatedAt: string;
@@ -2476,6 +2478,8 @@ const ProcessForm = () => {
   const [activeStep, setActiveStep] = useState<string>("stock-take");
   const [lowStockItems, setLowStockItems] = useState<Array<{product: Product, quantity: number, location: string}>>([]);
   const [showLowStockAlert, setShowLowStockAlert] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isSaving, setIsSaving] = useState(false);
   
   // Fetch work item data
   const { 
@@ -2488,9 +2492,44 @@ const ProcessForm = () => {
   });
   
   // Set activeStep to "completed" if work item is already completed
+  // Also restore from draft if available
   useEffect(() => {
     if (workItem && workItem.status === WorkItemStatus.COMPLETED) {
       setActiveStep("completed");
+    } else if (workItem && workItem.currentStep) {
+      // Resume from saved step
+      setActiveStep(workItem.currentStep);
+    }
+  }, [workItem]);
+
+  // Restore draft data when work item is loaded
+  useEffect(() => {
+    if (workItem && workItem.draftData) {
+      try {
+        const draftData = JSON.parse(workItem.draftData);
+        
+        // Restore stock data if available
+        if (draftData.stockData) {
+          setStockData(draftData.stockData);
+        }
+        
+        // Restore other form state as needed
+        if (draftData.comments) {
+          setComments(draftData.comments);
+        }
+        
+        if (draftData.pictures) {
+          setPictures(draftData.pictures);
+        }
+        
+        if (draftData.shelfImages) {
+          setShelfImages(draftData.shelfImages);
+        }
+        
+        console.log("Restored draft data:", draftData);
+      } catch (error) {
+        console.error("Error parsing draft data:", error);
+      }
     }
   }, [workItem]);
   

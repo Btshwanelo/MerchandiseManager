@@ -512,6 +512,8 @@ export const workItems = pgTable("work_items", {
   completedAt: timestamp("completed_at"),
   notes: text("notes"),
   attachments: text("attachments").array(), 
+  draftData: text("draft_data"), // JSON string to store form progress
+  currentStep: text("current_step"), // Current step in the process form
   createdBy: integer("created_by").references(() => users.id).notNull(), // Admin or manager who created the work item
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
