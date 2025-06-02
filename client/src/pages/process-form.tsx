@@ -2803,6 +2803,10 @@ const ProcessForm = () => {
                     workItem.status.charAt(0).toUpperCase() + workItem.status.slice(1).replace('_', ' ') 
                     : 'Unknown'}
                 </span>
+                {/* Debug info */}
+                <span className="ml-2 text-xs bg-yellow-100 px-1 rounded">
+                  Debug: {workItem.status} | Pending={WorkItemStatus.PENDING} | InProgress={WorkItemStatus.IN_PROGRESS}
+                </span>
               </p>
               {workItem.dueDate && (
                 <p className="text-sm text-muted-foreground">
