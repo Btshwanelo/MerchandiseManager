@@ -217,7 +217,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   // Save draft mutation
   const saveDraftMutation = useMutation({
     mutationFn: async ({ workItemId, draftData, currentStep }: { workItemId: number, draftData: string, currentStep: string }) => {
-      const response = await apiRequest("POST", `/api/work-items/${workItemId}/save-draft`, {
+      const response = await apiRequest("PUT", `/api/work-items/${workItemId}/draft`, {
         draftData,
         currentStep
       });
