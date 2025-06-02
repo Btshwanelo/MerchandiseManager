@@ -1605,6 +1605,70 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [price, setPrice] = useState<string>("0.00");
   const { toast } = useToast();
+
+  // Save draft mutation for merchandising
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const merchandisingData = {
+        storeId,
+        workItemId,
+        merchandisingItems: promotionItems.map(item => ({
+          productId: item.productId,
+          price: item.price,
+          notes: item.notes || ''
+        })),
+        status: 'draft'
+      };
+
+      if (promotionPictures.length > 0) {
+        merchandisingData.promotionPictures = promotionPictures;
+      }
+
+      const response = await apiRequest("POST", "/api/merchandising", merchandisingData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/merchandising/by-work-item', workItemId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      
+      toast({
+        title: "Draft saved",
+        description: "Your merchandising progress has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Listen for save draft events
+  useEffect(() => {
+    const handleSaveDraft = (event: CustomEvent) => {
+      const { activeStep } = event.detail;
+      
+      if (activeStep === 'merchandising') {
+        if (promotionItems.length > 0 || promotionPictures.length > 0) {
+          saveDraftMutation.mutate();
+        } else {
+          toast({
+            title: "Nothing to save",
+            description: "Add some promotion items or pictures before saving.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    window.addEventListener('saveDraft', handleSaveDraft as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveDraft', handleSaveDraft as EventListener);
+    };
+  }, [promotionItems, promotionPictures, saveDraftMutation, toast]);
   
   const { data: products = [] } = useQuery<Product[]>({
     queryKey: ['/api/products'],
@@ -1872,6 +1936,73 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
   const [promotionalPrice, setPromotionalPrice] = useState<number | null>(null);
   const [pictures, setPictures] = useState<string[]>([]);
   const { toast } = useToast();
+
+  // Save draft mutation for competitor analysis
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const competitorData = {
+        storeId,
+        workItemId,
+        competitorName: brand,
+        generalNotes: productDescription,
+        competitorItems: promotionalPrice ? [{
+          productName: productDescription,
+          brand: brand,
+          price: promotionalPrice,
+          notes: ''
+        }] : [],
+        status: 'draft'
+      };
+
+      if (pictures.length > 0) {
+        competitorData.pictures = pictures;
+      }
+
+      const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/competitor-merchandising/by-work-item', workItemId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      
+      toast({
+        title: "Draft saved",
+        description: "Your competitor analysis progress has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Listen for save draft events
+  useEffect(() => {
+    const handleSaveDraft = (event: CustomEvent) => {
+      const { activeStep } = event.detail;
+      
+      if (activeStep === 'competitor-analysis') {
+        if (brand || productDescription || promotionalPrice || pictures.length > 0) {
+          saveDraftMutation.mutate();
+        } else {
+          toast({
+            title: "Nothing to save",
+            description: "Add competitor information before saving.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    window.addEventListener('saveDraft', handleSaveDraft as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveDraft', handleSaveDraft as EventListener);
+    };
+  }, [brand, productDescription, promotionalPrice, pictures, saveDraftMutation, toast]);
   
   const submitCompetitorAnalysis = async () => {
     setLoading(true);
@@ -2032,6 +2163,67 @@ const OrderPlacementSection = ({ storeId, workItemId, navigate, setActiveStep, l
   const [quantity, setQuantity] = useState("1");
   const [itemNotes, setItemNotes] = useState("");
   const { toast } = useToast();
+
+  // Save draft mutation for order placement
+  const saveDraftMutation = useMutation({
+    mutationFn: async () => {
+      const orderData = {
+        storeId,
+        workItemId,
+        orderItems: orderItems.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          notes: item.notes || ''
+        })),
+        notes: notes,
+        status: 'draft'
+      };
+
+      const response = await apiRequest("POST", "/api/orders", orderData);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/orders/by-work-item', workItemId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/work-items', workItemId] });
+      
+      toast({
+        title: "Draft saved",
+        description: "Your order progress has been saved.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
+
+  // Listen for save draft events
+  useEffect(() => {
+    const handleSaveDraft = (event: CustomEvent) => {
+      const { activeStep } = event.detail;
+      
+      if (activeStep === 'order-placement') {
+        if (orderItems.length > 0 || notes) {
+          saveDraftMutation.mutate();
+        } else {
+          toast({
+            title: "Nothing to save",
+            description: "Add some order items or notes before saving.",
+            variant: "destructive"
+          });
+        }
+      }
+    };
+
+    window.addEventListener('saveDraft', handleSaveDraft as EventListener);
+    
+    return () => {
+      window.removeEventListener('saveDraft', handleSaveDraft as EventListener);
+    };
+  }, [orderItems, notes, saveDraftMutation, toast]);
   
   // Fetch products and low stock data
   const { data: products = [] } = useQuery<Product[]>({
