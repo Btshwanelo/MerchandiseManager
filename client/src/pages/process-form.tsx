@@ -26,7 +26,7 @@ import {
   Loader2, ClipboardList, ShoppingCart, BarChart, Tag, CheckCircle, 
   CheckCircle2, AlertCircle, AlertTriangle, Plus, Camera, QrCode, 
   ShoppingBasket, Trash, TrendingUp, Check, ChevronRight, RotateCcw,
-  Package, ArrowRight, Image as ImageIcon, Maximize2, Upload, X
+  Package, ArrowRight, Image as ImageIcon, Maximize2, Upload, X, Clock
 } from "lucide-react";
 import { Select, SelectContent, SelectGroup, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { WorkItemAccessError } from "@/components/ui/error-state";
@@ -2808,6 +2808,14 @@ const ProcessForm = () => {
                 <p className="text-sm text-muted-foreground">
                   Due: {new Date(workItem.dueDate).toLocaleDateString()}
                 </p>
+              )}
+              
+              {/* Draft indicator */}
+              {workItem.draftData && workItem.status === WorkItemStatus.IN_PROGRESS && (
+                <div className="flex items-center gap-1 text-sm text-orange-600">
+                  <RotateCcw className="h-3 w-3" />
+                  <span>Draft saved - Resume from {workItem.currentStep || 'stock-take'}</span>
+                </div>
               )}
             </div>
             
