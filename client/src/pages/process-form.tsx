@@ -346,32 +346,43 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   });
   
   // Update state with stock take data when available
-  // Restore draft data from work item when available
+  // Restore draft data from existing stock take when available
   useEffect(() => {
-    if (workItem && workItem.draftData) {
-      try {
-        const draftData = JSON.parse(workItem.draftData);
-        
-        // Restore stock take specific data
-        if (draftData.stockData) {
-          setStockData(draftData.stockData);
-        }
-        if (draftData.comments) {
-          setComments(draftData.comments);
-        }
-        if (draftData.pictures) {
-          setPictures(draftData.pictures);
-        }
-        if (draftData.shelfImages) {
-          setShelfImages(draftData.shelfImages);
-        }
-        
-        console.log("Restored draft data for stock take:", draftData);
-      } catch (error) {
-        console.error("Error parsing draft data:", error);
+    if (stockTake && stockTake.status === 'draft') {
+      console.log("Restoring draft stock take data:", stockTake);
+      
+      // Restore stock take items to stock data format
+      if (stockTake.items && stockTake.items.length > 0) {
+        const restoredStockData = stockTake.items.map(item => ({
+          productId: item.productId,
+          quantity: item.quantity,
+          location: item.location
+        }));
+        setStockData(restoredStockData);
+        console.log("Restored stock data:", restoredStockData);
       }
+      
+      // Restore comments
+      if (stockTake.comment) {
+        setComments(stockTake.comment);
+        console.log("Restored comments:", stockTake.comment);
+      }
+      
+      // Restore pictures
+      if (stockTake.pictures && stockTake.pictures.length > 0) {
+        setPictures(stockTake.pictures);
+        console.log("Restored pictures:", stockTake.pictures);
+      }
+      
+      // Set status to draft
+      setStockTakeStatus('draft');
+      
+      toast({
+        title: "Draft restored",
+        description: "Your previous progress has been restored.",
+      });
     }
-  }, [workItem]);
+  }, [stockTake, toast]);
 
   useEffect(() => {
     if (stockTake) {
