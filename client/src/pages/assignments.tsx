@@ -926,6 +926,30 @@ type StoreAssignmentWithRelations = StoreAssignment & {
                 )}
               />
 
+              {/* Roving Assignment Section */}
+              <FormField
+                control={assignmentForm.control}
+                name="isRoving"
+                render={({ field }) => (
+                  <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                    <FormControl>
+                      <Checkbox
+                        checked={field.value}
+                        onCheckedChange={field.onChange}
+                      />
+                    </FormControl>
+                    <div className="space-y-1 leading-none">
+                      <FormLabel>
+                        Roving Assignment
+                      </FormLabel>
+                      <FormDescription>
+                        Allow this merchandiser to work at multiple stores on the same day
+                      </FormDescription>
+                    </div>
+                  </FormItem>
+                )}
+              />
+
               {assignmentForm.watch("isRecurring") && (
                 <div className="space-y-4 p-4 border rounded-lg bg-gray-50">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
