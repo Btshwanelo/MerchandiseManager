@@ -213,6 +213,30 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [quantity, setQuantity] = useState<string>("0");
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
+
+  // Save draft mutation
+  const saveDraftMutation = useMutation({
+    mutationFn: async ({ workItemId, draftData, currentStep }: { workItemId: number, draftData: string, currentStep: string }) => {
+      const response = await apiRequest("POST", `/api/work-items/${workItemId}/save-draft`, {
+        draftData,
+        currentStep
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Draft saved",
+        description: "Your progress has been saved and you can resume later.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Save failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    }
+  });
   
   // Flag to indicate if we're in read-only mode (completed work item)
   const isReadOnly = workItem?.status === WorkItemStatus.COMPLETED;
@@ -257,6 +281,33 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   });
   
   // Update state with stock take data when available
+  // Restore draft data from work item when available
+  useEffect(() => {
+    if (workItem && workItem.draftData) {
+      try {
+        const draftData = JSON.parse(workItem.draftData);
+        
+        // Restore stock take specific data
+        if (draftData.stockData) {
+          setStockData(draftData.stockData);
+        }
+        if (draftData.comments) {
+          setComments(draftData.comments);
+        }
+        if (draftData.pictures) {
+          setPictures(draftData.pictures);
+        }
+        if (draftData.shelfImages) {
+          setShelfImages(draftData.shelfImages);
+        }
+        
+        console.log("Restored draft data for stock take:", draftData);
+      } catch (error) {
+        console.error("Error parsing draft data:", error);
+      }
+    }
+  }, [workItem]);
+
   useEffect(() => {
     if (stockTake) {
       // Update status
@@ -2508,18 +2559,12 @@ const ProcessForm = () => {
     
     setIsSaving(true);
     
-    // Collect current form state from all sections
-    const draftData = {
-      activeStep,
-      // Note: Individual sections will need to implement their own save logic
-      // since state is scoped to each component
-    };
-    
-    saveDraftMutation.mutate({
-      workItemId,
-      draftData: JSON.stringify(draftData),
-      currentStep: activeStep
+    // We need to collect form data from the currently active section
+    // Since each section manages its own state, we'll create a callback system
+    const event = new CustomEvent('saveDraft', { 
+      detail: { workItemId, activeStep } 
     });
+    window.dispatchEvent(event);
     
     setIsSaving(false);
   };
