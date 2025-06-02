@@ -503,10 +503,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           items
         };
 
-        // Update work item status
-        if (validatedData.workItemId) {
-          await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
-        }
+        // Don't mark work item as completed yet - only complete when entire process form is submitted
 
         console.log("Successfully created merchandising data with items:", result);
         res.status(201).json(result);
@@ -725,13 +722,10 @@ const dbResult = await pool.query(`
         const result = dbResult.rows[0];
         console.log("Successfully saved competitor data to database:", result);
 
-        // If we have a work item ID, mark it as completed
+        // Don't mark work item as completed yet - only complete when entire process form is submitted
         if (workItemId) {
           try {
-            await storage.updateWorkItemStatus(workItemId, "completed");
-            console.log(`Work item ${workItemId} marked as completed`);
-
-            // Record an activity for the completed work item
+            // Record an activity for the step completion
             await storage.createActivity({
               userId: req.user!.id,
               storeId,
@@ -843,10 +837,7 @@ const dbResult = await pool.query(`
         order.items = orderItems;
         console.log("Created order in database:", order);
               
-        // Update the work item status
-        if (validatedData.workItemId) {
-          await storage.updateWorkItemStatus(validatedData.workItemId, "completed");
-        }
+        // Don't mark work item as completed yet - only complete when entire process form is submitted
 
         return res.status(201).json(order);
       } catch (dbError) {
