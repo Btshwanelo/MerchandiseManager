@@ -529,6 +529,69 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get merchandising data by work item ID
+  app.get("/api/merchandising/by-work-item/:workItemId", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.workItemId);
+      
+      // Query merchandising promotions table
+      const merchandisingQuery = `
+        SELECT 
+          mp.id, 
+          mp.store_id as "storeId", 
+          mp.user_id as "userId", 
+          mp.date as "createdAt",
+          mp.promotion_pictures as "promotionPictures",
+          mp.work_item_id as "workItemId"
+        FROM merchandising_promotions mp
+        WHERE mp.work_item_id = $1
+        ORDER BY mp.date DESC
+        LIMIT 1
+      `;
+
+      const merchandisingResult = await pool.query(merchandisingQuery, [workItemId]);
+
+      if (merchandisingResult.rows.length === 0) {
+        return res.status(404).json({ message: "No merchandising data found" });
+      }
+
+      const merchandising = merchandisingResult.rows[0];
+
+      // Get merchandising items
+      const itemsQuery = `
+        SELECT 
+          mi.id, 
+          mi.merchandising_promotion_id as "merchandisingPromotionId", 
+          mi.product_id as "productId",
+          mi.price,
+          p.name as "productName",
+          p.sku as "productSku"
+        FROM merchandising_items mi
+        JOIN products p ON p.id = mi.product_id
+        WHERE mi.merchandising_promotion_id = $1
+      `;
+
+      const itemsResult = await pool.query(itemsQuery, [merchandising.id]);
+      
+      // Add items with product details
+      merchandising.items = itemsResult.rows.map(item => ({
+        id: item.id,
+        productId: item.productId,
+        price: item.price,
+        product: {
+          id: item.productId,
+          name: item.productName,
+          sku: item.productSku
+        }
+      }));
+
+      res.json(merchandising);
+    } catch (error) {
+      console.error("Error fetching merchandising data:", error);
+      res.status(500).json({ message: "Failed to fetch merchandising data" });
+    }
+  });
+
   // Create merchandising promotion endpoint
   app.post("/api/merchandising-promotions", isAuthenticated, async (req, res) => {
     try {
@@ -754,6 +817,62 @@ const dbResult = await pool.query(`
         message: "Failed to create competitor merchandising data",
         details: error.message || "Unknown error"
       });
+    }
+  });
+
+  // Get competitor merchandising data by work item ID
+  app.get("/api/competitor-merchandising/by-work-item/:workItemId", isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.workItemId);
+      
+      // Query competitor merchandising table
+      const competitorQuery = `
+        SELECT 
+          cm.id, 
+          cm.store_id as "storeId", 
+          cm.user_id as "userId", 
+          cm.date as "createdAt",
+          cm.brand,
+          cm.product_description as "productDescription",
+          cm.promotional_price as "promotionalPrice",
+          cm.promotion_pictures as "promotionPictures",
+          cm.work_item_id as "workItemId"
+        FROM competitor_merchandising cm
+        WHERE cm.work_item_id = $1
+        ORDER BY cm.date DESC
+        LIMIT 1
+      `;
+
+      const competitorResult = await pool.query(competitorQuery, [workItemId]);
+
+      if (competitorResult.rows.length === 0) {
+        return res.status(404).json({ message: "No competitor data found" });
+      }
+
+      const competitor = competitorResult.rows[0];
+      
+      // Format the competitor data to match UI expectations
+      const formattedCompetitor = {
+        id: competitor.id,
+        storeId: competitor.storeId,
+        userId: competitor.userId,
+        createdAt: competitor.createdAt,
+        workItemId: competitor.workItemId,
+        competitorName: competitor.brand,
+        generalNotes: competitor.productDescription,
+        pictures: competitor.promotionPictures || [],
+        items: [{
+          productName: competitor.productDescription,
+          brand: competitor.brand,
+          price: competitor.promotionalPrice || 0,
+          notes: ''
+        }]
+      };
+
+      res.json(formattedCompetitor);
+    } catch (error) {
+      console.error("Error fetching competitor data:", error);
+      res.status(500).json({ message: "Failed to fetch competitor data" });
     }
   });
 
