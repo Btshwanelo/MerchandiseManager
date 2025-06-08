@@ -1282,17 +1282,17 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                           <h3 className="text-sm font-medium mb-1">Submitted Date</h3>
-                          <p>{stockTake.date ? new Date(stockTake.date).toLocaleString() : 'Not available'}</p>
+                          <p>{stockTake?.date ? new Date(stockTake.date).toLocaleString() : 'Not available'}</p>
                         </div>
                         <div>
                           <h3 className="text-sm font-medium mb-1">Status</h3>
-                          <Badge variant={stockTake.status === 'completed' ? 'success' : 'default'}>
-                            {stockTake.status}
+                          <Badge variant={stockTake?.status === 'completed' ? 'success' : 'default'}>
+                            {stockTake?.status || 'pending'}
                           </Badge>
                         </div>
                       </div>
                       
-                      {stockTake.items && stockTake.items.length > 0 && (
+                      {stockTake?.items && stockTake.items.length > 0 && (
                         <div>
                           <h3 className="text-sm font-medium mb-2">Inventory Items ({stockTake.items.length})</h3>
                           <div className="border rounded-md overflow-hidden">
@@ -1307,7 +1307,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                                 </tr>
                               </thead>
                               <tbody className="bg-card divide-y divide-border">
-                                {stockTake.items.map((item: any) => (
+                                {stockTake?.items?.map((item: any) => (
                                   <tr key={item.id}>
                                     <td className="px-4 py-3 text-sm">{item.product?.name || 'Unknown Product'}</td>
                                     <td className="px-4 py-3 text-sm">{item.product?.sku || 'N/A'}</td>
@@ -1331,11 +1331,11 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       )}
                       
                       {/* Show shelf images if available */}
-                      {stockTake.pictures && stockTake.pictures.length > 0 && (
+                      {stockTake?.pictures && stockTake?.pictures.length > 0 && (
                         <div>
-                          <h3 className="text-sm font-medium mb-2">Stock Take Images ({stockTake.pictures.length})</h3>
+                          <h3 className="text-sm font-medium mb-2">Stock Take Images ({stockTake?.pictures.length})</h3>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {stockTake.pictures.map((imagePath: string, index: number) => {
+                            {stockTake?.pictures.map((imagePath: string, index: number) => {
                               // Extract filename from path
                               const filename = imagePath.split('/').pop() || imagePath;
                               const imageUrl = `/api/images/${filename}`;
@@ -1703,7 +1703,7 @@ const MerchandisingSection = ({ storeId, workItemId, navigate, setActiveStep }: 
       };
 
       if (promotionPictures.length > 0) {
-        merchandisingData.promotionPictures = promotionPictures;
+        (merchandisingData as any).promotionPictures = promotionPictures;
       }
 
       const response = await apiRequest("POST", "/api/merchandising", merchandisingData);
@@ -2037,7 +2037,7 @@ const CompetitorAnalysisSection = ({ storeId, workItemId, navigate, setActiveSte
       };
 
       if (pictures.length > 0) {
-        competitorData.pictures = pictures;
+        (competitorData as any).pictures = pictures;
       }
 
       const response = await apiRequest("POST", "/api/competitor-merchandising", competitorData);
