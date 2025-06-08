@@ -211,6 +211,7 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   const [comments, setComments] = useState("");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const [quantity, setQuantity] = useState<string>("0");
+  const [selectedLocation, setSelectedLocation] = useState<"shelf" | "back_store">("shelf");
   const [stockTakeStatus, setStockTakeStatus] = useState<string>("draft");
   const { toast } = useToast();
 
@@ -452,6 +453,18 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
   // Determine stock take type from store assignment
   const stockTakeType = storeAssignment?.stockTakeType || 'both';
   
+  // Set default location based on stock take type
+  useEffect(() => {
+    if (stockTakeType === 'shelf') {
+      setSelectedLocation('shelf');
+    } else if (stockTakeType === 'store') {
+      setSelectedLocation('back_store');
+    } else {
+      // For 'both' type, default to shelf
+      setSelectedLocation('shelf');
+    }
+  }, [stockTakeType]);
+  
   const submitStockTake = async () => {
     setLoading(true);
     try {
@@ -632,45 +645,22 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
     
     const numQuantity = parseInt(quantity) || 0;
     
-    // Determine if we're adding shelf, back store, or both based on stockTakeType
-    if (stockTakeType === 'shelf' || stockTakeType === 'both') {
-      const newStockData = [...stockData];
-      const existingIndex = newStockData.findIndex(
-        item => item.productId === selectedProduct.id && item.location === "shelf"
-      );
-      
-      if (existingIndex >= 0) {
-        newStockData[existingIndex].quantity = numQuantity;
-      } else {
-        newStockData.push({
-          productId: selectedProduct.id,
-          quantity: numQuantity,
-          location: "shelf"
-        });
-      }
-      
-      setStockData(newStockData);
+    const newStockData = [...stockData];
+    const existingIndex = newStockData.findIndex(
+      item => item.productId === selectedProduct.id && item.location === selectedLocation
+    );
+    
+    if (existingIndex >= 0) {
+      newStockData[existingIndex].quantity = numQuantity;
+    } else {
+      newStockData.push({
+        productId: selectedProduct.id,
+        quantity: numQuantity,
+        location: selectedLocation
+      });
     }
     
-    if (stockTakeType === 'store' || stockTakeType === 'both') {
-      // For back store, we only add if it's a store or both type
-      const newStockData = [...stockData];
-      const existingIndex = newStockData.findIndex(
-        item => item.productId === selectedProduct.id && item.location === "back_store"
-      );
-      
-      if (existingIndex >= 0) {
-        newStockData[existingIndex].quantity = numQuantity;
-      } else {
-        newStockData.push({
-          productId: selectedProduct.id,
-          quantity: numQuantity,
-          location: "back_store"
-        });
-      }
-      
-      setStockData(newStockData);
-    }
+    setStockData(newStockData);
     
     // Reset form
     setSelectedProduct(null);
@@ -818,6 +808,34 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                   className="h-10"
                 />
               </div>
+              
+              {/* Location selector - only show when stockTakeType is 'both' */}
+              {stockTakeType === 'both' && (
+                <div className="md:col-span-2">
+                  <label className="text-base font-medium mb-2 block">Location</label>
+                  <Select value={selectedLocation} onValueChange={(value: "shelf" | "back_store") => setSelectedLocation(value)}>
+                    <SelectTrigger className="h-10">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="shelf">Shelf</SelectItem>
+                      <SelectItem value="back_store">Back Store</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              
+              {/* Show current location when not changeable */}
+              {stockTakeType !== 'both' && (
+                <div className="md:col-span-2">
+                  <label className="text-base font-medium mb-2 block">Location</label>
+                  <div className="h-10 px-3 py-2 border rounded-md bg-muted flex items-center">
+                    <span className="capitalize text-sm">
+                      {selectedLocation.replace('_', ' ')}
+                    </span>
+                  </div>
+                </div>
+              )}
               
               <div className="md:col-span-2 flex items-end">
                 <Button 
