@@ -1333,25 +1333,35 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                       {/* Show shelf images if available */}
                       {stockTake.pictures && stockTake.pictures.length > 0 && (
                         <div>
-                          <h3 className="text-sm font-medium mb-2">Shelf Images ({stockTake.pictures.length})</h3>
+                          <h3 className="text-sm font-medium mb-2">Stock Take Images ({stockTake.pictures.length})</h3>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                            {stockTake.pictures.map((image: string, index: number) => (
-                              <div 
-                                key={index} 
-                                className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
-                                onClick={() => window.open(image, '_blank')}
-                              >
-                                <div className="w-full h-full bg-muted/50 flex items-center justify-center">
-                                  <ImageIcon className="h-8 w-8 text-muted-foreground" />
+                            {stockTake.pictures.map((imagePath: string, index: number) => {
+                              // Extract filename from path
+                              const filename = imagePath.split('/').pop() || imagePath;
+                              const imageUrl = `/api/images/${filename}`;
+                              
+                              return (
+                                <div 
+                                  key={index} 
+                                  className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                                  onClick={() => window.open(imageUrl, '_blank')}
+                                >
+                                  <img
+                                    src={imageUrl}
+                                    alt={`Stock take image ${index + 1}`}
+                                    className="w-full h-full object-cover"
+                                    onError={(e) => {
+                                      const target = e.target as HTMLImageElement;
+                                      target.style.display = 'none';
+                                      const parent = target.parentElement;
+                                      if (parent) {
+                                        parent.innerHTML = `<div class="w-full h-full bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">Image not found</div>`;
+                                      }
+                                    }}
+                                  />
                                 </div>
-                                <div className="absolute inset-0 hover:bg-black/10 transition-colors flex items-center justify-center">
-                                  <span className="sr-only">View Image</span>
-                                </div>
-                                <div className="absolute bottom-0 left-0 right-0 bg-black/60 text-white text-xs p-1 text-center">
-                                  Image {index + 1}
-                                </div>
-                              </div>
-                            ))}
+                              );
+                            })}
                           </div>
                         </div>
                       )}
@@ -1424,6 +1434,42 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             </div>
                           </div>
                         )}
+
+                        {/* Show promotion images if available */}
+                        {merchandisingData.promotionPictures && merchandisingData.promotionPictures.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Promotion Images ({merchandisingData.promotionPictures.length})</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {merchandisingData.promotionPictures.map((imagePath: string, index: number) => {
+                                // Extract filename from path
+                                const filename = imagePath.split('/').pop() || imagePath;
+                                const imageUrl = `/api/images/${filename}`;
+                                
+                                return (
+                                  <div 
+                                    key={index} 
+                                    className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt={`Promotion image ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const parent = target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = `<div class="w-full h-full bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">Image not found</div>`;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </CardContent>
@@ -1493,6 +1539,42 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                             <h3 className="text-sm font-medium mb-2">General Observations</h3>
                             <div className="border rounded-md p-4 bg-muted/30">
                               <p>{competitorData.generalNotes}</p>
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Show competitor images if available */}
+                        {competitorData.pictures && competitorData.pictures.length > 0 && (
+                          <div>
+                            <h3 className="text-sm font-medium mb-2">Competitor Images ({competitorData.pictures.length})</h3>
+                            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                              {competitorData.pictures.map((imagePath: string, index: number) => {
+                                // Extract filename from path
+                                const filename = imagePath.split('/').pop() || imagePath;
+                                const imageUrl = `/api/images/${filename}`;
+                                
+                                return (
+                                  <div 
+                                    key={index} 
+                                    className="relative aspect-square rounded-md overflow-hidden border hover:shadow-md transition-shadow cursor-pointer"
+                                    onClick={() => window.open(imageUrl, '_blank')}
+                                  >
+                                    <img
+                                      src={imageUrl}
+                                      alt={`Competitor image ${index + 1}`}
+                                      className="w-full h-full object-cover"
+                                      onError={(e) => {
+                                        const target = e.target as HTMLImageElement;
+                                        target.style.display = 'none';
+                                        const parent = target.parentElement;
+                                        if (parent) {
+                                          parent.innerHTML = `<div class="w-full h-full bg-muted/50 flex items-center justify-center text-xs text-muted-foreground">Image not found</div>`;
+                                        }
+                                      }}
+                                    />
+                                  </div>
+                                );
+                              })}
                             </div>
                           </div>
                         )}
