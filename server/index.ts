@@ -37,6 +37,10 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Production environment validation
+  const { logProductionStatus } = await import("./production-check");
+  logProductionStatus();
+
   // Test database connection at startup
   if (process.env.DATABASE_URL) {
     const { testConnection } = await import("./db");
