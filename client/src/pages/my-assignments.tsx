@@ -119,31 +119,24 @@ const MyAssignmentsPage = () => {
     select: (data: WorkItemWithRelations[]) => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const tomorrow = new Date(today);
-      tomorrow.setDate(tomorrow.getDate() + 1);
-      
-      // Date 3 days ago
-      const threeDaysAgo = new Date(today);
-      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
       
       return data.filter(item => {
-        const createdAt = new Date(item.createdAt);
         const dueDate = item.dueDate ? new Date(item.dueDate) : null;
         const isCompleted = item.status === 'completed';
         
-        // Show today's work items
-        if (createdAt >= today && createdAt < tomorrow) {
+        // Show items that:
+        // - Are not completed AND
+        // - Have a due date that is closest to today (today or future dates)
+        if (!isCompleted && dueDate && dueDate >= today) {
           return true;
         }
         
-        // Show work items from last 3 days that are:
-        // - Not completed AND
-        // - Either have no due date OR haven't passed their due date
-        if (createdAt >= threeDaysAgo && createdAt < today) {
-          return !isCompleted && (!dueDate || dueDate >= today);
-        }
-        
         return false;
+      }).sort((a, b) => {
+        // Sort by due date ascending (closest to today first)
+        const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
+        const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
+        return aDate - bDate;
       });
     }
   });
@@ -448,7 +441,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Showing today's assignments and pending items from last 3 days ({new Date().toLocaleDateString()})
+                      Showing work items with upcoming due dates (sorted by closest due date)
                     </span>
                   </div>
                 </div>
@@ -474,7 +467,7 @@ const MyAssignmentsPage = () => {
                             </TableHead>
                             <TableHead>
                               <div className="flex items-center space-x-1">
-                                <span>Assignment date</span>
+                                <span>Due date</span>
                                 <ArrowUpDown className="h-3 w-3" />
                               </div>
                             </TableHead>
@@ -504,10 +497,10 @@ const MyAssignmentsPage = () => {
                               </TableCell>
                               <TableCell>{getStatusBadge(item.status)}</TableCell>
                               <TableCell>
-                                {item.createdAt ? (
+                                {item.dueDate ? (
                                   <div className="flex items-center space-x-1">
                                     <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span>{dayjs(item.createdAt).format('DD/MM/YYYY')}</span>
+                                    <span>{dayjs(item.dueDate).format('DD/MM/YYYY')}</span>
                                   </div>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">—</span>
@@ -696,7 +689,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Today's assignments and pending items from last 3 days ({new Date().toLocaleDateString()})
+                      Showing work items with upcoming due dates (sorted by closest due date)
                     </span>
                   </div>
                 </div>
@@ -710,7 +703,7 @@ const MyAssignmentsPage = () => {
                         </div>
                         <div className="flex-1">Task</div>
                         <div className="flex items-center space-x-2">
-                          <span>Assignment date</span>
+                          <span>Due date</span>
                           <HelpCircle className="h-4 w-4" />
                         </div>
                         <div className="w-16 text-right">Priority</div>
@@ -729,8 +722,8 @@ const MyAssignmentsPage = () => {
                               {item.title}
                             </div>
                             <div>
-                              {item.createdAt ? (
-                                dayjs(item.createdAt).format('DD/MM/YYYY')
+                              {item.dueDate ? (
+                                dayjs(item.dueDate).format('DD/MM/YYYY')
                               ) : (
                                 "—"
                               )}
