@@ -654,18 +654,38 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (mimetype && extname) {
         return cb(null, true);
       }
-      cb(new Error("Only image files are allowed"));
+      const fileExtension = path.extname(file.originalname).toLowerCase();
+      cb(new Error(`File type not supported: ${fileExtension}. Only JPEG, JPG, PNG, and GIF files are allowed.`));
     }
   });
 
-  app.post("/api/competitor-merchandising", isAuthenticated, competitorUpload.fields([
-    { name: 'promotionPictures', maxCount: 10 },
-    { name: 'competitor_0_pictures', maxCount: 10 },
-    { name: 'competitor_1_pictures', maxCount: 10 },
-    { name: 'competitor_2_pictures', maxCount: 10 },
-    { name: 'competitor_3_pictures', maxCount: 10 },
-    { name: 'competitor_4_pictures', maxCount: 10 }
-  ]), async (req, res) => {
+  app.post("/api/competitor-merchandising", isAuthenticated, (req, res, next) => {
+    competitorUpload.fields([
+      { name: 'promotionPictures', maxCount: 10 },
+      { name: 'competitor_0_pictures', maxCount: 10 },
+      { name: 'competitor_1_pictures', maxCount: 10 },
+      { name: 'competitor_2_pictures', maxCount: 10 },
+      { name: 'competitor_3_pictures', maxCount: 10 },
+      { name: 'competitor_4_pictures', maxCount: 10 }
+    ])(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ 
+            message: "File size too large. Maximum file size allowed is 10MB per file." 
+          });
+        }
+        if (err.message.includes('File type not supported')) {
+          return res.status(400).json({ 
+            message: err.message 
+          });
+        }
+        return res.status(400).json({ 
+          message: "File upload error: " + err.message 
+        });
+      }
+      next();
+    });
+  }, async (req, res) => {
     try {
       console.log("Received competitor data:", req.body);
       console.log("Received files:", req.files);
@@ -2452,12 +2472,32 @@ const dbResult = await pool.query(`
       if (mimetype && extname) {
         return cb(null, true);
       }
-      cb(new Error("Only image files are allowed"));
+      const fileExtension = path.extname(file.originalname).toLowerCase();
+      cb(new Error(`File type not supported: ${fileExtension}. Only JPEG, JPG, PNG, and GIF files are allowed.`));
     }
   });
 
   // Create a new stock take
-  app.post("/api/stock-takes", stockTakeUpload.array('pictures', 10), async (req, res) => {
+  app.post("/api/stock-takes", (req, res, next) => {
+    stockTakeUpload.array('pictures', 10)(req, res, (err) => {
+      if (err) {
+        if (err.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ 
+            message: "File size too large. Maximum file size allowed is 10MB per file." 
+          });
+        }
+        if (err.message.includes('File type not supported')) {
+          return res.status(400).json({ 
+            message: err.message 
+          });
+        }
+        return res.status(400).json({ 
+          message: "File upload error: " + err.message 
+        });
+      }
+      next();
+    });
+  }, async (req, res) => {
     try {
       if (!req.user) {
         return res.status(401).json({ message: "Unauthorized - Please log in" });
