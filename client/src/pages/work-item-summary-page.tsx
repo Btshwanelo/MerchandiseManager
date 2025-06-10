@@ -3,7 +3,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { Loader2 } from "lucide-react";
-import WorkItemSummary from "@/components/work-item-summary";
+import WorkItemSummary from "@/components/fixed-work-item-summary-v2";
 import { UserRole } from "@shared/schema";
 
 // Define the types for the data we expect from the API
