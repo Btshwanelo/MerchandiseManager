@@ -37,6 +37,17 @@ app.use((req, res, next) => {
 });
 
 (async () => {
+  // Test database connection at startup
+  if (process.env.DATABASE_URL) {
+    const { testConnection } = await import("./db");
+    const dbConnected = await testConnection();
+    if (!dbConnected) {
+      console.warn("Warning: Database connection failed. Some features may not work properly.");
+    }
+  } else {
+    console.warn("Warning: DATABASE_URL not set. Database features will be unavailable.");
+  }
+
   const server = await registerRoutes(app);
 
   app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
