@@ -117,15 +117,33 @@ const MyAssignmentsPage = () => {
   } = useQuery({
     queryKey: ['/api/my-work-items'],
     select: (data: WorkItemWithRelations[]) => {
-      // Filter to only show work items for today
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       const tomorrow = new Date(today);
       tomorrow.setDate(tomorrow.getDate() + 1);
       
+      // Date 3 days ago
+      const threeDaysAgo = new Date(today);
+      threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+      
       return data.filter(item => {
         const createdAt = new Date(item.createdAt);
-        return createdAt >= today && createdAt < tomorrow;
+        const dueDate = item.dueDate ? new Date(item.dueDate) : null;
+        const isCompleted = item.status === 'completed';
+        
+        // Show today's work items
+        if (createdAt >= today && createdAt < tomorrow) {
+          return true;
+        }
+        
+        // Show work items from last 3 days that are:
+        // - Not completed AND
+        // - Either have no due date OR haven't passed their due date
+        if (createdAt >= threeDaysAgo && createdAt < today) {
+          return !isCompleted && (!dueDate || dueDate >= today);
+        }
+        
+        return false;
       });
     }
   });
@@ -430,7 +448,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Showing today's assignments ({new Date().toLocaleDateString()})
+                      Showing today's assignments and pending items from last 3 days ({new Date().toLocaleDateString()})
                     </span>
                   </div>
                 </div>
@@ -678,7 +696,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Today's assignments ({new Date().toLocaleDateString()})
+                      Today's assignments and pending items from last 3 days ({new Date().toLocaleDateString()})
                     </span>
                   </div>
                 </div>
