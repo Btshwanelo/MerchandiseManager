@@ -352,7 +352,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             diagnostic.checks.stockTake.processedPaths = picturesToProcess
               .filter(Boolean)
               .map((pic: string) => {
-                const filename = pic.includes('/') ? pic.split('/').pop() : pic;
+                const filename = pic.includes('/') ? pic.split('/').pop() || pic : pic;
                 return {
                   original: pic,
                   filename: filename,
@@ -363,7 +363,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
         }
       } catch (error) {
-        diagnostic.checks.stockTake.error = error.message;
+        diagnostic.checks.stockTake.error = String(error);
       }
 
       res.json(diagnostic);
