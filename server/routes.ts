@@ -1,6 +1,7 @@
 import express, { Express } from "express";
 import { createServer, type Server } from "http";
 import fs from "fs";
+import path from "path";
 import { storage } from "./storage";
 import { db, pool } from "./db"; // Add import for database operations
 import { setupAuth, checkRole, isAuthenticated } from "./auth";
@@ -18,7 +19,6 @@ import {
   insertShelfSchema 
 } from "@shared/schema";
 import multer from "multer";
-import path from "path";
 import { registerUserRoutes } from "./user-routes";
 import { registerAssignmentRoutes } from "./assignments-routes";
 import { userAlertsRouter } from "./routes/alerts";
@@ -277,6 +277,99 @@ export async function registerRoutes(app: Express): Promise<Server> {
         error: 'Server error',
         message: 'An internal server error occurred.'
       });
+    }
+  });
+
+  // Image diagnostic endpoint for troubleshooting
+  app.get('/api/diagnose-images/:workItemId', isAuthenticated, async (req, res) => {
+    try {
+      const workItemId = parseInt(req.params.workItemId);
+      
+      const diagnostic = {
+        workItemId,
+        timestamp: new Date().toISOString(),
+        checks: {
+          uploadsDirectory: {
+            exists: false,
+            readable: false,
+            files: [] as string[]
+          },
+          stockTake: {
+            found: false,
+            pictures: null as any,
+            picturesType: null as string | null,
+            processedPaths: [] as any[],
+            error: null as string | null
+          },
+          imageEndpoints: [] as any[]
+        }
+      };
+
+      // Check uploads directory
+      try {
+        const uploadsDir = path.join(process.cwd(), 'uploads');
+        diagnostic.checks.uploadsDirectory.exists = fs.existsSync(uploadsDir);
+        if (diagnostic.checks.uploadsDirectory.exists) {
+          diagnostic.checks.uploadsDirectory.readable = true;
+          const files = fs.readdirSync(uploadsDir);
+          diagnostic.checks.uploadsDirectory.files = files.slice(0, 20); // Limit to first 20 files
+        }
+      } catch (error) {
+        diagnostic.checks.uploadsDirectory.readable = false;
+      }
+
+      // Check stock take data for this work item
+      try {
+        const stockTakeQuery = `
+          SELECT st.pictures, st.status, st.date
+          FROM stock_takes st
+          WHERE st.work_item_id = $1
+          ORDER BY st.date DESC
+          LIMIT 1
+        `;
+        const stockTakeResult = await pool.query(stockTakeQuery, [workItemId]);
+        
+        if (stockTakeResult.rows.length > 0) {
+          const stockTake = stockTakeResult.rows[0];
+          diagnostic.checks.stockTake.found = true;
+          diagnostic.checks.stockTake.pictures = stockTake.pictures;
+          diagnostic.checks.stockTake.picturesType = typeof stockTake.pictures;
+          
+          // Process pictures to see what paths would be generated
+          if (stockTake.pictures) {
+            let picturesToProcess = [];
+            if (typeof stockTake.pictures === 'string') {
+              try {
+                const parsed = JSON.parse(stockTake.pictures);
+                picturesToProcess = Array.isArray(parsed) ? parsed : [stockTake.pictures];
+              } catch (e) {
+                picturesToProcess = [stockTake.pictures];
+              }
+            } else if (Array.isArray(stockTake.pictures)) {
+              picturesToProcess = stockTake.pictures;
+            }
+            
+            diagnostic.checks.stockTake.processedPaths = picturesToProcess
+              .filter(Boolean)
+              .map((pic: string) => {
+                const filename = pic.includes('/') ? pic.split('/').pop() : pic;
+                return {
+                  original: pic,
+                  filename: filename,
+                  apiPath: `/api/images/${filename}`,
+                  fileExists: fs.existsSync(path.join(process.cwd(), 'uploads', filename))
+                };
+              });
+          }
+        }
+      } catch (error) {
+        diagnostic.checks.stockTake.error = error.message;
+      }
+
+      res.json(diagnostic);
+    } catch (error) {
+      console.error('Error in image diagnostics:', error);
+      res.status(500).json({ error: 'Failed to run diagnostics' });
     }
   });
 
