@@ -116,7 +116,18 @@ const MyAssignmentsPage = () => {
     error: workItemsError
   } = useQuery({
     queryKey: ['/api/my-work-items'],
-    select: (data: WorkItemWithRelations[]) => data
+    select: (data: WorkItemWithRelations[]) => {
+      // Filter to only show work items for today
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const tomorrow = new Date(today);
+      tomorrow.setDate(tomorrow.getDate() + 1);
+      
+      return data.filter(item => {
+        const createdAt = new Date(item.createdAt);
+        return createdAt >= today && createdAt < tomorrow;
+      });
+    }
   });
   
   // Work item status update mutation
@@ -419,7 +430,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Showing today's tasks and overdue items ({new Date().toLocaleDateString()})
+                      Showing today's assignments ({new Date().toLocaleDateString()})
                     </span>
                   </div>
                 </div>
@@ -445,7 +456,7 @@ const MyAssignmentsPage = () => {
                             </TableHead>
                             <TableHead>
                               <div className="flex items-center space-x-1">
-                                <span>Due date</span>
+                                <span>Assignment date</span>
                                 <ArrowUpDown className="h-3 w-3" />
                               </div>
                             </TableHead>
@@ -475,10 +486,10 @@ const MyAssignmentsPage = () => {
                               </TableCell>
                               <TableCell>{getStatusBadge(item.status)}</TableCell>
                               <TableCell>
-                                {item.dueDate ? (
+                                {item.createdAt ? (
                                   <div className="flex items-center space-x-1">
                                     <CalendarDays className="h-3.5 w-3.5 text-muted-foreground" />
-                                    <span>{dayjs(item.dueDate).format('DD/MM/YYYY')}</span>
+                                    <span>{dayjs(item.createdAt).format('DD/MM/YYYY')}</span>
                                   </div>
                                 ) : (
                                   <span className="text-muted-foreground text-sm">—</span>
@@ -667,7 +678,7 @@ const MyAssignmentsPage = () => {
                   <div className="flex items-center space-x-2 text-blue-800">
                     <CalendarDays className="h-4 w-4" />
                     <span className="text-sm font-medium">
-                      Today's tasks ({new Date().toLocaleDateString()})
+                      Today's assignments ({new Date().toLocaleDateString()})
                     </span>
                   </div>
                 </div>
@@ -681,7 +692,7 @@ const MyAssignmentsPage = () => {
                         </div>
                         <div className="flex-1">Task</div>
                         <div className="flex items-center space-x-2">
-                          <span>Due date</span>
+                          <span>Assignment date</span>
                           <HelpCircle className="h-4 w-4" />
                         </div>
                         <div className="w-16 text-right">Priority</div>
@@ -700,8 +711,8 @@ const MyAssignmentsPage = () => {
                               {item.title}
                             </div>
                             <div>
-                              {item.dueDate ? (
-                                dayjs(item.dueDate).format('DD/MM/YYYY')
+                              {item.createdAt ? (
+                                dayjs(item.createdAt).format('DD/MM/YYYY')
                               ) : (
                                 "—"
                               )}
