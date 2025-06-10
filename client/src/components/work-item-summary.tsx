@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { ChevronLeft, Clock, File, FileText, Info, ShoppingCart, Tag, Store as StoreIcon, User } from "lucide-react";
 import { WorkItemStatus } from "@shared/schema";
 import { Link } from "wouter";
+import { getImageUrl, processImagePaths, getPlaceholderImageUrl } from "@/lib/image-utils";
 
 interface WorkItemSummaryProps {
   workItem: any;
