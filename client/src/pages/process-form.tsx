@@ -1354,9 +1354,9 @@ const StockTakeSection = ({ storeId, workItemId, navigate, setActiveStep, setLow
                           <h3 className="text-sm font-medium mb-2">Stock Take Images ({stockTake?.pictures.length})</h3>
                           <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                             {stockTake?.pictures.map((imagePath: string, index: number) => {
-                              // Extract filename from path
-                              const filename = imagePath.split('/').pop() || imagePath;
-                              const imageUrl = `/api/images/${filename}`;
+                              // Extract filename from path using browser-safe method
+                              const filename = imagePath.includes('/') ? imagePath.split('/').pop() || imagePath : imagePath;
+                              const imageUrl = `/api/images/${encodeURIComponent(filename)}`;
                               
                               return (
                                 <div 

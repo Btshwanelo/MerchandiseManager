@@ -26,8 +26,8 @@ export function getImageUrl(imagePath: string): string {
     filename = imagePath;
   }
 
-  // Use the API endpoint for serving images
-  return `/api/images/${filename}`;
+  // Use the API endpoint for serving images with proper encoding
+  return `/api/images/${encodeURIComponent(filename)}`;
 }
 
 /**
