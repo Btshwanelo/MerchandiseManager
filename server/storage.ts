@@ -1,6 +1,6 @@
 import {
   users, stores, products, shelves, inventory, activities, alerts, stockTakes, stockTakeItems, storeAssignments, workItems, userAlerts,
-  orders, orderItems, competitorMerchandising, merchandisingPromotions, merchandisingItems,
+  orders, orderItems, competitorMerchandising, merchandisingPromotions, merchandisingItems, base64Images,
   type User, type InsertUser, type Store, type InsertStore,
   type Product, type InsertProduct, type Shelf, type InsertShelf,
   type Inventory, type InsertInventory, type Activity, type InsertActivity,
@@ -11,7 +11,8 @@ import {
   type Order, type InsertOrder, type OrderItem, type InsertOrderItem,
   type CompetitorMerchandising, type InsertCompetitorMerchandising,
   type MerchandisingPromotion, type InsertMerchandisingPromotion,
-  type MerchandisingItem, type InsertMerchandisingItem
+  type MerchandisingItem, type InsertMerchandisingItem,
+  type Base64Image, type InsertBase64Image
 } from "@shared/schema";
 import session from "express-session";
 import createMemoryStore from "memorystore";
@@ -204,6 +205,13 @@ export interface IStorage {
   getOrderReportsData(timeframe: string): Promise<any>;
   getCompetitorReportsData(timeframe: string): Promise<any>;
   getActivityReportsData(timeframe: string): Promise<any>;
+  
+  // Base64 Image methods
+  createBase64Image(image: InsertBase64Image): Promise<Base64Image>;
+  getBase64Image(id: number): Promise<Base64Image | undefined>;
+  getBase64ImageByFilename(filename: string): Promise<Base64Image | undefined>;
+  getAllBase64Images(): Promise<Base64Image[]>;
+  deleteBase64Image(id: number): Promise<boolean>;
   
   // Session store for authentication
   sessionStore: any; // Express session store

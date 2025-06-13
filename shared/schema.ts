@@ -398,6 +398,25 @@ export type StoreAssignment = typeof storeAssignments.$inferSelect;
 export type InsertStoreAssignment = z.infer<typeof insertStoreAssignmentSchema>;
 
 export type WorkItem = typeof workItems.$inferSelect;
+
+// Base64 Images table for storing images as base64 strings
+export const base64Images = pgTable("base64_images", {
+  id: serial("id").primaryKey(),
+  filename: text("filename").notNull(),
+  mimeType: text("mime_type").notNull(),
+  base64Data: text("base64_data").notNull(),
+  size: integer("size").notNull(), // File size in bytes
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: integer("created_by").references(() => users.id),
+});
+
+export const insertBase64ImageSchema = createInsertSchema(base64Images).omit({
+  id: true,
+  createdAt: true,
+});
+
+export type Base64Image = typeof base64Images.$inferSelect;
+export type InsertBase64Image = z.infer<typeof insertBase64ImageSchema>;
 export type InsertWorkItem = z.infer<typeof insertWorkItemSchema>;
 
 export type UserAlert = typeof userAlerts.$inferSelect;
