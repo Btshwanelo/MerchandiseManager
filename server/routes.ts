@@ -3192,6 +3192,140 @@ const dbResult = await pool.query(`
     }
   });
 
+  // Base64 Image Conversion and Storage Endpoints
+  
+  // Convert existing images to base64 and store in database
+  app.post("/api/images/migrate-to-base64", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const { migrateExistingImagesToBase64 } = await import('./image-base64');
+      
+      console.log("Starting migration of existing images to base64 format");
+      const result = await migrateExistingImagesToBase64('./uploads');
+      
+      res.json({
+        success: true,
+        message: `Migration completed: ${result.converted} images converted`,
+        converted: result.converted,
+        errors: result.errors
+      });
+    } catch (error) {
+      console.error("Migration error:", error);
+      res.status(500).json({ 
+        success: false,
+        message: "Failed to migrate images to base64",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // Get base64 image by ID
+  app.get("/api/images/base64/:id", isAuthenticated, async (req, res) => {
+    try {
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid image ID" });
+      }
+
+      const image = await storage.getBase64Image(id);
+      if (!image) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      // Return as data URI for direct use in frontend
+      const { createDataUri } = await import('./image-base64');
+      const dataUri = createDataUri(image.base64Data, image.mimeType);
+      
+      res.json({
+        id: image.id,
+        filename: image.filename,
+        mimeType: image.mimeType,
+        size: image.size,
+        dataUri,
+        createdAt: image.createdAt
+      });
+    } catch (error) {
+      console.error("Error retrieving base64 image:", error);
+      res.status(500).json({ message: "Failed to retrieve image" });
+    }
+  });
+
+  // Get base64 image by filename
+  app.get("/api/images/base64/filename/:filename", isAuthenticated, async (req, res) => {
+    try {
+      const filename = req.params.filename;
+      
+      const image = await storage.getBase64ImageByFilename(filename);
+      if (!image) {
+        return res.status(404).json({ message: "Image not found" });
+      }
+
+      // Return as data URI for direct use in frontend
+      const { createDataUri } = await import('./image-base64');
+      const dataUri = createDataUri(image.base64Data, image.mimeType);
+      
+      res.json({
+        id: image.id,
+        filename: image.filename,
+        mimeType: image.mimeType,
+        size: image.size,
+        dataUri,
+        createdAt: image.createdAt
+      });
+    } catch (error) {
+      console.error("Error retrieving base64 image by filename:", error);
+      res.status(500).json({ message: "Failed to retrieve image" });
+    }
+  });
+
+  // Convert single image file to base64 and store
+  app.post("/api/images/convert-to-base64", checkRole(UserRole.ADMIN), upload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ message: "No image file provided" });
+      }
+
+      const { storeImageAsBase64 } = await import('./image-base64');
+      const imageId = await storeImageAsBase64(req.file.path, req.user!.id);
+      
+      // Clean up the temporary file
+      fs.unlinkSync(req.file.path);
+      
+      res.json({
+        success: true,
+        message: "Image converted and stored successfully",
+        imageId
+      });
+    } catch (error) {
+      console.error("Error converting image to base64:", error);
+      res.status(500).json({ 
+        message: "Failed to convert image to base64",
+        error: error instanceof Error ? error.message : String(error)
+      });
+    }
+  });
+
+  // List all base64 images
+  app.get("/api/images/base64", checkRole(UserRole.ADMIN), async (req, res) => {
+    try {
+      const images = await storage.getAllBase64Images();
+      
+      res.json({
+        success: true,
+        images: images.map(img => ({
+          id: img.id,
+          filename: img.filename,
+          mimeType: img.mimeType,
+          size: img.size,
+          createdAt: img.createdAt,
+          createdBy: img.createdBy
+        }))
+      });
+    } catch (error) {
+      console.error("Error listing base64 images:", error);
+      res.status(500).json({ message: "Failed to list images" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

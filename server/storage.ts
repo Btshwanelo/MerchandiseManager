@@ -1533,6 +1533,27 @@ export class MemStorage implements IStorage {
       return orderData;
     }
   }
+
+  // Base64 Image methods for MemStorage
+  async createBase64Image(image: InsertBase64Image): Promise<Base64Image> {
+    throw new Error("Base64 images not supported in memory storage");
+  }
+
+  async getBase64Image(id: number): Promise<Base64Image | undefined> {
+    throw new Error("Base64 images not supported in memory storage");
+  }
+
+  async getBase64ImageByFilename(filename: string): Promise<Base64Image | undefined> {
+    throw new Error("Base64 images not supported in memory storage");
+  }
+
+  async getAllBase64Images(): Promise<Base64Image[]> {
+    throw new Error("Base64 images not supported in memory storage");
+  }
+
+  async deleteBase64Image(id: number): Promise<boolean> {
+    throw new Error("Base64 images not supported in memory storage");
+  }
 }
 
 // Database storage implementation
@@ -4085,6 +4106,31 @@ export class DatabaseStorage implements IStorage {
       console.error("Error getting timeline data:", error);
       return []; // Return empty array on error
     }
+  }
+
+  // Base64 Image methods implementation
+  async createBase64Image(image: InsertBase64Image): Promise<Base64Image> {
+    const [result] = await db.insert(base64Images).values(image).returning();
+    return result;
+  }
+
+  async getBase64Image(id: number): Promise<Base64Image | undefined> {
+    const [image] = await db.select().from(base64Images).where(eq(base64Images.id, id));
+    return image;
+  }
+
+  async getBase64ImageByFilename(filename: string): Promise<Base64Image | undefined> {
+    const [image] = await db.select().from(base64Images).where(eq(base64Images.filename, filename));
+    return image;
+  }
+
+  async getAllBase64Images(): Promise<Base64Image[]> {
+    return await db.select().from(base64Images);
+  }
+
+  async deleteBase64Image(id: number): Promise<boolean> {
+    const result = await db.delete(base64Images).where(eq(base64Images.id, id));
+    return (result as any).rowCount > 0;
   }
 }
 
