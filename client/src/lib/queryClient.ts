@@ -1,5 +1,7 @@
 import { QueryClient, QueryFunction } from "@tanstack/react-query";
 
+const BASE_URL = 'http://127.0.0.1:5000';
+
 async function throwIfResNotOk(res: Response) {
   if (!res.ok) {
     let errorMessage = res.statusText;
@@ -109,7 +111,7 @@ export async function apiRequest(
     }
   }
   
-  const res = await fetch(url, {
+  const res = await fetch(`${BASE_URL}${url}`, {
     method,
     headers,
     body,
@@ -167,7 +169,7 @@ export const getQueryFn: <T>(options: QueryFnOptions) => QueryFunction<T> =
   async ({ queryKey }) => {
     try {
       // Make the request with credentials
-      const res = await fetch(queryKey[0] as string, {
+      const res = await fetch(`${BASE_URL}${queryKey[0] as string}`, {
         credentials: "include",
         cache: fromCache ? "default" : "no-cache",
       });

@@ -1,8 +1,14 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
+import 'dotenv/config';
+import cors from 'cors';
 
 const app = express();
+
+// Configure CORS
+app.use(cors())
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
@@ -77,8 +83,8 @@ app.use((req, res, next) => {
   const port = 5000;
   server.listen({
     port,
-    host: "0.0.0.0",
-    reusePort: true,
+    host: "127.0.0.1",
+    reusePort: false,
   }, () => {
     log(`serving on port ${port}`);
   });

@@ -7,17 +7,18 @@ import * as schema from "@shared/schema";
 // Configure Neon serverless with websockets for Replit environment
 neonConfig.webSocketConstructor = ws;
 
-if (!process.env.DATABASE_URL) {
-  console.error(
-    "DATABASE_URL must be set. Did you forget to provision a database?"
-  );
-  // In production, we want to gracefully handle this rather than crash
-  process.exit(1);
-}
+// if (!process.env.DATABASE_URL) {
+//   console.error(
+//     "DATABASE_URL must be set. Did you forget to provision a database?"
+//   );
+//   // In production, we want to gracefully handle this rather than crash
+//   process.exit(1);
+// }
 
 // Create a connection pool with error handling
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
+  connectionString: 'postgresql://neondb_owner:npg_a1HrG3WiClkg@ep-black-resonance-a51zoepm.us-east-2.aws.neon.tech/neondb?sslmode=require',
+  // connectionString: process.env.DATABASE_URL,
   // Add connection error handling
   connectionTimeoutMillis: 30000,
   idleTimeoutMillis: 30000,

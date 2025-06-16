@@ -992,104 +992,23 @@ const dbResult = await pool.query(`
   // Orders Information
   app.post("/api/orders", isAuthenticated, upload.any(), async (req, res) => {
     try {
-      console.log("Received order data:", req.body);
-      console.log("Received files:", req.files);
-
-      const orderSchema = z.object({
-        storeId: z.number(),
-        workItemId: z.number(),
-        products: z.array(z.object({
-          productId: z.number(),
-          quantity: z.number(),
-        })).optional(),
-        notes: z.string(),
-        priority: z.enum(["low", "medium", "high"]).optional().default("medium"),
-      });
-
-      const validatedData = orderSchema.parse(req.body);
-      console.log("Validated order data:", validatedData);
-
       // Process uploaded files
       const uploadedFiles = req.files as Express.Multer.File[];
-      const picturePaths = uploadedFiles?.map(file => file.path) || [];
-      console.log("Picture paths to save:", picturePaths);
-
-      // Use direct SQL to ensure we're saving to the database
-      let orderResult;
-      try {
-        const orderQuery = `
-          INSERT INTO orders 
-          (store_id, user_id, status, notes, pictures, order_date, work_item_id) 
-          VALUES ($1, $2, $3, $4, $5, $6, $7)
-          RETURNING id, store_id as "storeId", user_id as "userId", status, notes, pictures, order_date as "orderDate", work_item_id as "workItemId"
-        `;
-
-        orderResult = await pool.query(orderQuery, [
-          validatedData.storeId,
-          req.user!.id,
-          "pending",
-          validatedData.notes || null,
-          picturePaths, // Save the actual file paths
-          new Date(),
-          validatedData.workItemId
-        ]);
-
-        if (!orderResult || orderResult.rows.length === 0) {
-          throw new Error("Failed to create order record");
+      const pictureIds = [];
+      if (uploadedFiles && uploadedFiles.length > 0) {
+        const { storeImageAsBase64 } = await import('./image-base64');
+        for (const file of uploadedFiles) {
+          const imageId = await storeImageAsBase64(file.path, req.user!.id);
+          pictureIds.push(imageId.toString());
+          // Delete the file from disk
+          fs.unlinkSync(file.path);
         }
-
-        const order = orderResult.rows[0];
-        const orderItems = [];
-
-        // Save order items if present
-        if (validatedData.products && validatedData.products.length > 0) {
-          console.log("Processing order items:", validatedData.products);
-          for (const product of validatedData.products) {
-            const itemResult = await pool.query(`
-              INSERT INTO order_items 
-              (order_id, product_id, quantity, notes)
-              VALUES ($1, $2, $3, $4)
-              RETURNING id, order_id as "orderId", product_id as "productId", quantity, notes
-            `, [
-              order.id,
-              product.productId,
-              product.quantity,
-              product.notes || null
-            ]);
-            if (itemResult.rows[0]) {
-              orderItems.push(itemResult.rows[0]);
-              console.log("Added order item:", itemResult.rows[0]);
-            }
-          }
-        } else {
-          console.log("No products provided in order data");
-        }
-
-        // Add items to the order object
-        order.items = orderItems;
-        console.log("Created order in database:", order);
-              
-        // Don't mark work item as completed yet - only complete when entire process form is submitted
-
-        return res.status(201).json(order);
-      } catch (dbError) {
-        console.error("Database error creating order:", dbError);
-
-        // Fall back to the storage method if direct SQL fails
-        console.log("Falling back to storage method");
-        const result = await storage.createOrder({
-          ...validatedData,
-          userId: req.user!.id,
-          status: "pending",
-          date: new Date()
-        });
-
-        return res.status(201).json(result);
       }
+      // Create the order with the picture IDs
+      const orderData = { ...req.body, pictures: pictureIds };
+      const newOrder = await storage.createOrder(orderData);
+      res.status(201).json(newOrder);
     } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid order data", errors: error.errors });
-      }
       console.error("Error creating order:", error);
       res.status(500).json({ message: "Failed to create order" });
     }
@@ -2132,27 +2051,28 @@ const dbResult = await pool.query(`
   // Stock Takes API
 
   // Generic file upload endpoint
-  app.post("/api/upload", isAuthenticated, upload.single('file'), (req, res) => {
+  app.post("/api/upload", isAuthenticated, upload.single('file'), async (req, res) => {
     try {
       if (!req.file) {
         return res.status(400).json({ error: "No file uploaded" });
       }
-
-      // Return the file path relative to the uploads directory
-      const filePath = req.file.filename;
-      console.log("File uploaded successfully:", filePath);
-
-      // Return the file path for the client to use
-      return res.status(200).json({ 
-        filePath,
+      const filePath = req.file.path;
+      // Store the file as base64 in the database
+      const { storeImageAsBase64 } = await import('./image-base64');
+      const imageId = await storeImageAsBase64(filePath, req.user!.id);
+      // Delete the file from disk
+      fs.unlinkSync(filePath);
+      console.log("File uploaded and stored as base64 with ID:", imageId);
+      res.json({
         success: true,
-        message: "File uploaded successfully" 
+        message: "File uploaded and stored as base64 successfully",
+        imageId
       });
     } catch (error) {
       console.error("Upload error:", error);
-      return res.status(500).json({ 
+      res.status(500).json({
         error: "File upload failed",
-        details: error instanceof Error ? error.message : "Unknown error"
+        message: error instanceof Error ? error.message : String(error)
       });
     }
   });
@@ -2433,108 +2353,31 @@ const dbResult = await pool.query(`
   // Update a stock take (with required audit comment for admins/managers)
   app.put("/api/stock-takes/:id", upload.array('pictures', 5), async (req, res) => {
     try {
-      // Authentication check
-      if (!req.user) {
-        return res.status(401).json({ message: "Unauthorized - Please log in" });
+      const id = parseInt(req.params.id);
+      if (isNaN(id)) {
+        return res.status(400).json({ message: "Invalid stock take ID" });
       }
-
-      const stockTakeId = parseInt(req.params.id);
-      const user = req.user!;
-
-      // Get the existing stock take
-      const existingStockTake = await storage.getStockTake(stockTakeId);
-      if (!existingStockTake) {
+      const stockTake = await storage.getStockTakeById(id);
+      if (!stockTake) {
         return res.status(404).json({ message: "Stock take not found" });
       }
-
-      // Check if user has permission to edit this stock take
-      if (user.role !== UserRole.ADMIN && user.role !== UserRole.MANAGER && existingStockTake.userId !== user.id) {
-        return res.status(403).json({ message: "Not authorized to edit this stock take" });
-      }
-
-      // If an admin or manager is editing a stock take that isn't theirs, require an audit comment
-      const isAdminManagerEditingOthersWork = 
-        (user.role === UserRole.ADMIN || user.role === UserRole.MANAGER) && 
-        existingStockTake.userId !== user.id;
-
-      // Get the audit comment from the request
-      const auditComment = req.body.auditComment || '';
-
-      // If admin/manager is editing someone else's stock take, enforce audit comment requirement
-      if (isAdminManagerEditingOthersWork && !auditComment.trim()) {
-        return res.status(400).json({ 
-          message: "Audit comment is required when editing a stock take created by another user" 
-        });
-      }
-
-      // Parse the updated data
-      const comment = req.body.comment || '';
-      const status = req.body.status || existingStockTake.status;
-
-      // Parse items from the form data if provided
-      let items: InsertStockTakeItem[] = [];
-      if (req.body.items) {
-        try {
-          const parsedItems = JSON.parse(req.body.items);
-          if (Array.isArray(parsedItems)) {
-            items = parsedItems.map(item => ({
-              stockTakeId,
-              productId: item.productId,
-              quantity: item.quantity,
-              location: item.location
-            }));
-          }
-        } catch (e) {
-          return res.status(400).json({ message: "Invalid items data format" });
+      // Process pictures from multer file uploads
+      let allPictures = [];
+      if (req.files && req.files.length > 0) {
+        console.log("Processing multer uploaded files:", (req.files as Express.Multer.File[]).map(f => f.path));
+        const { storeImageAsBase64 } = await import('./image-base64');
+        for (const file of req.files as Express.Multer.File[]) {
+          const imageId = await storeImageAsBase64(file.path, req.user!.id);
+          allPictures.push(imageId.toString());
+          // Delete the file from disk
+          fs.unlinkSync(file.path);
         }
       }
-
-      // Prepare the update data
-      const updateData: Partial<StockTake> = {
-        comment,
-        status
-      };
-
-      // Get file paths if any were uploaded
-      const files = (req.files as Express.Multer.File[]) || [];
-      if (files.length > 0) {
-        // Handle the new pictures
-        const pictureUrls = files.map(file => file.path);
-
-        // Combine with any existing pictures if we want to keep them
-        if (existingStockTake.pictures) {
-          updateData.pictures = [...existingStockTake.pictures, ...pictureUrls];
-        } else {
-          updateData.pictures = pictureUrls;
-        }
-      }
-
-      // Update the stock take record
-      const updatedStockTake = await storage.updateStockTake(
-        stockTakeId, 
-        updateData, 
-        user.id, 
-        auditComment
-      );
-
-      // Update items if provided
-      if (items.length > 0) {
-        await storage.updateStockTakeItems(stockTakeId, items);
-      }
-
-      // Return the updated stock take with its items
-      const result = await storage.getStockTakeWithItems(stockTakeId);
-
-      res.json({
-        success: true,
-        message: "Stock take updated successfully",
-        stockTake: result
-      });
+      // Update the stock take with the new pictures
+      const updatedStockTake = await storage.updateStockTake(id, { pictures: allPictures });
+      res.json(updatedStockTake);
     } catch (error) {
       console.error("Error updating stock take:", error);
-      if (error instanceof Error) {
-        return res.status(500).json({ message: error.message });
-      }
       res.status(500).json({ message: "Failed to update stock take" });
     }
   });
