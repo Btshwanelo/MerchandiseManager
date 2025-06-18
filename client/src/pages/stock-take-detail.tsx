@@ -120,13 +120,13 @@ const StockTakeDetailPage = () => {
   // Get stock take from window history state if available
   const passedStockTake = window.history.state?.stockTake;
 
-  console.log("Tshwanelo V1")
+  console.log("Tshwanelo V1");
 
   // Log for debugging
   console.log("History state:", window.history.state);
   console.log("Passed stock take data:", passedStockTake);
 
-
+  console.log("Tshwanelo V2 - About to create useQuery with ID:", id);
 
   // Fetch the stock take with its items if not passed through state
   const { data: fetchedStockTake, isLoading: isLoadingStockTake } =
@@ -145,17 +145,16 @@ const StockTakeDetailPage = () => {
       refetchOnMount: true, // Always refetch on mount
     });
 
-  console.log("Stock take detail page - Query state:", {
+  console.log("Tshwanelo V3 - useQuery created, state:", {
     id,
     enabled: !!id,
     isLoadingStockTake,
     fetchedStockTake,
-    passedStockTake,
   });
-
 
   // Force refetch on mount
   useEffect(() => {
+    console.log("Tshwanelo V4 - useEffect called with ID:", id);
     console.log("Stock take detail page - Component mounted, ID:", id);
     if (id) {
       console.log(
