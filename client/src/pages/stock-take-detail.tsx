@@ -128,6 +128,10 @@ const StockTakeDetailPage = () => {
   const { data: fetchedStockTake, isLoading: isLoadingStockTake } =
     useQuery<StockTake>({
       queryKey: ["/api/stock-takes", id],
+      queryFn: async () => {
+        const response = await apiRequest("GET", `/api/stock-takes/${id}`);
+        return response.json();
+      },
       enabled: !!id && !passedStockTake,
     });
 
