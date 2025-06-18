@@ -117,23 +117,13 @@ const MyAssignmentsPage = () => {
   } = useQuery({
     queryKey: ['/api/my-work-items'],
     select: (data: WorkItemWithRelations[]) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      return data.filter(item => {
-        const dueDate = item.dueDate ? new Date(item.dueDate) : null;
-        const isCompleted = item.status === 'completed';
+      // Return all work items and let the component handle filtering
+      return data.sort((a, b) => {
+        // Sort completed items last, then by due date
+        if (a.status === 'completed' && b.status !== 'completed') return 1;
+        if (a.status !== 'completed' && b.status === 'completed') return -1;
         
-        // Show items that:
-        // - Are not completed AND
-        // - Have a due date that is closest to today (today or future dates)
-        if (!isCompleted && dueDate && dueDate >= today) {
-          return true;
-        }
-        
-        return false;
-      }).sort((a, b) => {
-        // Sort by due date ascending (closest to today first)
+        // For items with same completion status, sort by due date
         const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return aDate - bDate;
