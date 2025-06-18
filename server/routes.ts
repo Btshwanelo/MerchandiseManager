@@ -4081,6 +4081,90 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Test endpoint to check stock take data
+  app.get("/api/test/stock-take/:id", async (req, res) => {
+    try {
+      const stockTakeId = parseInt(req.params.id);
+      console.log(`TEST: Fetching stock take with ID: ${stockTakeId}`);
+
+      const stockTake = await storage.getStockTakeWithItems(stockTakeId);
+
+      console.log(`TEST: Stock take result:`, {
+        found: !!stockTake,
+        id: stockTake?.id,
+        pictures: stockTake?.pictures,
+        picturesType: typeof stockTake?.pictures,
+        isArray: Array.isArray(stockTake?.pictures),
+        picturesLength: stockTake?.pictures?.length,
+      });
+
+      res.json({
+        success: true,
+        stockTake,
+        debug: {
+          found: !!stockTake,
+          id: stockTake?.id,
+          pictures: stockTake?.pictures,
+          picturesType: typeof stockTake?.pictures,
+          isArray: Array.isArray(stockTake?.pictures),
+          picturesLength: stockTake?.pictures?.length,
+        },
+      });
+    } catch (error) {
+      console.error("TEST: Error in test endpoint:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
+  // Raw database query to see stock take data
+  app.get("/api/debug/stock-take/:id", async (req, res) => {
+    try {
+      const stockTakeId = parseInt(req.params.id);
+      console.log(`DEBUG: Raw query for stock take ID: ${stockTakeId}`);
+
+      // Direct database query
+      const result = await pool.query(
+        "SELECT * FROM stock_takes WHERE id = $1",
+        [stockTakeId]
+      );
+
+      const stockTake = result.rows[0];
+
+      console.log(`DEBUG: Raw database result:`, {
+        found: !!stockTake,
+        id: stockTake?.id,
+        pictures: stockTake?.pictures,
+        picturesType: typeof stockTake?.pictures,
+        isArray: Array.isArray(stockTake?.pictures),
+        picturesLength: stockTake?.pictures?.length,
+        rawPictures: stockTake?.pictures,
+      });
+
+      res.json({
+        success: true,
+        rawData: stockTake,
+        debug: {
+          found: !!stockTake,
+          id: stockTake?.id,
+          pictures: stockTake?.pictures,
+          picturesType: typeof stockTake?.pictures,
+          isArray: Array.isArray(stockTake?.pictures),
+          picturesLength: stockTake?.pictures?.length,
+          rawPictures: stockTake?.pictures,
+        },
+      });
+    } catch (error) {
+      console.error("DEBUG: Error in raw query:", error);
+      res.status(500).json({
+        success: false,
+        error: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
