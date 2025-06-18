@@ -105,6 +105,7 @@ const editStockTakeItemSchema = z.object({
 type EditStockTakeItemFormValues = z.infer<typeof editStockTakeItemSchema>;
 
 const StockTakeDetailPage = () => {
+  console.log("Tshwanelo V1");
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
