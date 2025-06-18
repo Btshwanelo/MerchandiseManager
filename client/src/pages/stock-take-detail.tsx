@@ -120,20 +120,51 @@ const StockTakeDetailPage = () => {
   // Get stock take from window history state if available
   const passedStockTake = window.history.state?.stockTake;
 
+  console.log("Tshwanelo V1")
+
   // Log for debugging
   console.log("History state:", window.history.state);
   console.log("Passed stock take data:", passedStockTake);
 
+
+
   // Fetch the stock take with its items if not passed through state
   const { data: fetchedStockTake, isLoading: isLoadingStockTake } =
     useQuery<StockTake>({
-      queryKey: ["/api/stock-takes", id],
+      queryKey: ["stock-take-detail", id, "fresh"],
       queryFn: async () => {
+        console.log("Stock take detail page - API call being made for ID:", id);
         const response = await apiRequest("GET", `/api/stock-takes/${id}`);
-        return response.json();
+        const data = await response.json();
+        console.log("Stock take detail page - API response:", data);
+        return data;
       },
       enabled: !!id, // Always fetch, even if we have passed data
+      staleTime: 0, // Always consider data stale
+      gcTime: 0, // Don't cache
+      refetchOnMount: true, // Always refetch on mount
     });
+
+  console.log("Stock take detail page - Query state:", {
+    id,
+    enabled: !!id,
+    isLoadingStockTake,
+    fetchedStockTake,
+    passedStockTake,
+  });
+
+
+  // Force refetch on mount
+  useEffect(() => {
+    console.log("Stock take detail page - Component mounted, ID:", id);
+    if (id) {
+      console.log(
+        "Stock take detail page - Triggering manual refetch for ID:",
+        id
+      );
+      queryClient.invalidateQueries({ queryKey: ["stock-take-detail", id] });
+    }
+  }, [id, queryClient]);
 
   // Use fetched data if available, otherwise fall back to passed data
   const stockTake = fetchedStockTake || passedStockTake;
@@ -192,7 +223,7 @@ const StockTakeDetailPage = () => {
         title: "Item updated",
         description: "The stock take item has been updated successfully.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/stock-takes", id] });
+      queryClient.invalidateQueries({ queryKey: ["stock-take-detail", id] });
       setIsEditDialogOpen(false);
       setCurrentItemBeingEdited(null);
       form.reset();
