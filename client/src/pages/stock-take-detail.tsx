@@ -135,6 +135,14 @@ const StockTakeDetailPage = () => {
   const stockTake = passedStockTake || fetchedStockTake;
   const isLoading = !passedStockTake && isLoadingStockTake;
 
+  // Debug logging for stock take data
+  console.log("Stock take detail page - stock take data:", {
+    stockTake,
+    pictures: stockTake?.pictures,
+    picturesType: typeof stockTake?.pictures,
+    isArray: Array.isArray(stockTake?.pictures),
+  });
+
   // Form setup
   const form = useForm<EditStockTakeItemFormValues>({
     resolver: zodResolver(editStockTakeItemSchema),
@@ -549,6 +557,14 @@ const StockTakeDetailPage = () => {
                     // Convert file ID to URL
                     const imageUrl = getFileUrl(picture);
 
+                    // Debug logging
+                    console.log(`Stock take image ${index + 1}:`, {
+                      originalPicture: picture,
+                      type: typeof picture,
+                      generatedUrl: imageUrl,
+                      isNumeric: !isNaN(parseInt(picture)),
+                    });
+
                     return (
                       <div
                         key={index}
@@ -560,6 +576,11 @@ const StockTakeDetailPage = () => {
                           alt={`Stock take photo ${index + 1}`}
                           className="w-full h-48 object-cover"
                           onError={(e) => {
+                            console.error(`Image failed to load:`, {
+                              src: imageUrl,
+                              originalPicture: picture,
+                              error: e,
+                            });
                             const target = e.target as HTMLImageElement;
                             target.style.display = "none";
                             const parent = target.parentElement;

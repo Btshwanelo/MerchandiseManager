@@ -39,10 +39,52 @@ export async function uploadFile(file: File): Promise<FileInfo> {
 }
 
 /**
- * Get file URL by ID
+ * Generates a URL for a file, handling both new file IDs and legacy file paths
  */
-export function getFileUrl(fileId: number | string): string {
-  return `/api/files/${fileId}`;
+export function getFileUrl(fileIdOrPath: string): string {
+  console.log("getFileUrl called with:", {
+    input: fileIdOrPath,
+    type: typeof fileIdOrPath,
+    isNumeric: !isNaN(parseInt(fileIdOrPath)),
+  });
+
+  if (!fileIdOrPath || typeof fileIdOrPath !== "string") {
+    console.log("getFileUrl: Invalid input, returning empty string");
+    return "";
+  }
+
+  // If it's a file ID (numeric), use the new file endpoint
+  if (!isNaN(parseInt(fileIdOrPath))) {
+    const url = `/api/files/${fileIdOrPath}`;
+    console.log("getFileUrl: File ID detected, returning:", url);
+    return url;
+  }
+
+  // If it's already a complete URL, use as-is
+  if (
+    fileIdOrPath.startsWith("http://") ||
+    fileIdOrPath.startsWith("https://")
+  ) {
+    console.log(
+      "getFileUrl: Complete URL detected, returning as-is:",
+      fileIdOrPath
+    );
+    return fileIdOrPath;
+  }
+
+  // Legacy file path handling
+  let filename: string;
+  if (fileIdOrPath.includes("/")) {
+    // If it has path separators, extract the filename
+    filename = fileIdOrPath.split("/").pop() || fileIdOrPath;
+  } else {
+    // It's already just a filename
+    filename = fileIdOrPath;
+  }
+
+  const url = `/api/images/${encodeURIComponent(filename)}`;
+  console.log("getFileUrl: Legacy path detected, returning:", url);
+  return url;
 }
 
 /**
