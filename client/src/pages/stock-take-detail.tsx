@@ -132,12 +132,12 @@ const StockTakeDetailPage = () => {
         const response = await apiRequest("GET", `/api/stock-takes/${id}`);
         return response.json();
       },
-      enabled: !!id && !passedStockTake,
+      enabled: !!id, // Always fetch, even if we have passed data
     });
 
-  // Use passed stock take data or fetched data
-  const stockTake = passedStockTake || fetchedStockTake;
-  const isLoading = !passedStockTake && isLoadingStockTake;
+  // Use fetched data if available, otherwise fall back to passed data
+  const stockTake = fetchedStockTake || passedStockTake;
+  const isLoading = isLoadingStockTake;
 
   // Debug logging for stock take data
   console.log("Stock take detail page - stock take data:", {
