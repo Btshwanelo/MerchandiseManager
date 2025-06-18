@@ -2737,11 +2737,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const stockTakeId = parseInt(req.params.id);
+      console.log(`Fetching stock take with ID: ${stockTakeId}`);
+
       const stockTake = await storage.getStockTakeWithItems(stockTakeId);
 
       if (!stockTake) {
+        console.log(`Stock take with ID ${stockTakeId} not found`);
         return res.status(404).json({ message: "Stock take not found" });
       }
+
+      console.log(`Stock take data:`, {
+        id: stockTake.id,
+        pictures: stockTake.pictures,
+        picturesType: typeof stockTake.pictures,
+        isArray: Array.isArray(stockTake.pictures),
+        picturesLength: stockTake.pictures?.length,
+      });
 
       // Check if user has permission to view this stock take
       const user = req.user!;
@@ -2757,6 +2768,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       res.json(stockTake);
     } catch (error) {
+      console.error("Error in /api/stock-takes/:id:", error);
       if (error instanceof Error) {
         return res.status(500).json({ message: error.message });
       }
