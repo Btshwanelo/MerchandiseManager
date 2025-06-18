@@ -1,39 +1,39 @@
 import { useEffect, useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  Card, 
-  CardContent, 
-  CardDescription, 
-  CardFooter, 
-  CardHeader, 
-  CardTitle 
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
 } from "@/components/ui/card";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
 import { Separator } from "@/components/ui/separator";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Dialog, 
-  DialogContent, 
-  DialogHeader, 
-  DialogTitle, 
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
   DialogDescription,
   DialogFooter,
-  DialogClose 
+  DialogClose,
 } from "@/components/ui/dialog";
-import { 
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
@@ -50,20 +50,35 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, ArrowLeft, Save, Edit, AlertTriangle, User, Calendar, Store, ShoppingBag, CheckCircle, Upload, Eye, X } from "lucide-react";
+import {
+  Loader2,
+  ArrowLeft,
+  Save,
+  Edit,
+  AlertTriangle,
+  User,
+  Calendar,
+  Store,
+  ShoppingBag,
+  CheckCircle,
+  Upload,
+  Eye,
+  X,
+} from "lucide-react";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useForm } from "react-hook-form";
-import { formatDistanceToNow, format } from 'date-fns';
-import { 
-  Product, 
-  Store as StoreType, 
-  StockLocation, 
-  StockTake as DbStockTake, 
-  StockTakeItem as DbStockTakeItem, 
+import { formatDistanceToNow, format } from "date-fns";
+import {
+  Product,
+  Store as StoreType,
+  StockLocation,
+  StockTake as DbStockTake,
+  StockTakeItem as DbStockTakeItem,
   User as UserType,
-  UserRole 
+  UserRole,
 } from "@shared/schema";
 import * as z from "zod";
+import { getFileUrl, processImagePaths } from "@/lib/file-utils";
 
 // Define types that extend the database models
 type StockTake = DbStockTake & {
@@ -82,7 +97,9 @@ type StockTakeItemWithDetails = DbStockTakeItem & {
 const editStockTakeItemSchema = z.object({
   quantity: z.coerce.number().min(0, "Quantity must be a positive number"),
   location: z.enum([StockLocation.SHELF, StockLocation.BACK_STORE]),
-  auditComment: z.string().min(5, "Audit comment must be at least 5 characters"),
+  auditComment: z
+    .string()
+    .min(5, "Audit comment must be at least 5 characters"),
 });
 
 type EditStockTakeItemFormValues = z.infer<typeof editStockTakeItemSchema>;
@@ -94,24 +111,26 @@ const StockTakeDetailPage = () => {
   const { user } = useAuth();
   const [editingItemId, setEditingItemId] = useState<number | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [currentItemBeingEdited, setCurrentItemBeingEdited] = useState<StockTakeItemWithDetails | null>(null);
+  const [currentItemBeingEdited, setCurrentItemBeingEdited] =
+    useState<StockTakeItemWithDetails | null>(null);
   const [activeTab, setActiveTab] = useState("details");
   const [imageDialogOpen, setImageDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState("");
-  
+
   // Get stock take from window history state if available
   const passedStockTake = window.history.state?.stockTake;
-  
+
   // Log for debugging
   console.log("History state:", window.history.state);
   console.log("Passed stock take data:", passedStockTake);
 
   // Fetch the stock take with its items if not passed through state
-  const { data: fetchedStockTake, isLoading: isLoadingStockTake } = useQuery<StockTake>({
-    queryKey: ["/api/stock-takes", id],
-    enabled: !!id && !passedStockTake,
-  });
-  
+  const { data: fetchedStockTake, isLoading: isLoadingStockTake } =
+    useQuery<StockTake>({
+      queryKey: ["/api/stock-takes", id],
+      enabled: !!id && !passedStockTake,
+    });
+
   // Use passed stock take data or fetched data
   const stockTake = passedStockTake || fetchedStockTake;
   const isLoading = !passedStockTake && isLoadingStockTake;
@@ -128,8 +147,8 @@ const StockTakeDetailPage = () => {
 
   // Helper function to safely format dates
   const formatDate = (date: Date | string | null) => {
-    if (!date) return 'Unknown date';
-    return format(new Date(date), 'PPP p');
+    if (!date) return "Unknown date";
+    return format(new Date(date), "PPP p");
   };
 
   // Handle opening the edit dialog for an item
@@ -145,9 +164,15 @@ const StockTakeDetailPage = () => {
 
   // Handle the submission of edits
   const editStockTakeItemMutation = useMutation({
-    mutationFn: async (data: EditStockTakeItemFormValues & { itemId: number }) => {
+    mutationFn: async (
+      data: EditStockTakeItemFormValues & { itemId: number }
+    ) => {
       const { itemId, ...updateData } = data;
-      const response = await apiRequest("PUT", `/api/stock-take-items/${itemId}`, updateData);
+      const response = await apiRequest(
+        "PUT",
+        `/api/stock-take-items/${itemId}`,
+        updateData
+      );
       return response.json();
     },
     onSuccess: () => {
@@ -207,9 +232,9 @@ const StockTakeDetailPage = () => {
     return (
       <div className="space-y-4">
         <div className="flex items-center space-x-2">
-          <Button 
-            variant="outline" 
-            size="sm" 
+          <Button
+            variant="outline"
+            size="sm"
             onClick={() => setLocation("/stock-take")}
           >
             <ArrowLeft className="mr-2 h-4 w-4" />
@@ -220,12 +245,15 @@ const StockTakeDetailPage = () => {
           <CardContent className="pt-6">
             <div className="flex flex-col items-center justify-center py-10">
               <AlertTriangle className="h-10 w-10 text-yellow-500 mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Stock Take Not Found</h3>
+              <h3 className="text-xl font-semibold mb-2">
+                Stock Take Not Found
+              </h3>
               <p className="text-muted-foreground text-center">
-                The requested stock take could not be found or you don't have permission to view it.
+                The requested stock take could not be found or you don't have
+                permission to view it.
               </p>
-              <Button 
-                className="mt-6" 
+              <Button
+                className="mt-6"
                 onClick={() => setLocation("/stock-take")}
               >
                 Return to Stock Takes
@@ -242,9 +270,9 @@ const StockTakeDetailPage = () => {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
         <div className="space-y-1">
           <div className="flex items-center space-x-2">
-            <Button 
-              variant="outline" 
-              size="sm" 
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setLocation("/stock-take")}
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
@@ -260,12 +288,18 @@ const StockTakeDetailPage = () => {
         </div>
       </div>
 
-      <Tabs defaultValue="details" className="space-y-6" onValueChange={setActiveTab}>
+      <Tabs
+        defaultValue="details"
+        className="space-y-6"
+        onValueChange={setActiveTab}
+      >
         <TabsList>
           <TabsTrigger value="details">Details</TabsTrigger>
           <TabsTrigger value="items">Items</TabsTrigger>
           {stockTake.pictures && stockTake.pictures.length > 0 && (
-            <TabsTrigger value="photos">Photos ({stockTake.pictures.length})</TabsTrigger>
+            <TabsTrigger value="photos">
+              Photos ({stockTake.pictures.length})
+            </TabsTrigger>
           )}
           <TabsTrigger value="audit">Audit Log</TabsTrigger>
         </TabsList>
@@ -282,51 +316,65 @@ const StockTakeDetailPage = () => {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Date Submitted</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Date Submitted
+                    </h3>
                     <div className="flex items-center">
                       <Calendar className="h-4 w-4 mr-2 text-muted-foreground" />
                       <span>{formatDate(stockTake.date)}</span>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Store</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Store
+                    </h3>
                     <div className="flex items-center">
                       <Store className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{stockTake.store?.name || 'Unknown'}</span>
+                      <span>{stockTake.store?.name || "Unknown"}</span>
                     </div>
                   </div>
-                  
+
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Submitted By</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Submitted By
+                    </h3>
                     <div className="flex items-center">
                       <User className="h-4 w-4 mr-2 text-muted-foreground" />
-                      <span>{stockTake.user?.name || 'Unknown'}</span>
+                      <span>{stockTake.user?.name || "Unknown"}</span>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="space-y-4">
                   <div>
-                    <h3 className="text-sm font-medium text-muted-foreground mb-1">Status</h3>
+                    <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                      Status
+                    </h3>
                     <Badge className="capitalize">
-                      {stockTake.status ? stockTake.status.toLowerCase() : 'unknown'}
+                      {stockTake.status
+                        ? stockTake.status.toLowerCase()
+                        : "unknown"}
                     </Badge>
                   </div>
 
                   {stockTake.items && (
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Items</h3>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                        Items
+                      </h3>
                       <div className="flex items-center">
                         <ShoppingBag className="h-4 w-4 mr-2 text-muted-foreground" />
                         <span>{stockTake.items.length} products</span>
                       </div>
                     </div>
                   )}
-                  
+
                   {stockTake.lastEditedAt && (
                     <div>
-                      <h3 className="text-sm font-medium text-muted-foreground mb-1">Last Edited</h3>
+                      <h3 className="text-sm font-medium text-muted-foreground mb-1">
+                        Last Edited
+                      </h3>
                       <div className="flex items-start">
                         <Calendar className="h-4 w-4 mr-2 text-muted-foreground mt-1" />
                         <div className="flex flex-col">
@@ -345,7 +393,9 @@ const StockTakeDetailPage = () => {
 
               {stockTake.comment && (
                 <div className="pt-4">
-                  <h3 className="text-sm font-medium text-muted-foreground mb-2">Comments</h3>
+                  <h3 className="text-sm font-medium text-muted-foreground mb-2">
+                    Comments
+                  </h3>
                   <div className="bg-muted p-4 rounded-md">
                     {stockTake.comment}
                   </div>
@@ -368,18 +418,31 @@ const StockTakeDetailPage = () => {
                 <div className="flex flex-col sm:items-end">
                   <div className="grid grid-cols-2 gap-1 text-sm">
                     <span className="text-muted-foreground">Store:</span>
-                    <span className="font-medium text-right">{stockTake.store?.name || 'Unknown'}</span>
-                    
+                    <span className="font-medium text-right">
+                      {stockTake.store?.name || "Unknown"}
+                    </span>
+
                     <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium text-right">{formatDate(stockTake.date).split('at')[0]}</span>
-                    
+                    <span className="font-medium text-right">
+                      {formatDate(stockTake.date).split("at")[0]}
+                    </span>
+
                     <span className="text-muted-foreground">Merchandiser:</span>
-                    <span className="font-medium text-right">{stockTake.user?.name || 'Unknown'}</span>
-                    
+                    <span className="font-medium text-right">
+                      {stockTake.user?.name || "Unknown"}
+                    </span>
+
                     <span className="text-muted-foreground">Status:</span>
                     <span className="text-right">
-                      <Badge variant={stockTake.status === 'completed' ? 'default' : 'outline'} className="capitalize">
-                        {stockTake.status || 'unknown'}
+                      <Badge
+                        variant={
+                          stockTake.status === "completed"
+                            ? "default"
+                            : "outline"
+                        }
+                        className="capitalize"
+                      >
+                        {stockTake.status || "unknown"}
                       </Badge>
                     </span>
                   </div>
@@ -412,22 +475,27 @@ const StockTakeDetailPage = () => {
                       {stockTake.items.map((item) => (
                         <TableRow key={item.id}>
                           <TableCell className="font-medium">
-                            {item.product?.name || 'Unknown Product'}
+                            {item.product?.name || "Unknown Product"}
                           </TableCell>
-                          <TableCell>
-                            {item.product?.sku || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {item.product?.category || '-'}
-                          </TableCell>
+                          <TableCell>{item.product?.sku || "-"}</TableCell>
+                          <TableCell>{item.product?.category || "-"}</TableCell>
                           <TableCell className="text-center">
-                            <Badge variant={item.quantity === 0 ? "destructive" : (item.quantity < (item.product?.minStockLevel || 5) ? "warning" : "default")}>
+                            <Badge
+                              variant={
+                                item.quantity === 0
+                                  ? "destructive"
+                                  : item.quantity <
+                                    (item.product?.minStockLevel || 5)
+                                  ? "warning"
+                                  : "default"
+                              }
+                            >
                               {item.quantity}
                             </Badge>
                           </TableCell>
                           <TableCell>
                             <Badge variant="outline" className="capitalize">
-                              {item.location.toLowerCase().replace('_', ' ')}
+                              {item.location.toLowerCase().replace("_", " ")}
                             </Badge>
                           </TableCell>
                           <TableCell className="text-right">
@@ -438,7 +506,8 @@ const StockTakeDetailPage = () => {
                                 onClick={() => handleEditItem(item)}
                                 disabled={editStockTakeItemMutation.isPending}
                               >
-                                {editStockTakeItemMutation.isPending && editingItemId === item.id ? (
+                                {editStockTakeItemMutation.isPending &&
+                                editingItemId === item.id ? (
                                   <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                 ) : (
                                   <Edit className="h-4 w-4 mr-2" />
@@ -476,22 +545,42 @@ const StockTakeDetailPage = () => {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {stockTake.pictures.map((picture, index) => (
-                    <div 
-                      key={index} 
-                      className="border rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105"
-                      onClick={() => handleViewImage(picture)}
-                    >
-                      <img 
-                        src={picture} 
-                        alt={`Stock take photo ${index + 1}`} 
-                        className="w-full h-48 object-cover"
-                      />
-                      <div className="p-2 bg-muted text-center">
-                        <span className="text-sm">Photo {index + 1}</span>
+                  {stockTake.pictures.map((picture, index) => {
+                    // Convert file ID to URL
+                    const imageUrl = getFileUrl(picture);
+
+                    return (
+                      <div
+                        key={index}
+                        className="border rounded-md overflow-hidden cursor-pointer transition-transform hover:scale-105"
+                        onClick={() => handleViewImage(imageUrl)}
+                      >
+                        <img
+                          src={imageUrl}
+                          alt={`Stock take photo ${index + 1}`}
+                          className="w-full h-48 object-cover"
+                          onError={(e) => {
+                            const target = e.target as HTMLImageElement;
+                            target.style.display = "none";
+                            const parent = target.parentElement;
+                            if (parent) {
+                              parent.innerHTML = `
+                                <div class="w-full h-48 bg-muted/50 flex items-center justify-center">
+                                  <div class="text-center text-muted-foreground">
+                                    <Eye class="h-8 w-8 mx-auto mb-2" />
+                                    <p class="text-sm">Image not available</p>
+                                  </div>
+                                </div>
+                              `;
+                            }
+                          }}
+                        />
+                        <div className="p-2 bg-muted text-center">
+                          <span className="text-sm">Photo {index + 1}</span>
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               </CardContent>
             </Card>
@@ -511,13 +600,19 @@ const StockTakeDetailPage = () => {
                 <div className="flex flex-col sm:items-end">
                   <div className="grid grid-cols-2 gap-1 text-sm">
                     <span className="text-muted-foreground">Store:</span>
-                    <span className="font-medium text-right">{stockTake.store?.name || 'Unknown'}</span>
-                    
+                    <span className="font-medium text-right">
+                      {stockTake.store?.name || "Unknown"}
+                    </span>
+
                     <span className="text-muted-foreground">Date:</span>
-                    <span className="font-medium text-right">{formatDate(stockTake.date).split('at')[0]}</span>
-                    
+                    <span className="font-medium text-right">
+                      {formatDate(stockTake.date).split("at")[0]}
+                    </span>
+
                     <span className="text-muted-foreground">Merchandiser:</span>
-                    <span className="font-medium text-right">{stockTake.user?.name || 'Unknown'}</span>
+                    <span className="font-medium text-right">
+                      {stockTake.user?.name || "Unknown"}
+                    </span>
                   </div>
                 </div>
               </div>
@@ -540,61 +635,99 @@ const StockTakeDetailPage = () => {
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">Stock Take Item Edited</span>
+                        <span className="font-medium">
+                          Stock Take Item Edited
+                        </span>
                         <span className="text-sm text-muted-foreground">
                           {formatDate(stockTake.lastEditedAt)}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
-                        <span className="font-medium">{stockTake.lastEditedBy?.name || 'Admin'}</span> updated the quantity of product 
-                        <span className="font-medium"> {stockTake.items && stockTake.items[0]?.product?.name}</span>.
+                        <span className="font-medium">
+                          {stockTake.lastEditedBy?.name || "Admin"}
+                        </span>{" "}
+                        updated the quantity of product
+                        <span className="font-medium">
+                          {" "}
+                          {stockTake.items && stockTake.items[0]?.product?.name}
+                        </span>
+                        .
                       </p>
                       {stockTake.auditComment && (
                         <div className="mt-2 bg-muted p-3 rounded-md">
-                          <p className="text-sm"><span className="font-medium">Comment:</span> {stockTake.auditComment}</p>
+                          <p className="text-sm">
+                            <span className="font-medium">Comment:</span>{" "}
+                            {stockTake.auditComment}
+                          </p>
                         </div>
                       )}
                       <div className="mt-3 border-t pt-3 text-sm">
                         <div className="grid grid-cols-3 gap-x-4 gap-y-2">
                           <span className="text-muted-foreground">Field</span>
-                          <span className="text-muted-foreground">Old Value</span>
-                          <span className="text-muted-foreground">New Value</span>
-                          
+                          <span className="text-muted-foreground">
+                            Old Value
+                          </span>
+                          <span className="text-muted-foreground">
+                            New Value
+                          </span>
+
                           <span>Quantity</span>
                           <span className="text-red-500 line-through">3</span>
-                          <span className="text-green-600">{stockTake.items && stockTake.items[0]?.quantity}</span>
-                          
+                          <span className="text-green-600">
+                            {stockTake.items && stockTake.items[0]?.quantity}
+                          </span>
+
                           <span>Location</span>
                           <span className="text-muted-foreground">shelf</span>
-                          <span className="text-muted-foreground">{stockTake.items && stockTake.items[0]?.location.toLowerCase().replace('_', ' ')}</span>
+                          <span className="text-muted-foreground">
+                            {stockTake.items &&
+                              stockTake.items[0]?.location
+                                .toLowerCase()
+                                .replace("_", " ")}
+                          </span>
                         </div>
                       </div>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-4 border-l-2 border-blue-500 pl-4 pb-6">
                     <div className="rounded-full bg-blue-500 h-8 w-8 flex items-center justify-center">
                       <CheckCircle className="h-4 w-4 text-primary-foreground" />
                     </div>
                     <div className="space-y-1">
                       <div className="flex items-center space-x-2">
-                        <span className="font-medium">Stock Take Submitted</span>
+                        <span className="font-medium">
+                          Stock Take Submitted
+                        </span>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(stockTake.date || '').toLocaleDateString()} at{' '}
-                          {new Date(stockTake.date || '').toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                          {new Date(stockTake.date || "").toLocaleDateString()}{" "}
+                          at{" "}
+                          {new Date(stockTake.date || "").toLocaleTimeString(
+                            [],
+                            { hour: "2-digit", minute: "2-digit" }
+                          )}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
-                        <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> submitted this stock take with {stockTake.items?.length || 0} items.
+                        <span className="font-medium">
+                          {stockTake.user?.name || "Unknown User"}
+                        </span>{" "}
+                        submitted this stock take with{" "}
+                        {stockTake.items?.length || 0} items.
                       </p>
                       {stockTake.comment && (
                         <div className="mt-2 bg-muted p-3 rounded-md">
-                          <p className="text-sm"><span className="font-medium">Merchandiser Comment:</span> {stockTake.comment}</p>
+                          <p className="text-sm">
+                            <span className="font-medium">
+                              Merchandiser Comment:
+                            </span>{" "}
+                            {stockTake.comment}
+                          </p>
                         </div>
                       )}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start space-x-4 border-l-2 border-gray-300 pl-4">
                     <div className="rounded-full bg-gray-200 h-8 w-8 flex items-center justify-center">
                       <User className="h-4 w-4 text-gray-600" />
@@ -603,11 +736,21 @@ const StockTakeDetailPage = () => {
                       <div className="flex items-center space-x-2">
                         <span className="font-medium">Stock Take Assigned</span>
                         <span className="text-sm text-muted-foreground">
-                          {new Date(new Date(stockTake.date || '').getTime() - 86400000).toLocaleDateString()}
+                          {new Date(
+                            new Date(stockTake.date || "").getTime() - 86400000
+                          ).toLocaleDateString()}
                         </span>
                       </div>
                       <p className="text-muted-foreground">
-                        This stock take was assigned to <span className="font-medium">{stockTake.user?.name || 'Unknown User'}</span> for store <span className="font-medium">{stockTake.store?.name || 'Unknown Store'}</span>.
+                        This stock take was assigned to{" "}
+                        <span className="font-medium">
+                          {stockTake.user?.name || "Unknown User"}
+                        </span>{" "}
+                        for store{" "}
+                        <span className="font-medium">
+                          {stockTake.store?.name || "Unknown Store"}
+                        </span>
+                        .
                       </p>
                     </div>
                   </div>
@@ -615,7 +758,9 @@ const StockTakeDetailPage = () => {
               ) : (
                 <div className="flex flex-col items-center justify-center py-10">
                   <AlertTriangle className="h-10 w-10 text-muted-foreground mb-4" />
-                  <h3 className="text-xl font-semibold mb-2">No Audit History</h3>
+                  <h3 className="text-xl font-semibold mb-2">
+                    No Audit History
+                  </h3>
                   <p className="text-muted-foreground text-center">
                     This stock take has not been edited since creation.
                   </p>
@@ -632,22 +777,24 @@ const StockTakeDetailPage = () => {
           <DialogHeader>
             <DialogTitle>Edit Stock Take Item</DialogTitle>
             <DialogDescription>
-              Update the quantity and location of this stock take item.
-              As an admin, you must provide a reason for this edit.
+              Update the quantity and location of this stock take item. As an
+              admin, you must provide a reason for this edit.
             </DialogDescription>
           </DialogHeader>
-          
+
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
               {currentItemBeingEdited?.product && (
                 <div className="rounded-md bg-muted p-4 mb-4">
-                  <h4 className="font-medium">{currentItemBeingEdited.product.name}</h4>
+                  <h4 className="font-medium">
+                    {currentItemBeingEdited.product.name}
+                  </h4>
                   <p className="text-sm text-muted-foreground">
                     SKU: {currentItemBeingEdited.product.sku}
                   </p>
                 </div>
               )}
-              
+
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={form.control}
@@ -656,17 +803,13 @@ const StockTakeDetailPage = () => {
                     <FormItem>
                       <FormLabel>Quantity</FormLabel>
                       <FormControl>
-                        <Input 
-                          type="number" 
-                          min="0" 
-                          {...field} 
-                        />
+                        <Input type="number" min="0" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                
+
                 <FormField
                   control={form.control}
                   name="location"
@@ -676,17 +819,29 @@ const StockTakeDetailPage = () => {
                       <div className="flex space-x-2">
                         <Button
                           type="button"
-                          variant={field.value === StockLocation.SHELF ? "default" : "outline"}
+                          variant={
+                            field.value === StockLocation.SHELF
+                              ? "default"
+                              : "outline"
+                          }
                           className="flex-1"
-                          onClick={() => form.setValue("location", StockLocation.SHELF)}
+                          onClick={() =>
+                            form.setValue("location", StockLocation.SHELF)
+                          }
                         >
                           Shelf
                         </Button>
                         <Button
                           type="button"
-                          variant={field.value === StockLocation.BACK_STORE ? "default" : "outline"}
+                          variant={
+                            field.value === StockLocation.BACK_STORE
+                              ? "default"
+                              : "outline"
+                          }
                           className="flex-1"
-                          onClick={() => form.setValue("location", StockLocation.BACK_STORE)}
+                          onClick={() =>
+                            form.setValue("location", StockLocation.BACK_STORE)
+                          }
                         >
                           Back Store
                         </Button>
@@ -696,7 +851,7 @@ const StockTakeDetailPage = () => {
                   )}
                 />
               </div>
-              
+
               <FormField
                 control={form.control}
                 name="auditComment"
@@ -711,37 +866,41 @@ const StockTakeDetailPage = () => {
                               <AlertTriangle className="h-4 w-4 text-yellow-500" />
                             </TooltipTrigger>
                             <TooltipContent>
-                              <p>Required: Explain why you're editing this stock take item</p>
+                              <p>
+                                Required: Explain why you're editing this stock
+                                take item
+                              </p>
                             </TooltipContent>
                           </Tooltip>
                         </TooltipProvider>
                       </span>
                     </FormLabel>
                     <FormControl>
-                      <Textarea 
-                        placeholder="e.g., Correcting counting error based on physical verification" 
+                      <Textarea
+                        placeholder="e.g., Correcting counting error based on physical verification"
                         className="min-h-[80px]"
-                        {...field} 
+                        {...field}
                       />
                     </FormControl>
                     <FormDescription>
-                      Please provide a detailed reason for this edit for audit purposes.
+                      Please provide a detailed reason for this edit for audit
+                      purposes.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              
+
               <DialogFooter>
-                <Button 
-                  type="button" 
-                  variant="outline" 
+                <Button
+                  type="button"
+                  variant="outline"
                   onClick={() => setIsEditDialogOpen(false)}
                   disabled={editStockTakeItemMutation.isPending}
                 >
                   Cancel
                 </Button>
-                <Button 
+                <Button
                   type="submit"
                   disabled={editStockTakeItemMutation.isPending}
                 >
@@ -759,9 +918,9 @@ const StockTakeDetailPage = () => {
       {/* Image Preview Dialog */}
       <Dialog open={imageDialogOpen} onOpenChange={setImageDialogOpen}>
         <DialogContent className="sm:max-w-[800px] p-1">
-          <img 
-            src={selectedImage} 
-            alt="Stock take photo" 
+          <img
+            src={selectedImage}
+            alt="Stock take photo"
             className="w-full h-auto"
           />
         </DialogContent>

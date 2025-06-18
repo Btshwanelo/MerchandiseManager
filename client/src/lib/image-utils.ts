@@ -3,30 +3,35 @@
  */
 
 /**
- * Converts a stored image path to the correct API endpoint URL
- * Handles various path formats that might be stored in the database
+ * Converts a stored image path or file ID to the correct API endpoint URL
+ * Handles both new file IDs and legacy file paths
  */
 export function getImageUrl(imagePath: string): string {
-  if (!imagePath || typeof imagePath !== 'string') {
-    return '';
+  if (!imagePath || typeof imagePath !== "string") {
+    return "";
   }
 
   // If it's already a complete URL, use as-is
-  if (imagePath.startsWith('http://') || imagePath.startsWith('https://')) {
+  if (imagePath.startsWith("http://") || imagePath.startsWith("https://")) {
     return imagePath;
   }
 
-  // Extract just the filename from any path format
+  // If it's a file ID (numeric), use the new file endpoint
+  if (!isNaN(parseInt(imagePath))) {
+    return `/api/files/${imagePath}`;
+  }
+
+  // Extract just the filename from any path format (legacy support)
   let filename: string;
-  if (imagePath.includes('/')) {
+  if (imagePath.includes("/")) {
     // If it has path separators, extract the filename
-    filename = imagePath.split('/').pop() || imagePath;
+    filename = imagePath.split("/").pop() || imagePath;
   } else {
     // It's already just a filename
     filename = imagePath;
   }
 
-  // Use the API endpoint for serving images with proper encoding
+  // Use the legacy API endpoint for serving images with proper encoding
   return `/api/images/${encodeURIComponent(filename)}`;
 }
 
@@ -41,7 +46,7 @@ export function processImagePaths(pictures: any): string[] {
 
   let picturesToProcess: string[] = [];
 
-  if (typeof pictures === 'string') {
+  if (typeof pictures === "string") {
     // Try to parse if it's a JSON string
     try {
       const parsed = JSON.parse(pictures);
@@ -52,18 +57,19 @@ export function processImagePaths(pictures: any): string[] {
     }
   } else if (Array.isArray(pictures)) {
     picturesToProcess = pictures;
-  } else if (pictures && typeof pictures === 'object') {
+  } else if (pictures && typeof pictures === "object") {
     // If it's a non-null object but not an array, might be empty object from database
-    picturesToProcess = Object.keys(pictures).length > 0 
-      ? Object.values(pictures).map(v => String(v))
-      : [];
+    picturesToProcess =
+      Object.keys(pictures).length > 0
+        ? Object.values(pictures).map((v) => String(v))
+        : [];
   }
 
   // Filter out falsy values and empty strings, ensure all are strings
   return picturesToProcess
     .filter(Boolean)
-    .filter(p => typeof p === 'string' && p.trim && p.trim() !== '')
-    .map(p => String(p));
+    .filter((p) => typeof p === "string" && p.trim && p.trim() !== "")
+    .map((p) => String(p));
 }
 
 /**
