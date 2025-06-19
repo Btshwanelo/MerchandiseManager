@@ -5,14 +5,14 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -20,19 +20,29 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { Loader2, Plus, Upload, Store, Camera, Save, File, DollarSign } from "lucide-react";
+import {
+  Loader2,
+  Plus,
+  Upload,
+  Store,
+  Camera,
+  Save,
+  File,
+  DollarSign,
+} from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { Store as StoreType } from "@shared/schema";
 import { formatCurrency } from "@/lib/utils";
+import { validateFileUpload } from "@/lib/file-utils";
 
 const CompetitorMerchandisingPage = () => {
   const { toast } = useToast();
@@ -41,20 +51,22 @@ const CompetitorMerchandisingPage = () => {
   const [fileUploads, setFileUploads] = useState<File[]>([]);
   const [imagePreviewDialogOpen, setImagePreviewDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  
+
   // Competitor info
   const [brand, setBrand] = useState<string>("");
   const [productDescription, setProductDescription] = useState<string>("");
   const [promotionalPrice, setPromotionalPrice] = useState<string>("");
 
   // List of competitors
-  const [competitors, setCompetitors] = useState<Array<{
-    id: number;
-    brand: string;
-    productDescription: string;
-    promotionalPrice: number | null;
-    pictures: File[];
-  }>>([]);
+  const [competitors, setCompetitors] = useState<
+    Array<{
+      id: number;
+      brand: string;
+      productDescription: string;
+      promotionalPrice: number | null;
+      pictures: File[];
+    }>
+  >([]);
 
   // Fetch stores
   const { data: stores, isLoading: isLoadingStores } = useQuery<StoreType[]>({
@@ -67,7 +79,7 @@ const CompetitorMerchandisingPage = () => {
       toast({
         title: "Brand required",
         description: "Please enter the competitor brand name.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -76,20 +88,22 @@ const CompetitorMerchandisingPage = () => {
       toast({
         title: "Product description required",
         description: "Please enter a description of the competitor product.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     // Convert price to cents or null if empty
-    const priceInCents = promotionalPrice ? Math.round(parseFloat(promotionalPrice) * 100) : null;
-    
+    const priceInCents = promotionalPrice
+      ? Math.round(parseFloat(promotionalPrice) * 100)
+      : null;
+
     // Validate price if provided
     if (promotionalPrice && isNaN(priceInCents!)) {
       toast({
         title: "Invalid price",
         description: "Please enter a valid price or leave it empty.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -103,9 +117,9 @@ const CompetitorMerchandisingPage = () => {
         productDescription,
         promotionalPrice: priceInCents,
         pictures: [...fileUploads],
-      }
+      },
     ]);
-    
+
     // Reset form
     setBrand("");
     setProductDescription("");
@@ -115,14 +129,30 @@ const CompetitorMerchandisingPage = () => {
 
   // Remove competitor
   const handleRemoveCompetitor = (id: number) => {
-    setCompetitors(competitors.filter(c => c.id !== id));
+    setCompetitors(competitors.filter((c) => c.id !== id));
   };
 
   // Handle file upload
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
       const newFiles = Array.from(e.target.files);
-      setFileUploads([...fileUploads, ...newFiles]);
+      // Validate file size (4MB limit)
+      const validFiles: File[] = [];
+      for (const file of newFiles) {
+        const validation = validateFileUpload(file);
+        if (!validation.valid) {
+          toast({
+            title: "File too large",
+            description: `${file.name}: ${validation.error}`,
+            variant: "destructive",
+          });
+        } else {
+          validFiles.push(file);
+        }
+      }
+      if (validFiles.length > 0) {
+        setFileUploads([...fileUploads, ...validFiles]);
+      }
     }
   };
 
@@ -150,18 +180,26 @@ const CompetitorMerchandisingPage = () => {
   // Create competitor merchandising mutation
   const createCompetitorMutation = useMutation({
     mutationFn: async (formData: FormData) => {
-      const res = await apiRequest("POST", "/api/competitor-merchandising", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data"
+      const res = await apiRequest(
+        "POST",
+        "/api/competitor-merchandising",
+        formData,
+        {
+          headers: {
+            "Content-Type": "multipart/form-data",
+          },
         }
-      });
+      );
       return await res.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/competitor-merchandising"] });
+      queryClient.invalidateQueries({
+        queryKey: ["/api/competitor-merchandising"],
+      });
       toast({
         title: "Competitor data submitted",
-        description: "The competitor merchandising data has been successfully submitted.",
+        description:
+          "The competitor merchandising data has been successfully submitted.",
       });
       // Reset form
       setSelectedStore("");
@@ -182,7 +220,7 @@ const CompetitorMerchandisingPage = () => {
       toast({
         title: "Store required",
         description: "Please select a store for this report.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -191,7 +229,7 @@ const CompetitorMerchandisingPage = () => {
       toast({
         title: "No competitor data added",
         description: "Please add at least one competitor product.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -202,15 +240,20 @@ const CompetitorMerchandisingPage = () => {
 
     const formData = new FormData();
     formData.append("storeId", selectedStore);
-    formData.append("competitors", JSON.stringify(competitors.map(c => ({
-      brand: c.brand,
-      productDescription: c.productDescription,
-      promotionalPrice: c.promotionalPrice
-    }))));
-    
+    formData.append(
+      "competitors",
+      JSON.stringify(
+        competitors.map((c) => ({
+          brand: c.brand,
+          productDescription: c.productDescription,
+          promotionalPrice: c.promotionalPrice,
+        }))
+      )
+    );
+
     // Add pictures for each competitor
     competitors.forEach((competitor, idx) => {
-      competitor.pictures.forEach(file => {
+      competitor.pictures.forEach((file) => {
         formData.append(`competitor_${idx}_pictures`, file);
       });
     });
@@ -222,7 +265,7 @@ const CompetitorMerchandisingPage = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Competitor Merchandising</h1>
-        <Button 
+        <Button
           onClick={handleSubmit}
           disabled={createCompetitorMutation.isPending}
         >
@@ -279,7 +322,7 @@ const CompetitorMerchandisingPage = () => {
                     <Camera className="h-4 w-4 mr-2" />
                     Upload Photos
                   </div>
-                  <input 
+                  <input
                     id="file-upload"
                     type="file"
                     accept="image/*"
@@ -301,9 +344,11 @@ const CompetitorMerchandisingPage = () => {
                     onChange={(e) => setBrand(e.target.value)}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Product Description</label>
+                  <label className="text-sm font-medium">
+                    Product Description
+                  </label>
                   <Textarea
                     placeholder="Describe the competitor product"
                     value={productDescription}
@@ -311,13 +356,15 @@ const CompetitorMerchandisingPage = () => {
                     rows={3}
                   />
                 </div>
-                
+
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Promotional Price (optional)</label>
+                  <label className="text-sm font-medium">
+                    Promotional Price (optional)
+                  </label>
                   <div className="relative">
                     <DollarSign className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                    <Input 
-                      type="number" 
+                    <Input
+                      type="number"
                       value={promotionalPrice}
                       onChange={(e) => setPromotionalPrice(e.target.value)}
                       min="0"
@@ -336,24 +383,26 @@ const CompetitorMerchandisingPage = () => {
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {fileUploads.map((file, index) => (
                       <div key={index} className="relative group">
-                        <div 
+                        <div
                           className="h-32 border rounded-md flex items-center justify-center bg-muted/20 cursor-pointer overflow-hidden"
                           onClick={() => handlePreviewImage(file)}
                         >
-                          {file.type.startsWith('image/') ? (
-                            <img 
-                              src={URL.createObjectURL(file)} 
-                              alt={file.name} 
+                          {file.type.startsWith("image/") ? (
+                            <img
+                              src={URL.createObjectURL(file)}
+                              alt={file.name}
                               className="h-full w-full object-cover"
                             />
                           ) : (
                             <div className="flex flex-col items-center text-sm p-2">
                               <File className="h-8 w-8 text-muted-foreground mb-1" />
-                              <span className="text-xs truncate w-full text-center">{file.name}</span>
+                              <span className="text-xs truncate w-full text-center">
+                                {file.name}
+                              </span>
                             </div>
                           )}
                         </div>
-                        <button 
+                        <button
                           className="absolute -top-2 -right-2 bg-destructive text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity"
                           onClick={() => handleRemoveFile(index)}
                         >
@@ -376,7 +425,8 @@ const CompetitorMerchandisingPage = () => {
                 <h3 className="text-sm font-medium">Added Competitors</h3>
                 {competitors.length === 0 ? (
                   <div className="border rounded-md p-6 text-center text-muted-foreground">
-                    No competitor products added yet. Fill out the form above to add one.
+                    No competitor products added yet. Fill out the form above to
+                    add one.
                   </div>
                 ) : (
                   <div className="border rounded-md overflow-hidden">
@@ -393,28 +443,41 @@ const CompetitorMerchandisingPage = () => {
                       <TableBody>
                         {competitors.map((competitor) => (
                           <TableRow key={competitor.id}>
-                            <TableCell className="font-medium">{competitor.brand}</TableCell>
-                            <TableCell>{competitor.productDescription}</TableCell>
+                            <TableCell className="font-medium">
+                              {competitor.brand}
+                            </TableCell>
                             <TableCell>
-                              {competitor.promotionalPrice 
-                                ? formatCurrency(competitor.promotionalPrice) 
+                              {competitor.productDescription}
+                            </TableCell>
+                            <TableCell>
+                              {competitor.promotionalPrice
+                                ? formatCurrency(competitor.promotionalPrice)
                                 : "Not specified"}
                             </TableCell>
                             <TableCell>
-                              <Button 
-                                variant="outline" 
-                                size="sm" 
-                                onClick={() => handleViewCompetitorImages(competitor.pictures)}
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() =>
+                                  handleViewCompetitorImages(
+                                    competitor.pictures
+                                  )
+                                }
                                 disabled={competitor.pictures.length === 0}
                               >
-                                View {competitor.pictures.length} {competitor.pictures.length === 1 ? "image" : "images"}
+                                View {competitor.pictures.length}{" "}
+                                {competitor.pictures.length === 1
+                                  ? "image"
+                                  : "images"}
                               </Button>
                             </TableCell>
                             <TableCell>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => handleRemoveCompetitor(competitor.id)}
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                onClick={() =>
+                                  handleRemoveCompetitor(competitor.id)
+                                }
                                 className="text-destructive hover:text-destructive/90"
                               >
                                 <span className="sr-only">Remove</span>
@@ -442,24 +505,35 @@ const CompetitorMerchandisingPage = () => {
               <div className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-sm">Total Competitors</span>
-                  <span className="text-xl font-bold">{competitors.length}</span>
+                  <span className="text-xl font-bold">
+                    {competitors.length}
+                  </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-sm">Store</span>
                   <span className="text-md font-medium">
-                    {selectedStore ? stores?.find(s => s.id.toString() === selectedStore)?.name : 'Not selected'}
+                    {selectedStore
+                      ? stores?.find((s) => s.id.toString() === selectedStore)
+                          ?.name
+                      : "Not selected"}
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-sm">Competitors with Price</span>
                   <span className="text-md font-medium">
-                    {competitors.filter(c => c.promotionalPrice !== null).length}
+                    {
+                      competitors.filter((c) => c.promotionalPrice !== null)
+                        .length
+                    }
                   </span>
                 </div>
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="text-sm">Total Images</span>
                   <span className="text-md font-medium">
-                    {competitors.reduce((total, curr) => total + curr.pictures.length, 0)}
+                    {competitors.reduce(
+                      (total, curr) => total + curr.pictures.length,
+                      0
+                    )}
                   </span>
                 </div>
               </div>
@@ -486,16 +560,19 @@ const CompetitorMerchandisingPage = () => {
       </div>
 
       {/* Image Preview Dialog */}
-      <Dialog open={imagePreviewDialogOpen} onOpenChange={setImagePreviewDialogOpen}>
+      <Dialog
+        open={imagePreviewDialogOpen}
+        onOpenChange={setImagePreviewDialogOpen}
+      >
         <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Image Preview</DialogTitle>
           </DialogHeader>
           {selectedImage && (
             <div className="overflow-hidden rounded-md">
-              <img 
-                src={selectedImage} 
-                alt="Preview" 
+              <img
+                src={selectedImage}
+                alt="Preview"
                 className="w-full h-auto"
                 onLoad={() => URL.revokeObjectURL(selectedImage)}
               />

@@ -79,6 +79,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { getFileUrl } from "@/lib/file-utils";
+import { validateFileUpload } from "@/lib/file-utils";
 
 // Type declarations for component props
 type StockTakeSectionProps = {
@@ -636,43 +637,24 @@ const StockTakeSection = ({
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-
-        // Create FormData for the image upload
-        const formData = new FormData();
-        formData.append("file", file);
-
-        // Upload the file first
-        fetch("/api/upload", {
-          method: "POST",
-          body: formData,
-        })
-          .then((response) => response.json())
-          .then((data) => {
-            if (data.filePath) {
-              // Add the file path to the pictures array
-              setPictures((prev) => [...prev, data.filePath]);
-              console.log("Image uploaded successfully:", data.filePath);
-            } else {
-              console.error("Upload failed:", data.error || "Unknown error");
-              toast({
-                title: "Image upload failed",
-                description: data.error || "Failed to upload image",
-                variant: "destructive",
-              });
-            }
-          })
-          .catch((error) => {
-            console.error("Upload error:", error);
-            toast({
-              title: "Image upload failed",
-              description: "An error occurred while uploading the image",
-              variant: "destructive",
-            });
+    if (event.target.files && event.target.files.length > 0) {
+      const newFiles = Array.from(event.target.files);
+      // Validate file size (4MB limit)
+      const validFiles: File[] = [];
+      for (const file of newFiles) {
+        const validation = validateFileUpload(file);
+        if (!validation.valid) {
+          toast({
+            title: "File too large",
+            description: `${file.name}: ${validation.error}`,
+            variant: "destructive",
           });
+        } else {
+          validFiles.push(file);
+        }
+      }
+      if (validFiles.length > 0) {
+        setPictures((prev) => [...prev, ...validFiles]);
       }
     }
   };
@@ -2247,13 +2229,25 @@ const MerchandisingSection = ({
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
-      const newPictures = [...promotionPictures];
-      for (let i = 0; i < files.length; i++) {
-        newPictures.push(files[i].name);
+    if (event.target.files && event.target.files.length > 0) {
+      const newFiles = Array.from(event.target.files);
+      // Validate file size (4MB limit)
+      const validFiles: File[] = [];
+      for (const file of newFiles) {
+        const validation = validateFileUpload(file);
+        if (!validation.valid) {
+          toast({
+            title: "File too large",
+            description: `${file.name}: ${validation.error}`,
+            variant: "destructive",
+          });
+        } else {
+          validFiles.push(file);
+        }
       }
-      setPromotionPictures(newPictures);
+      if (validFiles.length > 0) {
+        setPromotionPictures((prev) => [...prev, ...validFiles]);
+      }
     }
   };
 
@@ -2663,11 +2657,10 @@ const CompetitorAnalysisSection = ({
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
+    if (event.target.files && event.target.files.length > 0) {
       const newPictures = [...pictures];
-      for (let i = 0; i < files.length; i++) {
-        newPictures.push(files[i].name);
+      for (let i = 0; i < event.target.files.length; i++) {
+        newPictures.push(event.target.files[i].name);
       }
       setPictures(newPictures);
     }
@@ -3142,11 +3135,10 @@ const OrderPlacementSection = ({
   };
 
   const handleFileUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const files = event.target.files;
-    if (files && files.length > 0) {
+    if (event.target.files && event.target.files.length > 0) {
       const newPictures = [...pictures];
-      for (let i = 0; i < files.length; i++) {
-        newPictures.push(files[i].name);
+      for (let i = 0; i < event.target.files.length; i++) {
+        newPictures.push(event.target.files[i].name);
       }
       setPictures(newPictures);
     }

@@ -4169,3 +4169,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   return httpServer;
 }
+
+// Multer error handler (should be after all routes)
+app.use((err, req, res, next) => {
+  if (err && err.code === "LIMIT_FILE_SIZE") {
+    return res.status(413).json({
+      error: "File too large",
+      message: "One or more files exceed the 4MB size limit."
+    });
+  }
+  if (err && err.name === "MulterError") {
+    return res.status(400).json({
+      error: "Upload error",
+      message: err.message
+    });
+  }
+  next(err);
+});
