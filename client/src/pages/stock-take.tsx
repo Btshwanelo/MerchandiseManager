@@ -2,21 +2,27 @@ import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardHeader,
+  CardTitle,
+  CardDescription,
+} from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Checkbox } from "@/components/ui/checkbox";
-import { 
-  Select, 
-  SelectContent, 
-  SelectItem, 
-  SelectTrigger, 
-  SelectValue 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
 } from "@/components/ui/select";
 import { Combobox, ComboboxOption } from "@/components/ui/combobox";
-import { 
+import {
   Dialog,
   DialogContent,
   DialogHeader,
@@ -24,37 +30,43 @@ import {
   DialogFooter,
   DialogClose,
 } from "@/components/ui/dialog";
-import { 
-  Table, 
-  TableBody, 
-  TableCell, 
-  TableHead, 
-  TableHeader, 
-  TableRow 
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
 } from "@/components/ui/table";
-import { 
-  Loader2, 
-  Plus, 
-  Upload, 
-  Store, 
-  Camera, 
-  Save, 
-  File, 
-  CheckCircle2, 
-  AlertTriangle, 
-  ShoppingCart, 
-  RefreshCw, 
+import {
+  Loader2,
+  Plus,
+  Upload,
+  Store,
+  Camera,
+  Save,
+  File,
+  CheckCircle2,
+  AlertTriangle,
+  ShoppingCart,
+  RefreshCw,
   QrCode,
   Scan,
   Eye,
   X,
   Edit,
   CheckCircle,
-  Filter
+  Filter,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { Product, Store as StoreType, StockLocation, UserRole, StockTake as DbStockTake } from "@shared/schema";
+import {
+  Product,
+  Store as StoreType,
+  StockLocation,
+  UserRole,
+  StockTake as DbStockTake,
+} from "@shared/schema";
 // Removed barcode scanner import
 
 // Define a type for StockTake that includes properties we know will be in our response
@@ -84,20 +96,24 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
   const [, setLocation] = useLocation();
   const [selectedStore, setSelectedStore] = useState<string>(storeId || "");
   const [comment, setComment] = useState<string>("");
-  const [stockTakeItems, setStockTakeItems] = useState<Array<{productId: number, quantity: number, location: StockLocation}>>([]);
+  const [stockTakeItems, setStockTakeItems] = useState<
+    Array<{ productId: number; quantity: number; location: StockLocation }>
+  >([]);
   const [fileUploads, setFileUploads] = useState<File[]>([]);
   const [imagePreviewDialogOpen, setImagePreviewDialogOpen] = useState(false);
   const [selectedImage, setSelectedImage] = useState<string | null>(null);
   const [selectedProduct, setSelectedProduct] = useState<string>("");
   const [selectedQuantity, setSelectedQuantity] = useState<string>("0");
-  const [selectedLocation, setSelectedLocation] = useState<StockLocation>(StockLocation.SHELF);
+  const [selectedLocation, setSelectedLocation] = useState<StockLocation>(
+    StockLocation.SHELF
+  );
   const [stockTakeSummary, setStockTakeSummary] = useState({
     totalProducts: 0,
     inStock: 0,
     outOfStock: 0,
     lowStock: 0,
   });
-  
+
   // Selected stock takes for bulk actions (admin)
   const [selectedStockTakes, setSelectedStockTakes] = useState<number[]>([]);
 
@@ -110,21 +126,22 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
   const { data: products, isLoading: isLoadingProducts } = useQuery<Product[]>({
     queryKey: ["/api/products"],
   });
-  
+
   // Fetch completed stock takes
-  const { data: completedStockTakes, isLoading: isLoadingStockTakes } = useQuery<StockTake[]>({
-    queryKey: ["/api/stock-takes"],
-    enabled: !!user,
-  });
-  
+  const { data: completedStockTakes, isLoading: isLoadingStockTakes } =
+    useQuery<StockTake[]>({
+      queryKey: ["/api/stock-takes"],
+      enabled: !!user,
+    });
+
   // Update the selected store when storeId prop changes or stores are loaded
   useEffect(() => {
     if (storeId && storeId !== selectedStore) {
       setSelectedStore(storeId);
-      
+
       // Show a toast notification to indicate we're working with this store
       if (stores) {
-        const store = stores.find(s => s.id.toString() === storeId);
+        const store = stores.find((s) => s.id.toString() === storeId);
         if (store) {
           toast({
             title: "Store selected",
@@ -141,7 +158,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       toast({
         title: "Select a product",
         description: "Please select a product from the dropdown menu.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -149,10 +166,12 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
     const productId = parseInt(selectedProduct);
     const quantity = parseInt(selectedQuantity);
     const location = selectedLocation;
-    
+
     // Check if product already exists in the list
-    const existingItemIndex = stockTakeItems.findIndex(item => item.productId === productId);
-    
+    const existingItemIndex = stockTakeItems.findIndex(
+      (item) => item.productId === productId
+    );
+
     if (existingItemIndex >= 0) {
       // Update existing item
       const updatedItems = [...stockTakeItems];
@@ -163,33 +182,41 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       // Add new item
       setStockTakeItems([...stockTakeItems, { productId, quantity, location }]);
     }
-    
+
     // Reset selection
     setSelectedProduct("");
     setSelectedQuantity("0");
-    
+
     // Update summary
     updateSummary([...stockTakeItems, { productId, quantity, location }]);
   };
 
   // Update the summary stats
-  const updateSummary = (items: Array<{productId: number, quantity: number, location: StockLocation}>) => {
+  const updateSummary = (
+    items: Array<{
+      productId: number;
+      quantity: number;
+      location: StockLocation;
+    }>
+  ) => {
     if (!products) return;
-    
+
     const totalProducts = items.length;
-    const inStock = items.filter(item => item.quantity > 0).length;
-    const outOfStock = items.filter(item => item.quantity === 0).length;
-    
-    const lowStock = items.filter(item => {
-      const product = products.find(p => p.id === item.productId);
-      return product && item.quantity > 0 && item.quantity < product.minStockLevel;
+    const inStock = items.filter((item) => item.quantity > 0).length;
+    const outOfStock = items.filter((item) => item.quantity === 0).length;
+
+    const lowStock = items.filter((item) => {
+      const product = products.find((p) => p.id === item.productId);
+      return (
+        product && item.quantity > 0 && item.quantity < product.minStockLevel
+      );
     }).length;
-    
+
     setStockTakeSummary({
       totalProducts,
       inStock,
       outOfStock,
-      lowStock
+      lowStock,
     });
   };
 
@@ -205,17 +232,33 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
     if (e.target.files && e.target.files.length > 0) {
       // Maximum 5 images
       const newFiles = Array.from(e.target.files);
-      
+
       if (fileUploads.length + newFiles.length > 5) {
         toast({
           title: "Too many images",
           description: "You can upload a maximum of 5 shelf pictures.",
-          variant: "destructive"
+          variant: "destructive",
         });
         return;
       }
-      
-      setFileUploads([...fileUploads, ...newFiles]);
+
+      // Validate file size (4MB limit)
+      const validFiles: File[] = [];
+      for (const file of newFiles) {
+        const validation = require("@/lib/file-utils").validateFileUpload(file);
+        if (!validation.valid) {
+          toast({
+            title: "File too large",
+            description: `${file.name}: ${validation.error}`,
+            variant: "destructive",
+          });
+        } else {
+          validFiles.push(file);
+        }
+      }
+      if (validFiles.length > 0) {
+        setFileUploads([...fileUploads, ...validFiles]);
+      }
     }
   };
 
@@ -237,19 +280,21 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       try {
         // Debug log what's in the FormData
         console.log("Stock take submission - FormData contents:", {
-          storeId: formData.get('storeId'),
-          hasItems: !!formData.get('items'),
-          itemsLength: formData.get('items') ? JSON.parse(formData.get('items') as string).length : 0,
-          filesCount: Array.from(formData.getAll('pictures')).length
+          storeId: formData.get("storeId"),
+          hasItems: !!formData.get("items"),
+          itemsLength: formData.get("items")
+            ? JSON.parse(formData.get("items") as string).length
+            : 0,
+          filesCount: Array.from(formData.getAll("pictures")).length,
         });
-        
+
         // Use fetch directly instead of apiRequest to have more control
         const res = await fetch("/api/stock-takes", {
           method: "POST",
           body: formData,
-          credentials: "include"
+          credentials: "include",
         });
-        
+
         if (!res.ok) {
           let errorMessage = "Failed to submit stock take";
           try {
@@ -262,7 +307,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
           }
           throw new Error(errorMessage);
         }
-        
+
         return await res.json();
       } catch (error) {
         console.error("Stock take submission error:", error);
@@ -298,29 +343,31 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
 
   // Process items with low quantities and show replenishment prompts
   const [showLowStockDialog, setShowLowStockDialog] = useState(false);
-  const [lowStockItems, setLowStockItems] = useState<Array<{
-    product: Product,
-    quantity: number,
-    location: StockLocation,
-    needsOrder: boolean
-  }>>([]);
+  const [lowStockItems, setLowStockItems] = useState<
+    Array<{
+      product: Product;
+      quantity: number;
+      location: StockLocation;
+      needsOrder: boolean;
+    }>
+  >([]);
 
   // Check if items need replenishment or ordering
   const checkLowStockItems = () => {
     if (!products) return [];
-    
+
     const lowItems = stockTakeItems
-      .filter(item => {
-        const product = products.find(p => p.id === item.productId);
+      .filter((item) => {
+        const product = products.find((p) => p.id === item.productId);
         return product && item.quantity < product.minStockLevel;
       })
-      .map(item => {
-        const product = products.find(p => p.id === item.productId);
+      .map((item) => {
+        const product = products.find((p) => p.id === item.productId);
         if (!product) return null;
-        
+
         // Determine if an order is needed based on location
         let needsOrder = false;
-        
+
         if (item.location === StockLocation.BACK_STORE && item.quantity < 5) {
           // If back store stock is low, place an order
           needsOrder = true;
@@ -330,21 +377,21 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
           // In a real system, this would check the back store inventory
           needsOrder = true;
         }
-        
+
         return {
           product,
           quantity: item.quantity,
           location: item.location,
-          needsOrder
+          needsOrder,
         };
       })
       .filter(Boolean) as Array<{
-        product: Product,
-        quantity: number,
-        location: StockLocation,
-        needsOrder: boolean
-      }>;
-      
+      product: Product;
+      quantity: number;
+      location: StockLocation;
+      needsOrder: boolean;
+    }>;
+
     return lowItems;
   };
 
@@ -354,7 +401,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       toast({
         title: "Store required",
         description: "Please select a store for this stock take.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
@@ -363,14 +410,14 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       toast({
         title: "No items added",
         description: "Please add at least one product to the stock take.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
 
     // Check for items with low stock levels
     const lowItems = checkLowStockItems();
-    
+
     if (lowItems.length > 0) {
       setLowStockItems(lowItems);
       setShowLowStockDialog(true);
@@ -380,7 +427,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
     // If no low stock items, proceed with submission
     submitStockTake();
   };
-  
+
   // Final submission after checking low stock
   const submitStockTake = () => {
     // In a real implementation, we would upload the images to a storage service
@@ -391,39 +438,39 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       toast({
         title: "Error submitting stock take",
         description: "Store ID is required. Please select a store.",
-        variant: "destructive"
+        variant: "destructive",
       });
       return;
     }
-    
+
     // Create form data with all required fields
     const formData = new FormData();
     formData.append("storeId", selectedStore);
-    formData.append("comment", comment || '');
-    
+    formData.append("comment", comment || "");
+
     // Format items to ensure they match the expected format
-    const formattedItems = stockTakeItems.map(item => ({
+    const formattedItems = stockTakeItems.map((item) => ({
       productId: item.productId,
       quantity: item.quantity,
-      location: item.location
+      location: item.location,
     }));
-    
+
     formData.append("items", JSON.stringify(formattedItems));
-    
+
     // Add images if any
-    fileUploads.forEach(file => {
+    fileUploads.forEach((file) => {
       formData.append("pictures", file);
     });
 
     // Debug output to see what's being sent
     console.log("Submitting stock take: ", {
       storeId: selectedStore,
-      itemsCount: formattedItems.length
+      itemsCount: formattedItems.length,
     });
 
     createStockTakeMutation.mutate(formData);
   };
-  
+
   // Toggle select all stock takes
   const toggleSelectAll = () => {
     if (selectedStockTakes.length === (completedStockTakes?.length || 0)) {
@@ -431,28 +478,29 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       setSelectedStockTakes([]);
     } else {
       // Otherwise, select all
-      setSelectedStockTakes(completedStockTakes?.map(st => st.id) || []);
+      setSelectedStockTakes(completedStockTakes?.map((st) => st.id) || []);
     }
   };
-  
+
   // Toggle selection of a single stock take
   const toggleSelectStockTake = (id: number) => {
     if (selectedStockTakes.includes(id)) {
-      setSelectedStockTakes(selectedStockTakes.filter(stId => stId !== id));
+      setSelectedStockTakes(selectedStockTakes.filter((stId) => stId !== id));
     } else {
       setSelectedStockTakes([...selectedStockTakes, id]);
     }
   };
 
   // Different view based on user role
-  const isAdmin = user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
-  
+  const isAdmin =
+    user?.role === UserRole.ADMIN || user?.role === UserRole.MANAGER;
+
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">Stock Take / Availability</h1>
         {!isAdmin && (
-          <Button 
+          <Button
             onClick={handleSubmit}
             disabled={createStockTakeMutation.isPending}
           >
@@ -485,8 +533,8 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
             <div className="flex justify-between items-center">
               <CardTitle>All Stock Takes</CardTitle>
               <div className="flex items-center space-x-2">
-                <Input 
-                  placeholder="Search stock takes..." 
+                <Input
+                  placeholder="Search stock takes..."
                   className="w-[250px]"
                 />
                 <Select defaultValue="all">
@@ -515,34 +563,40 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               <>
                 <div className="flex items-center justify-between mb-4">
                   <div className="flex items-center space-x-2">
-                    <Checkbox 
-                      id="select-all" 
-                      checked={selectedStockTakes.length === completedStockTakes.length && completedStockTakes.length > 0}
+                    <Checkbox
+                      id="select-all"
+                      checked={
+                        selectedStockTakes.length ===
+                          completedStockTakes.length &&
+                        completedStockTakes.length > 0
+                      }
                       onCheckedChange={toggleSelectAll}
                     />
-                    <label htmlFor="select-all" className="text-sm">Select All</label>
+                    <label htmlFor="select-all" className="text-sm">
+                      Select All
+                    </label>
                   </div>
                   <div className="flex space-x-2">
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       disabled={selectedStockTakes.length === 0}
                     >
                       <CheckCircle2 className="h-4 w-4 mr-2" />
                       Mark as Processed
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
+                    <Button
+                      variant="outline"
+                      size="sm"
                       disabled={selectedStockTakes.length === 0}
                     >
                       <File className="h-4 w-4 mr-2" />
                       Generate Report
                     </Button>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="text-red-500 hover:text-red-500" 
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="text-red-500 hover:text-red-500"
                       disabled={selectedStockTakes.length === 0}
                     >
                       <X className="h-4 w-4 mr-2" />
@@ -566,59 +620,95 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     </TableHeader>
                     <TableBody>
                       {completedStockTakes.map((stockTake) => {
-                        const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
+                        const stockTakeStore = stores?.find(
+                          (store) => store.id === stockTake.storeId
+                        );
                         return (
                           <TableRow key={stockTake.id}>
                             <TableCell>
-                              <Checkbox 
-                                id={`select-${stockTake.id}`} 
-                                checked={selectedStockTakes.includes(stockTake.id)}
-                                onCheckedChange={() => toggleSelectStockTake(stockTake.id)}
+                              <Checkbox
+                                id={`select-${stockTake.id}`}
+                                checked={selectedStockTakes.includes(
+                                  stockTake.id
+                                )}
+                                onCheckedChange={() =>
+                                  toggleSelectStockTake(stockTake.id)
+                                }
                               />
                             </TableCell>
-                            <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
-                            <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
-                            <TableCell>{stockTake.user?.name || stockTake.userId}</TableCell>
                             <TableCell>
-                              <Badge variant={stockTake.status === 'completed' ? 'default' : 'outline'} className="capitalize">
-                                {stockTake.status || 'unknown'}
+                              {new Date(
+                                stockTake.date || ""
+                              ).toLocaleDateString()}
+                            </TableCell>
+                            <TableCell>
+                              {stockTakeStore?.name ||
+                                `Store #${stockTake.storeId}`}
+                            </TableCell>
+                            <TableCell>
+                              {stockTake.user?.name || stockTake.userId}
+                            </TableCell>
+                            <TableCell>
+                              <Badge
+                                variant={
+                                  stockTake.status === "completed"
+                                    ? "default"
+                                    : "outline"
+                                }
+                                className="capitalize"
+                              >
+                                {stockTake.status || "unknown"}
                               </Badge>
                             </TableCell>
                             <TableCell>
-                              {typeof stockTake.items?.length === 'number' ? stockTake.items.length : '—'}
+                              {typeof stockTake.items?.length === "number"
+                                ? stockTake.items.length
+                                : "—"}
                             </TableCell>
                             <TableCell>
-                              {stockTake.lastEditedAt ? new Date(stockTake.lastEditedAt).toLocaleDateString() : '—'}
+                              {stockTake.lastEditedAt
+                                ? new Date(
+                                    stockTake.lastEditedAt
+                                  ).toLocaleDateString()
+                                : "—"}
                             </TableCell>
                             <TableCell>
                               <div className="flex space-x-2">
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`, { 
-                                    replace: false,
-                                    state: { 
-                                      stockTake: {
-                                        id: stockTake.id,
-                                        user: stockTake.user,
-                                        storeId: stockTake.storeId,
-                                        items: stockTake.items,
-                                        date: stockTake.date,
-                                        status: stockTake.status,
-                                        pictures: stockTake.pictures,
-                                        comment: stockTake.comment,
-                                        lastEditedAt: stockTake.lastEditedAt,
-                                        lastEditedBy: stockTake.lastEditedBy,
-                                        auditComment: stockTake.auditComment
+                                <Button
+                                  variant="outline"
+                                  size="sm"
+                                  onClick={() =>
+                                    setLocation(
+                                      `/stock-take-detail/${stockTake.id}`,
+                                      {
+                                        replace: false,
+                                        state: {
+                                          stockTake: {
+                                            id: stockTake.id,
+                                            user: stockTake.user,
+                                            storeId: stockTake.storeId,
+                                            items: stockTake.items,
+                                            date: stockTake.date,
+                                            status: stockTake.status,
+                                            pictures: stockTake.pictures,
+                                            comment: stockTake.comment,
+                                            lastEditedAt:
+                                              stockTake.lastEditedAt,
+                                            lastEditedBy:
+                                              stockTake.lastEditedBy,
+                                            auditComment:
+                                              stockTake.auditComment,
+                                          },
+                                        },
                                       }
-                                    }
-                                  })}
+                                    )
+                                  }
                                 >
                                   <File className="h-4 w-4 mr-1" />
                                   View
                                 </Button>
-                                <Button 
-                                  variant="outline" 
+                                <Button
+                                  variant="outline"
                                   size="sm"
                                   className="text-red-500 hover:text-red-500"
                                 >
@@ -663,16 +753,16 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     placeholder="Select a store..."
                     loading={isLoadingStores}
                     emptyMessage={
-                      isLoadingStores 
-                        ? "Loading stores..." 
-                        : stores?.length === 0 
-                          ? "No stores available" 
-                          : "No stores found"
+                      isLoadingStores
+                        ? "Loading stores..."
+                        : stores?.length === 0
+                        ? "No stores available"
+                        : "No stores found"
                     }
                     options={
                       stores?.map((store) => ({
-                        label: `${store.name} - ${store.location || ''}`,
-                        value: store.id.toString()
+                        label: `${store.name} - ${store.location || ""}`,
+                        value: store.id.toString(),
                       })) || []
                     }
                     renderItem={(option) => (
@@ -685,26 +775,35 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                 </div>
 
                 <div className="space-y-2">
-                  <label className="text-sm font-medium">Default Location</label>
-                  <Select 
-                    value={selectedLocation} 
-                    onValueChange={(value) => setSelectedLocation(value as StockLocation)}
+                  <label className="text-sm font-medium">
+                    Default Location
+                  </label>
+                  <Select
+                    value={selectedLocation}
+                    onValueChange={(value) =>
+                      setSelectedLocation(value as StockLocation)
+                    }
                   >
                     <SelectTrigger>
                       <SelectValue placeholder="Select location..." />
                     </SelectTrigger>
                     <SelectContent>
                       <SelectItem value={StockLocation.SHELF}>Shelf</SelectItem>
-                      <SelectItem value={StockLocation.BACK_STORE}>Back Store</SelectItem>
+                      <SelectItem value={StockLocation.BACK_STORE}>
+                        Back Store
+                      </SelectItem>
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">This is the default location for all products in this stock take</p>
+                  <p className="text-xs text-muted-foreground">
+                    This is the default location for all products in this stock
+                    take
+                  </p>
                 </div>
 
                 <div className="space-y-2">
                   <label className="text-sm font-medium">Comments</label>
-                  <Textarea 
-                    placeholder="Add any comments about this stock take..." 
+                  <Textarea
+                    placeholder="Add any comments about this stock take..."
                     value={comment}
                     onChange={(e) => setComment(e.target.value)}
                     rows={3}
@@ -720,23 +819,25 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               <CardContent className="space-y-6">
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                   <div className="col-span-2">
-                    <label className="text-sm font-medium mb-2 block">Product</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      Product
+                    </label>
                     <Combobox
                       value={selectedProduct}
                       onChange={setSelectedProduct}
                       placeholder="Select a product..."
                       loading={isLoadingProducts}
                       emptyMessage={
-                        isLoadingProducts 
-                          ? "Loading products..." 
-                          : products?.length === 0 
-                            ? "No products available" 
-                            : "No products found"
+                        isLoadingProducts
+                          ? "Loading products..."
+                          : products?.length === 0
+                          ? "No products available"
+                          : "No products found"
                       }
                       options={
                         products?.map((product) => ({
                           label: `${product.name} - ${product.sku}`,
-                          value: product.id.toString()
+                          value: product.id.toString(),
                         })) || []
                       }
                       renderItem={(option) => (
@@ -747,9 +848,11 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                       )}
                     />
                   </div>
-                  
+
                   <div>
-                    <label className="text-sm font-medium mb-2 block">Quantity</label>
+                    <label className="text-sm font-medium mb-2 block">
+                      Quantity
+                    </label>
                     <div className="flex items-center space-x-2">
                       <Input
                         type="number"
@@ -763,7 +866,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     </div>
                   </div>
                 </div>
-                
+
                 {stockTakeItems.length > 0 && (
                   <div className="rounded-md border">
                     <Table>
@@ -771,28 +874,43 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                         <TableRow>
                           <TableHead>Product</TableHead>
                           <TableHead>SKU</TableHead>
-                          <TableHead className="text-center">Quantity</TableHead>
+                          <TableHead className="text-center">
+                            Quantity
+                          </TableHead>
                           <TableHead>Location</TableHead>
                           <TableHead className="text-right">Actions</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
                         {stockTakeItems.map((item, index) => {
-                          const product = products?.find(p => p.id === item.productId);
+                          const product = products?.find(
+                            (p) => p.id === item.productId
+                          );
                           return (
                             <TableRow key={index}>
                               <TableCell className="font-medium">
                                 {product?.name || `Product #${item.productId}`}
                               </TableCell>
-                              <TableCell>{product?.sku || '-'}</TableCell>
+                              <TableCell>{product?.sku || "-"}</TableCell>
                               <TableCell className="text-center">
-                                <Badge variant={item.quantity === 0 ? "destructive" : (item.quantity < (product?.minStockLevel || 5) ? "warning" : "default")}>
+                                <Badge
+                                  variant={
+                                    item.quantity === 0
+                                      ? "destructive"
+                                      : item.quantity <
+                                        (product?.minStockLevel || 5)
+                                      ? "warning"
+                                      : "default"
+                                  }
+                                >
                                   {item.quantity}
                                 </Badge>
                               </TableCell>
                               <TableCell>
                                 <Badge variant="outline" className="capitalize">
-                                  {item.location.toLowerCase().replace('_', ' ')}
+                                  {item.location
+                                    .toLowerCase()
+                                    .replace("_", " ")}
                                 </Badge>
                               </TableCell>
                               <TableCell className="text-right">
@@ -811,24 +929,28 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     </Table>
                   </div>
                 )}
-                
+
                 {stockTakeItems.length === 0 && (
                   <div className="border rounded-md p-8 text-center text-muted-foreground">
                     <ShoppingCart className="h-10 w-10 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No Products Added</h3>
+                    <h3 className="text-lg font-medium mb-2">
+                      No Products Added
+                    </h3>
                     <p>Add products to your stock take using the form above.</p>
                   </div>
                 )}
               </CardContent>
             </Card>
-            
+
             <Card>
               <CardHeader>
                 <CardTitle>Shelf Pictures</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="flex items-center justify-between">
-                  <p className="text-sm text-muted-foreground">Upload up to 5 pictures of your shelf display</p>
+                  <p className="text-sm text-muted-foreground">
+                    Upload up to 5 pictures of your shelf display
+                  </p>
                   <label htmlFor="picture-upload" className="cursor-pointer">
                     <div className="flex items-center gap-2 bg-primary text-primary-foreground py-2 px-4 rounded-md hover:bg-primary/90">
                       <Camera className="h-4 w-4" />
@@ -844,28 +966,31 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     />
                   </label>
                 </div>
-                
+
                 {fileUploads.length > 0 ? (
                   <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
                     {fileUploads.map((file, index) => (
-                      <div key={index} className="relative group border rounded-md overflow-hidden">
-                        <img 
-                          src={URL.createObjectURL(file)} 
-                          alt={`Shelf picture ${index + 1}`} 
+                      <div
+                        key={index}
+                        className="relative group border rounded-md overflow-hidden"
+                      >
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Shelf picture ${index + 1}`}
                           className="w-full h-32 object-cover"
                         />
                         <div className="absolute inset-0 bg-black/40 hidden group-hover:flex items-center justify-center space-x-2">
-                          <Button 
-                            variant="secondary" 
-                            size="sm" 
+                          <Button
+                            variant="secondary"
+                            size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => handlePreviewImage(file)}
                           >
                             <Eye className="h-4 w-4" />
                           </Button>
-                          <Button 
-                            variant="destructive" 
-                            size="sm" 
+                          <Button
+                            variant="destructive"
+                            size="sm"
                             className="h-8 w-8 p-0"
                             onClick={() => handleRemoveFile(index)}
                           >
@@ -878,14 +1003,19 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                 ) : (
                   <div className="border border-dashed rounded-md p-8 text-center text-muted-foreground">
                     <Camera className="h-10 w-10 mx-auto mb-4" />
-                    <h3 className="text-lg font-medium mb-2">No Pictures Added</h3>
-                    <p>Add pictures of your shelf displays to help with inventory tracking.</p>
+                    <h3 className="text-lg font-medium mb-2">
+                      No Pictures Added
+                    </h3>
+                    <p>
+                      Add pictures of your shelf displays to help with inventory
+                      tracking.
+                    </p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </div>
-          
+
           <div>
             <Card className="sticky top-6">
               <CardHeader>
@@ -894,50 +1024,95 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               <CardContent className="space-y-4">
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="font-medium">Total Products</span>
-                  <span className="text-xl font-bold">{stockTakeSummary.totalProducts}</span>
+                  <span className="text-xl font-bold">
+                    {stockTakeSummary.totalProducts}
+                  </span>
                 </div>
-                
+
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="font-medium">In Stock</span>
-                  <span className="text-xl font-bold">{stockTakeSummary.inStock}</span>
+                  <span className="text-xl font-bold">
+                    {stockTakeSummary.inStock}
+                  </span>
                 </div>
-                
+
                 <div className="flex justify-between items-center py-2 border-b">
                   <span className="font-medium">Out of Stock</span>
-                  <span className="text-xl font-bold text-destructive">{stockTakeSummary.outOfStock}</span>
+                  <span className="text-xl font-bold text-destructive">
+                    {stockTakeSummary.outOfStock}
+                  </span>
                 </div>
-                
+
                 <div className="flex justify-between items-center py-2">
                   <span className="font-medium">Low Stock</span>
-                  <span className="text-xl font-bold text-warning">{stockTakeSummary.lowStock}</span>
+                  <span className="text-xl font-bold text-warning">
+                    {stockTakeSummary.lowStock}
+                  </span>
                 </div>
-                
+
                 <div className="mt-6 space-y-4">
                   <h3 className="font-medium">Report Status</h3>
                   <div className="space-y-2">
                     <div className="flex items-center">
-                      <div className={selectedStore ? "text-green-500" : "text-muted-foreground"}>
-                        {selectedStore ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      <div
+                        className={
+                          selectedStore
+                            ? "text-green-500"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {selectedStore ? (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
                       </div>
-                      <span className="text-sm">Store selected: {selectedStore ? "Yes" : "No"}</span>
+                      <span className="text-sm">
+                        Store selected: {selectedStore ? "Yes" : "No"}
+                      </span>
                     </div>
-                    
+
                     <div className="flex items-center">
-                      <div className={stockTakeItems.length > 0 ? "text-green-500" : "text-muted-foreground"}>
-                        {stockTakeItems.length > 0 ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      <div
+                        className={
+                          stockTakeItems.length > 0
+                            ? "text-green-500"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {stockTakeItems.length > 0 ? (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
                       </div>
-                      <span className="text-sm">Products added: {stockTakeItems.length > 0 ? "Yes" : "No"}</span>
+                      <span className="text-sm">
+                        Products added:{" "}
+                        {stockTakeItems.length > 0 ? "Yes" : "No"}
+                      </span>
                     </div>
-                    
+
                     <div className="flex items-center">
-                      <div className={fileUploads.length > 0 ? "text-green-500" : "text-muted-foreground"}>
-                        {fileUploads.length > 0 ? <CheckCircle2 className="h-4 w-4 mr-2" /> : <RefreshCw className="h-4 w-4 mr-2" />}
+                      <div
+                        className={
+                          fileUploads.length > 0
+                            ? "text-green-500"
+                            : "text-muted-foreground"
+                        }
+                      >
+                        {fileUploads.length > 0 ? (
+                          <CheckCircle2 className="h-4 w-4 mr-2" />
+                        ) : (
+                          <RefreshCw className="h-4 w-4 mr-2" />
+                        )}
                       </div>
-                      <span className="text-sm">Shelf photos: {fileUploads.length} of 5</span>
+                      <span className="text-sm">
+                        Shelf photos: {fileUploads.length} of 5
+                      </span>
                     </div>
                   </div>
 
-                  <Button 
+                  <Button
                     className="w-full"
                     onClick={handleSubmit}
                     disabled={createStockTakeMutation.isPending}
@@ -969,7 +1144,9 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
               </div>
             ) : !completedStockTakes || completedStockTakes.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
-                <p>No stock takes found. Complete your first stock take above.</p>
+                <p>
+                  No stock takes found. Complete your first stock take above.
+                </p>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -979,88 +1156,118 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                       <TableHead>Date</TableHead>
                       <TableHead>Store</TableHead>
                       <TableHead>Status</TableHead>
-                      <TableHead className="hidden md:table-cell">Items</TableHead>
-                      <TableHead className="hidden md:table-cell">Comment</TableHead>
-                      <TableHead className="hidden md:table-cell">Pictures</TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Items
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Comment
+                      </TableHead>
+                      <TableHead className="hidden md:table-cell">
+                        Pictures
+                      </TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {completedStockTakes.map((stockTake) => {
-                      const stockTakeStore = stores?.find(store => store.id === stockTake.storeId);
+                      const stockTakeStore = stores?.find(
+                        (store) => store.id === stockTake.storeId
+                      );
                       return (
                         <TableRow key={stockTake.id}>
-                          <TableCell>{new Date(stockTake.date || '').toLocaleDateString()}</TableCell>
-                          <TableCell>{stockTakeStore?.name || `Store #${stockTake.storeId}`}</TableCell>
                           <TableCell>
-                            <span className={
-                              stockTake.status === 'completed' 
-                                ? 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800' 
-                                : 'inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800'
-                            }>
+                            {new Date(
+                              stockTake.date || ""
+                            ).toLocaleDateString()}
+                          </TableCell>
+                          <TableCell>
+                            {stockTakeStore?.name ||
+                              `Store #${stockTake.storeId}`}
+                          </TableCell>
+                          <TableCell>
+                            <span
+                              className={
+                                stockTake.status === "completed"
+                                  ? "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800"
+                                  : "inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800"
+                              }
+                            >
                               {stockTake.status}
                             </span>
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
                             {/* We don't have the count directly, this will be fetched when viewing details */}
-                            <Button 
-                              variant="link" 
-                              size="sm" 
-                              className="p-0 h-auto" 
-                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`, { 
-                                replace: false,
-                                state: { 
-                                  stockTake: {
-                                    id: stockTake.id,
-                                    user: stockTake.user,
-                                    storeId: stockTake.storeId,
-                                    items: stockTake.items,
-                                    date: stockTake.date,
-                                    status: stockTake.status,
-                                    pictures: stockTake.pictures,
-                                    comment: stockTake.comment,
-                                    lastEditedAt: stockTake.lastEditedAt,
-                                    lastEditedBy: stockTake.lastEditedBy,
-                                    auditComment: stockTake.auditComment
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="p-0 h-auto"
+                              onClick={() =>
+                                setLocation(
+                                  `/stock-take-detail/${stockTake.id}`,
+                                  {
+                                    replace: false,
+                                    state: {
+                                      stockTake: {
+                                        id: stockTake.id,
+                                        user: stockTake.user,
+                                        storeId: stockTake.storeId,
+                                        items: stockTake.items,
+                                        date: stockTake.date,
+                                        status: stockTake.status,
+                                        pictures: stockTake.pictures,
+                                        comment: stockTake.comment,
+                                        lastEditedAt: stockTake.lastEditedAt,
+                                        lastEditedBy: stockTake.lastEditedBy,
+                                        auditComment: stockTake.auditComment,
+                                      },
+                                    },
                                   }
-                                }
-                              })}
+                                )
+                              }
                             >
                               View Items
                             </Button>
                           </TableCell>
                           <TableCell className="hidden md:table-cell truncate max-w-[200px]">
-                            {stockTake.comment || '-'}
+                            {stockTake.comment || "-"}
                           </TableCell>
                           <TableCell className="hidden md:table-cell">
-                            {stockTake.pictures && stockTake.pictures.length > 0 ? (
-                              <Badge variant="outline">{stockTake.pictures.length} photos</Badge>
+                            {stockTake.pictures &&
+                            stockTake.pictures.length > 0 ? (
+                              <Badge variant="outline">
+                                {stockTake.pictures.length} photos
+                              </Badge>
                             ) : (
-                              '-'
+                              "-"
                             )}
                           </TableCell>
                           <TableCell>
-                            <Button 
-                              variant="outline" 
-                              size="sm" 
-                              onClick={() => setLocation(`/stock-take-detail/${stockTake.id}`, { 
-                                replace: false,
-                                state: { 
-                                  stockTake: {
-                                    id: stockTake.id,
-                                    user: stockTake.user,
-                                    storeId: stockTake.storeId,
-                                    items: stockTake.items,
-                                    date: stockTake.date,
-                                    status: stockTake.status,
-                                    pictures: stockTake.pictures,
-                                    comment: stockTake.comment,
-                                    lastEditedAt: stockTake.lastEditedAt,
-                                    lastEditedBy: stockTake.lastEditedBy,
-                                    auditComment: stockTake.auditComment
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() =>
+                                setLocation(
+                                  `/stock-take-detail/${stockTake.id}`,
+                                  {
+                                    replace: false,
+                                    state: {
+                                      stockTake: {
+                                        id: stockTake.id,
+                                        user: stockTake.user,
+                                        storeId: stockTake.storeId,
+                                        items: stockTake.items,
+                                        date: stockTake.date,
+                                        status: stockTake.status,
+                                        pictures: stockTake.pictures,
+                                        comment: stockTake.comment,
+                                        lastEditedAt: stockTake.lastEditedAt,
+                                        lastEditedBy: stockTake.lastEditedBy,
+                                        auditComment: stockTake.auditComment,
+                                      },
+                                    },
                                   }
-                                }
-                              })}
+                                )
+                              }
                             >
                               <File className="h-4 w-4 mr-2" />
                               Details
@@ -1078,7 +1285,10 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
       )}
 
       {/* Image Preview Dialog */}
-      <Dialog open={imagePreviewDialogOpen} onOpenChange={setImagePreviewDialogOpen}>
+      <Dialog
+        open={imagePreviewDialogOpen}
+        onOpenChange={setImagePreviewDialogOpen}
+      >
         <DialogContent className="max-w-3xl">
           <DialogHeader>
             <DialogTitle>Image Preview</DialogTitle>
@@ -1120,12 +1330,13 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
                     <Badge variant="warning">{item.quantity} in stock</Badge>
                   </div>
                   <p className="text-sm text-muted-foreground my-1">
-                    Location: {item.location.toLowerCase().replace('_', ' ')}
+                    Location: {item.location.toLowerCase().replace("_", " ")}
                   </p>
                   {item.needsOrder && (
                     <p className="text-red-500 text-sm mt-1">
                       <AlertTriangle className="h-3 w-3 inline-block mr-1" />
-                      Reorder needed (below minimum of {item.product.minStockLevel})
+                      Reorder needed (below minimum of{" "}
+                      {item.product.minStockLevel})
                     </p>
                   )}
                 </div>
@@ -1133,30 +1344,35 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
             </div>
           </div>
           <DialogFooter className="flex flex-col sm:flex-row gap-4">
-            <Button 
+            <Button
               variant="outline"
               className="w-full sm:w-auto"
               onClick={() => {
                 // Create line items in the order for low stock items
                 const orderItems = lowStockItems
-                  .filter(item => item.needsOrder)
-                  .map(item => ({
+                  .filter((item) => item.needsOrder)
+                  .map((item) => ({
                     productId: item.product.id,
-                    quantity: Math.max(item.product.minStockLevel - item.quantity, 1), // Order enough to meet minimum
+                    quantity: Math.max(
+                      item.product.minStockLevel - item.quantity,
+                      1
+                    ), // Order enough to meet minimum
                     location: item.location,
-                    price: item.product.price
+                    price: item.product.price,
                   }));
-                  
+
                 // In a real implementation, we would send these to the API
                 console.log("Creating order items:", orderItems);
-                
+
                 // Simulate API call for order creation
                 // In a production app, this would be a real API call:
                 // apiRequest("POST", "/api/orders", { items: orderItems, storeId: selectedStore })
-                
+
                 toast({
                   title: "Orders Placed",
-                  description: `${lowStockItems.filter(i => i.needsOrder).length} orders have been placed for low stock items.`
+                  description: `${
+                    lowStockItems.filter((i) => i.needsOrder).length
+                  } orders have been placed for low stock items.`,
                 });
                 setShowLowStockDialog(false);
                 submitStockTake();
@@ -1164,7 +1380,7 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
             >
               Place Orders & Submit
             </Button>
-            <Button 
+            <Button
               className="w-full sm:w-auto"
               onClick={() => {
                 setShowLowStockDialog(false);
