@@ -460,6 +460,11 @@ const MyAssignmentsPage = () => {
                               >
                                 <span>Task</span>
                                 <ArrowUpDown className="h-3 w-3" />
+                                {sortField === 'title' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
                               </button>
                             </TableHead>
                             <TableHead>Store</TableHead>
@@ -612,17 +617,33 @@ const MyAssignmentsPage = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-[300px]">
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('title')}
+                              >
                                 <span>Task</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'title' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>Store</TableHead>
                             <TableHead>
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('completedAt')}
+                              >
                                 <span>Completed</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'completedAt' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>Notes</TableHead>
                           </TableRow>
