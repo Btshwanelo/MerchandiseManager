@@ -36,7 +36,7 @@ import {
 // Set up multer for memory storage (we'll convert to base64 and store in DB)
 const upload = multer({
   storage: multer.memoryStorage(),
-  limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+  limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit
   fileFilter: (req, file, cb) => {
     // Accept images only
     if (!file.originalname.match(/\.(jpg|jpeg|png|gif|webp)$/)) {
@@ -1011,7 +1011,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   const competitorUpload = multer({
     storage: competitorStorage,
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB limit
+    limits: { fileSize: 4 * 1024 * 1024 }, // 4MB limit
     fileFilter: function (req, file, cb) {
       const filetypes = /jpeg|jpg|png|gif/;
       const mimetype = filetypes.test(file.mimetype);

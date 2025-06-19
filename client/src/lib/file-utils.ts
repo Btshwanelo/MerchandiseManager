@@ -222,7 +222,7 @@ export function validateFileUpload(
   } = {}
 ): { valid: boolean; error?: string } {
   const {
-    maxSize = 10 * 1024 * 1024, // 10MB default
+    maxSize = 4 * 1024 * 1024, // 4MB default
     allowedTypes = [
       "image/jpeg",
       "image/jpg",

@@ -14,6 +14,7 @@ import {
 } from "@shared/schema";
 import { eq, inArray } from "drizzle-orm";
 import { z } from "zod";
+import sharp from "sharp";
 
 export interface FileMetadata {
   id: number;
@@ -92,8 +93,38 @@ export async function storeFile(
 ): Promise<FileUploadResult> {
   const filename = generateUniqueFilename(originalName);
   const mimeType = getMimeType(originalName);
-  const base64Data = bufferToBase64(buffer);
-  const size = buffer.length;
+  let base64Data: string;
+  let size: number;
+  let processedBuffer = buffer;
+
+  // Only compress images (jpeg, png, webp, gif)
+  if (
+    [
+      "image/jpeg",
+      "image/jpg",
+      "image/png",
+      "image/webp",
+      "image/gif",
+    ].includes(mimeType)
+  ) {
+    try {
+      let sharpInstance = sharp(buffer);
+      if (mimeType === "image/jpeg" || mimeType === "image/jpg") {
+        sharpInstance = sharpInstance.jpeg({ quality: 80 });
+      } else if (mimeType === "image/png") {
+        sharpInstance = sharpInstance.png({ compressionLevel: 8 });
+      } else if (mimeType === "image/webp") {
+        sharpInstance = sharpInstance.webp({ quality: 80 });
+      } // gif: sharp can read but not write, so keep as is
+      processedBuffer = await sharpInstance.toBuffer();
+    } catch (err) {
+      console.error("Image compression failed, storing original:", err);
+      processedBuffer = buffer;
+    }
+  }
+
+  base64Data = bufferToBase64(processedBuffer);
+  size = processedBuffer.length;
 
   const [result] = await db
     .insert(base64Images)
