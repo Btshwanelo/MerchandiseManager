@@ -108,6 +108,8 @@ const MyAssignmentsPage = () => {
   const [isWorkItemDialogOpen, setIsWorkItemDialogOpen] = useState(false);
   const [selectedWorkItem, setSelectedWorkItem] = useState<WorkItemWithRelations | null>(null);
   const [completionNotes, setCompletionNotes] = useState("");
+  const [sortOrder, setSortOrder] = useState<'asc' | 'desc'>('asc');
+  const [sortField, setSortField] = useState<'dueDate' | 'title' | 'priority'>('dueDate');
   
   // Fetch work items
   const { 
@@ -117,23 +119,13 @@ const MyAssignmentsPage = () => {
   } = useQuery({
     queryKey: ['/api/my-work-items'],
     select: (data: WorkItemWithRelations[]) => {
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      
-      return data.filter(item => {
-        const dueDate = item.dueDate ? new Date(item.dueDate) : null;
-        const isCompleted = item.status === 'completed';
+      // Return all work items and let the component handle filtering
+      return data.sort((a, b) => {
+        // Sort completed items last, then by due date
+        if (a.status === 'completed' && b.status !== 'completed') return 1;
+        if (a.status !== 'completed' && b.status === 'completed') return -1;
         
-        // Show items that:
-        // - Are not completed AND
-        // - Have a due date that is closest to today (today or future dates)
-        if (!isCompleted && dueDate && dueDate >= today) {
-          return true;
-        }
-        
-        return false;
-      }).sort((a, b) => {
-        // Sort by due date ascending (closest to today first)
+        // For items with same completion status, sort by due date
         const aDate = a.dueDate ? new Date(a.dueDate).getTime() : Infinity;
         const bDate = b.dueDate ? new Date(b.dueDate).getTime() : Infinity;
         return aDate - bDate;
@@ -266,6 +258,45 @@ const MyAssignmentsPage = () => {
     }
   };
   
+  const sortItems = (items: WorkItemWithRelations[]) => {
+    return [...items].sort((a, b) => {
+      let aValue, bValue;
+      
+      switch (sortField) {
+        case 'dueDate':
+          aValue = a.dueDate ? new Date(a.dueDate).getTime() : (sortOrder === 'asc' ? Infinity : -Infinity);
+          bValue = b.dueDate ? new Date(b.dueDate).getTime() : (sortOrder === 'asc' ? Infinity : -Infinity);
+          break;
+        case 'title':
+          aValue = a.title.toLowerCase();
+          bValue = b.title.toLowerCase();
+          break;
+        case 'priority':
+          const priorityOrder = { 'high': 3, 'medium': 2, 'low': 1 };
+          aValue = priorityOrder[a.priority as keyof typeof priorityOrder] || 0;
+          bValue = priorityOrder[b.priority as keyof typeof priorityOrder] || 0;
+          break;
+        default:
+          return 0;
+      }
+      
+      if (sortOrder === 'asc') {
+        return aValue < bValue ? -1 : aValue > bValue ? 1 : 0;
+      } else {
+        return aValue > bValue ? -1 : aValue < bValue ? 1 : 0;
+      }
+    });
+  };
+
+  const handleSort = (field: 'dueDate' | 'title' | 'priority') => {
+    if (sortField === field) {
+      setSortOrder(sortOrder === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortField(field);
+      setSortOrder('asc');
+    }
+  };
+
   const filterWorkItems = (items: WorkItemWithRelations[] | undefined, status: string, search: string) => {
     if (!items) return [];
     
@@ -274,7 +305,7 @@ const MyAssignmentsPage = () => {
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1); // Start of tomorrow
     
-    return items
+    const filtered = items
       .filter(item => {
         // Basic status filter
         const statusMatch = status === "active" 
@@ -300,40 +331,10 @@ const MyAssignmentsPage = () => {
         
         // For completed items, show all that match other filters
         return statusMatch && searchMatch;
-      })
-      .sort((a, b) => {
-        // Sort overdue items first, then today's items
-        const today = new Date();
-        today.setHours(0, 0, 0, 0);
-        
-        if (a.dueDate && b.dueDate) {
-          const dueDateA = new Date(a.dueDate);
-          const dueDateB = new Date(b.dueDate);
-          dueDateA.setHours(0, 0, 0, 0);
-          dueDateB.setHours(0, 0, 0, 0);
-          
-          const isOverdueA = dueDateA.getTime() < today.getTime();
-          const isOverdueB = dueDateB.getTime() < today.getTime();
-          
-          // Overdue items first
-          if (isOverdueA && !isOverdueB) return -1;
-          if (!isOverdueA && isOverdueB) return 1;
-          
-          // Then sort by due date
-          return dueDateA.getTime() - dueDateB.getTime();
-        } else if (a.dueDate) {
-          return -1;
-        } else if (b.dueDate) {
-          return 1;
-        }
-        
-        // Sort by priority if no due date
-        const priorityOrder: Record<string, number> = { high: 1, medium: 2, low: 3 };
-        const priorityA = priorityOrder[a.priority.toLowerCase()] || 99;
-        const priorityB = priorityOrder[b.priority.toLowerCase()] || 99;
-        
-        return priorityA - priorityB;
       });
+    
+    // Apply custom sorting
+    return sortItems(filtered);
   };
   
   const getPriorityColor = (priority: string) => {
@@ -453,25 +454,49 @@ const MyAssignmentsPage = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-[300px]">
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('title')}
+                              >
                                 <span>Task</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'title' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>Store</TableHead>
                             <TableHead>
-                              <div className="flex items-center space-x-1">
-                                <span>Status</span>
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('priority')}
+                              >
+                                <span>Priority</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'priority' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('dueDate')}
+                              >
                                 <span>Due date</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'dueDate' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
-                            <TableHead>Priority</TableHead>
+                            <TableHead>Status</TableHead>
                             <TableHead className="text-right">Actions</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -592,17 +617,33 @@ const MyAssignmentsPage = () => {
                         <TableHeader>
                           <TableRow>
                             <TableHead className="w-[300px]">
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('title')}
+                              >
                                 <span>Task</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'title' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>Store</TableHead>
                             <TableHead>
-                              <div className="flex items-center space-x-1">
+                              <button 
+                                className="flex items-center space-x-1 hover:text-primary"
+                                onClick={() => handleSort('completedAt')}
+                              >
                                 <span>Completed</span>
                                 <ArrowUpDown className="h-3 w-3" />
-                              </div>
+                                {sortField === 'completedAt' && (
+                                  <span className="text-xs">
+                                    {sortOrder === 'asc' ? '↑' : '↓'}
+                                  </span>
+                                )}
+                              </button>
                             </TableHead>
                             <TableHead>Notes</TableHead>
                           </TableRow>
