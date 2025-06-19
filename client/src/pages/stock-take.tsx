@@ -67,6 +67,7 @@ import {
   UserRole,
   StockTake as DbStockTake,
 } from "@shared/schema";
+import { validateFileUpload } from "@/lib/file-utils";
 // Removed barcode scanner import
 
 // Define a type for StockTake that includes properties we know will be in our response
@@ -242,7 +243,23 @@ const StockTakePage = ({ storeId }: StockTakePageProps = {}) => {
         return;
       }
 
-      setFileUploads([...fileUploads, ...newFiles]);
+      // Validate file size (4MB limit)
+      const validFiles: File[] = [];
+      for (const file of newFiles) {
+        const validation = validateFileUpload(file);
+        if (!validation.valid) {
+          toast({
+            title: "File too large",
+            description: `${file.name}: ${validation.error}`,
+            variant: "destructive",
+          });
+        } else {
+          validFiles.push(file);
+        }
+      }
+      if (validFiles.length > 0) {
+        setFileUploads([...fileUploads, ...validFiles]);
+      }
     }
   };
 
